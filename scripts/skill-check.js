@@ -114,9 +114,10 @@ function formatBreakdown(result) {
   return text;
 }
 
+// Bewusst ohne Farbangaben: Foundry und aktive Themes bestimmen die Textfarbe.
 function critLabel(result) {
-  if (result.isCritical) return ` <span style="color:#22c55e; font-weight:bold;">KRITISCHER ERFOLG</span>`;
-  if (result.isFumble) return ` <span style="color:#ef4444; font-weight:bold;">KRITISCHER MISSERFOLG</span>`;
+  if (result.isCritical) return ` <strong>KRITISCHER ERFOLG</strong>`;
+  if (result.isFumble) return ` <strong>KRITISCHER MISSERFOLG</strong>`;
   return "";
 }
 
@@ -138,9 +139,9 @@ function promptRollOptions({ skillName, counterpart, targetNames, isGM }) {
 
   const content = `
     <form>
-      <div style="background: rgba(15,23,42,0.6); padding: 8px; border-radius: 4px; font-size: 12px; margin-bottom: 8px;">
+      <div style="font-size: 12px; margin-bottom: 8px;">
         <p style="margin:0;">🎲 <strong>${skillName}</strong></p>
-        <p style="margin:4px 0 0 0; color:#94a3b8;">${mode}</p>
+        <p style="margin:4px 0 0 0;">${mode}</p>
       </div>
       <div class="form-group">
         <label>Modifikator</label>
@@ -176,18 +177,19 @@ function promptRollOptions({ skillName, counterpart, targetNames, isGM }) {
   });
 }
 
+// Keine Farben und keine Hintergründe: die Chat-Nachricht erbt das Styling von
+// Foundry, damit sie in hellen wie dunklen Themes lesbar bleibt. Hervorhebungen
+// laufen über <strong>, Schriftgröße und die Zeichen ✔ / ✘.
 function buildChatContent(own, comparisons) {
   let content =
-    `<div style="background: rgba(15,23,42,0.7); padding: 8px; border-radius: 6px; border: 1px solid #334155;">` +
-    `🎲 <strong>${own.skillName}</strong> <span style="color:#94a3b8;">(${own.attribute})</span><br>` +
-    `<span style="color:#38bdf8; font-size: 22px; font-weight: bold; display:inline-block; margin-top:2px;">${own.total}</span>` +
-    critLabel(own) +
-    `<br><span style="color:#cbd5e1; font-size:11px;">${formatBreakdown(own)}</span>` +
-    `</div>`;
+    `<p style="margin:0;">🎲 <strong>${own.skillName}</strong> (${own.attribute})</p>` +
+    `<p style="margin:2px 0; font-size:22px; font-weight:bold;">${own.total}</p>` +
+    `<p style="margin:0; font-size:11px;">${formatBreakdown(own)}</p>` +
+    (critLabel(own) ? `<p style="margin:2px 0 0 0;">${critLabel(own)}</p>` : "");
 
   if (!comparisons.length) return content;
 
-  content += `<hr style="border: 0; border-top: 1px solid #334155; margin: 8px 0;">`;
+  content += `<hr>`;
 
   let won = 0;
   for (const entry of comparisons) {
@@ -195,25 +197,21 @@ function buildChatContent(own, comparisons) {
     const success = own.total > opposed.total;
     if (success) won += 1;
 
-    const verdict = success
-      ? `<span style="color:#22c55e; font-weight:bold;">gewonnen</span>`
-      : `<span style="color:#ef4444; font-weight:bold;">verloren</span>`;
+    const verdict = success ? `✔ <strong>gewonnen</strong>` : `✘ <strong>verloren</strong>`;
 
     content +=
-      `<div style="margin-bottom:4px;">` +
-      `🛡️ <strong>${entry.name}</strong> — ${opposed.skillName} ` +
-      `<span style="color:#94a3b8;">(${opposed.attribute})</span>: ` +
-      `<b style="color:#38bdf8;">${opposed.total}</b>${critLabel(opposed)} → ${verdict}<br>` +
-      `<span style="color:#cbd5e1; font-size:11px;">${formatBreakdown(opposed)}` +
-      (entry.hasSkill ? "" : ` <span style="color:#94a3b8;">[Skill nicht vorhanden, Level 0]</span>`) +
-      `</span></div>`;
+      `<p style="margin:0 0 6px 0;">` +
+      `🛡️ <strong>${entry.name}</strong> — ${opposed.skillName} (${opposed.attribute}): ` +
+      `<strong>${opposed.total}</strong>${critLabel(opposed)} → ${verdict}<br>` +
+      `<span style="font-size:11px;">${formatBreakdown(opposed)}` +
+      (entry.hasSkill ? "" : ` [Skill nicht vorhanden, Level 0]`) +
+      `</span></p>`;
   }
 
   if (comparisons.length > 1) {
     content +=
-      `<hr style="border: 0; border-top: 1px dashed #334155; margin: 6px 0;">` +
-      `<span style="color:#cbd5e1; font-size:12px;">Gewonnen gegen <b>${won}</b> von <b>${comparisons.length}</b> Zielen ` +
-      `<span style="color:#94a3b8;">(Gleichstand zählt für das Ziel)</span></span>`;
+      `<p style="margin:0; font-size:12px;">Gewonnen gegen <strong>${won}</strong> von ` +
+      `<strong>${comparisons.length}</strong> Zielen (Gleichstand zählt für das Ziel)</p>`;
   }
 
   return content;
