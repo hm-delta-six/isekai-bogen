@@ -177,19 +177,25 @@ function promptRollOptions({ skillName, counterpart, targetNames, isGM }) {
   });
 }
 
+// Deutscher Genitiv: Javiro -> Javiros, Max -> Max'
+const possessive = (name) => (/[sßxz]$/i.test(name) ? `${name}'` : `${name}s`);
+
 // Keine Farben und keine Hintergründe: die Chat-Nachricht erbt das Styling von
 // Foundry, damit sie in hellen wie dunklen Themes lesbar bleibt. Hervorhebungen
-// laufen über <strong>, Schriftgröße und die Zeichen ✔ / ✘.
-function buildChatContent(own, comparisons) {
+// laufen über <strong> und Schriftgröße.
+//
+// Der Wurf wird immer aus Sicht des Auslösers gelesen: erst sein eigener Wurf,
+// dann der Gegenwurf, dann als eigener Satz, wer sich durchgesetzt hat.
+function buildChatContent(own, comparisons, ownerName) {
   let content =
-    `<p style="margin:0;">🎲 <strong>${own.skillName}</strong> (${own.attribute})</p>` +
-    `<p style="margin:2px 0; font-size:22px; font-weight:bold;">${own.total}</p>` +
-    `<p style="margin:0; font-size:11px;">${formatBreakdown(own)}</p>` +
-    (critLabel(own) ? `<p style="margin:2px 0 0 0;">${critLabel(own)}</p>` : "");
+    `<p style="margin:0 0 6px 0;">` +
+    `🎲 <strong>${ownerName}</strong> würfelt ${own.skillName} (${own.attribute}) ` +
+    `<strong>${own.total}</strong> ` +
+    `<span style="font-size:11px;">(${formatBreakdown(own)})</span>` +
+    critLabel(own) +
+    `</p>`;
 
   if (!comparisons.length) return content;
-
-  content += `<hr>`;
 
   let won = 0;
   for (const entry of comparisons) {
@@ -197,21 +203,23 @@ function buildChatContent(own, comparisons) {
     const success = own.total > opposed.total;
     if (success) won += 1;
 
-    const verdict = success ? `✔ <strong>gewonnen</strong>` : `✘ <strong>verloren</strong>`;
+    const winner = success ? ownerName : entry.name;
+    const loser = success ? entry.name : ownerName;
 
     content +=
-      `<p style="margin:0 0 6px 0;">` +
-      `🛡️ <strong>${entry.name}</strong> — ${opposed.skillName} (${opposed.attribute}): ` +
-      `<strong>${opposed.total}</strong>${critLabel(opposed)} → ${verdict}<br>` +
-      `<span style="font-size:11px;">${formatBreakdown(opposed)}` +
-      (entry.hasSkill ? "" : ` [Skill nicht vorhanden, Level 0]`) +
-      `</span></p>`;
+      `<p style="margin:0;">` +
+      `gegen ${possessive(entry.name)} ${opposed.skillName} (${opposed.attribute}) ` +
+      `<strong>${opposed.total}</strong> ` +
+      `<span style="font-size:11px;">(${formatBreakdown(opposed)}` +
+      (entry.hasSkill ? "" : `, Skill nicht vorhanden`) +
+      `)</span>${critLabel(opposed)}</p>` +
+      `<p style="margin:2px 0 8px 0;"><strong>${winner}</strong> setzt sich gegen ${loser} durch.</p>`;
   }
 
   if (comparisons.length > 1) {
     content +=
-      `<p style="margin:0; font-size:12px;">Gewonnen gegen <strong>${won}</strong> von ` +
-      `<strong>${comparisons.length}</strong> Zielen (Gleichstand zählt für das Ziel)</p>`;
+      `<p style="margin:0; font-size:12px;">${ownerName} setzt sich gegen <strong>${won}</strong> von ` +
+      `<strong>${comparisons.length}</strong> Zielen durch (Gleichstand zählt für das Ziel).</p>`;
   }
 
   return content;
@@ -260,9 +268,10 @@ export async function rollSkillCheck(actor, skillIndex) {
     }
   }
 
+  const speaker = ChatMessage.getSpeaker({ actor });
   const messageData = {
-    speaker: ChatMessage.getSpeaker({ actor }),
-    content: buildChatContent(own, comparisons),
+    speaker,
+    content: buildChatContent(own, comparisons, speaker.alias || actor.name),
     rolls: [own.roll, ...comparisons.map(c => c.result.roll)]
   };
 

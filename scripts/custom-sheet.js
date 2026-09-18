@@ -257,14 +257,14 @@ async function executeAttack(actor, weapon) {
     title: `Angriff mit ${weapon.name}`,
     content: `
       <form>
-        <div style="background: rgba(15,23,42,0.6); padding: 8px; border-radius: 4px; font-size: 12px; margin-bottom: 8px;">
+        <div style="font-size: 12px; margin-bottom: 8px;">
           <p>⚔️ <strong>Dein AW:</strong> ${actorAW} (${attackType}: ${governingAttrVal} + AW-Skill: ${awSkillLvl} + Waffen-Skill: ${weaponSkillLvl} + Temp: ${weaponTempBonus} + 10)</p>
           <p>🛡️ <strong>Ziel (${targetName}) VW:</strong> ${targetVW} ${targetedToken ? '(aus Ziel-Token)' : '(Standard)'}</p>
-          <p style="color: #38bdf8; margin-top: 4px;">🎯 <strong>Trefferchance:</strong> ${hitChance}% (Min 5% / Max 95%)</p>
-          <hr style="border: 0; border-top: 1px solid #334155; margin: 6px 0;">
+          <p style="margin-top: 4px;">🎯 <strong>Trefferchance:</strong> ${hitChance}% (Min 5% / Max 95%)</p>
+          <hr>
           <p>💥 <strong>Schaden-Formel:</strong> (${diceType} × Machtfaktor ${m}) + ${flatDamageBonus}</p>
         </div>
-        <p style="font-size: 11px; color: #94a3b8;">Es wird ein W100 für den Treffer und ${diceType} für den Schaden gewürfelt.</p>
+        <p style="font-size: 11px;">Es wird ein W100 für den Treffer und ${diceType} für den Schaden gewürfelt.</p>
       </form>
     `,
     buttons: {
@@ -277,8 +277,8 @@ async function executeAttack(actor, weapon) {
           const isHit = rollVal <= hitChance;
 
           const hitResultText = isHit 
-            ? `<span style="color: #22c55e; font-weight: bold;">TREFFER! (W100: ${rollVal} vs. Chance: ${hitChance}%)</span>` 
-            : `<span style="color: #ef4444; font-weight: bold;">VERFEHLT! (W100: ${rollVal} vs. Chance: ${hitChance}%)</span>`;
+            ? `<strong>TREFFER! (W100: ${rollVal} vs. Chance: ${hitChance}%)</strong>` 
+            : `<strong>VERFEHLT! (W100: ${rollVal} vs. Chance: ${hitChance}%)</strong>`;
 
           const damageRoll = await new Roll(diceType).evaluate({async: true});
           const rawDiceValue = damageRoll.total;
@@ -288,16 +288,16 @@ async function executeAttack(actor, weapon) {
           let chatContent = `🎯 <strong>Angriff mit ${weapon.name} auf ${targetName}</strong><br>${hitResultText}<br><br>🎲 <strong>Angriffswurf:</strong> ${attackRoll.result} = <b>${rollVal}</b>`;
 
           if (!targetedToken || isHit) {
-            chatContent += `<hr style="border: 0; border-top: 1px solid #334155; margin: 8px 0;">` +
-                           `<div style="background: rgba(15, 23, 42, 0.7); padding: 8px; border-radius: 6px; border: 1px solid #334155;">` +
-                           `💥 <strong>Schaden (${weapon.name}):</strong> <span style="color: #38bdf8; font-size: 20px; font-weight: bold; display: inline-block; margin-top: 2px;">${finalDamage}</span><br>` +
-                           `<hr style="border: 0; border-top: 1px dashed #334155; margin: 6px 0;">` +
-                           `<span style="color: #cbd5e1; font-size: 11px; line-height: 1.4; display: block;">` +
+            chatContent += `<hr>` +
+                           `<div>` +
+                           `💥 <strong>Schaden (${weapon.name}):</strong> <span style="font-size: 20px; font-weight: bold; display: inline-block; margin-top: 2px;">${finalDamage}</span><br>` +
+                           `<hr>` +
+                           `<span style="font-size: 11px; line-height: 1.4; display: block;">` +
                            `🎲 <strong>Gewürfelt:</strong> ${damageRoll.result} (${diceType}) × Faktor ${m} = <b>${multipliedDiceValue}</b><br>` +
-                           `➕ <strong>Bonus:</strong> +${flatDamageBonus} <span style="color: #94a3b8;">[STR: ${str}, AW-Skill/2: ${halfAwSkill}, Bonus: ${wBonus}]</span>` +
+                           `➕ <strong>Bonus:</strong> +${flatDamageBonus} <span>[STR: ${str}, AW-Skill/2: ${halfAwSkill}, Bonus: ${wBonus}]</span>` +
                            `</span></div>`;
           } else {
-            chatContent += `<br><span style="color: #94a3b8; font-size: 11px;">(Kein Schaden, da verfehlt)</span>`;
+            chatContent += `<br><span style="font-size: 11px;">(Kein Schaden, da verfehlt)</span>`;
           }
 
           await ChatMessage.create({
