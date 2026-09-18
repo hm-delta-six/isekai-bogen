@@ -382,6 +382,49 @@
           {{/each}}
         </tbody>
       </table>
+
+      <!-- RÜSTUNGS TABELLE -->
+      <div class="section-header">
+        <span>Rüstung (gesamte DR: {{derived.totalDR}})</span>
+        <a class="add-armor" title="Rüstung hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <div style="font-size: 11px; margin-bottom: 6px;">
+        Abnutzung bei Treffern:
+        <select style="width: auto;" name="system.armorWear">
+          {{selectOptions armorWearChoices selected=actor.system.armorWear}}
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Rüstung</th>
+            <th style="width: 100px;">Rarität</th>
+            <th style="width: 45px;">DR</th>
+            <th style="width: 70px;">Haltbarkeit</th>
+            <th>Beschreibung</th>
+            <th style="width: 20px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each actor.system.armors as |armor index|}}
+            <tr>
+              <td><input type="text" style="width:100%;" name="system.armors.{{index}}.name" value="{{armor.name}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.armors.{{index}}.rarity">
+                  {{selectOptions ../rarityChoices selected=armor.rarity}}
+                </select>
+              </td>
+              <td><input type="number" class="num-short" name="system.armors.{{index}}.dr" value="{{armor.dr}}"/></td>
+              <td>
+                <input type="number" class="num-short" name="system.armors.{{index}}.durability" value="{{armor.durability}}"/>
+                {{#unless armor.intact}}<strong>defekt</strong>{{/unless}}
+              </td>
+              <td><input type="text" style="width:100%;" name="system.armors.{{index}}.description" value="{{armor.description}}"/></td>
+              <td><a class="delete-armor btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
     </div>
 
     <!-- TAB 4: TITEL -->

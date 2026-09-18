@@ -1,4 +1,8 @@
 import { rollSkillCheck } from "./skill-check.js";
+import {
+  ARMOR_WEAR_CHOICES, applyDamage, armorState, describeDamage,
+  isIntact, registerDamageSocket, resolveDamage
+} from "./damage.js";
 
 const RARITY_MAP = {
   "Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5, "Transzendiert": 6
@@ -40,6 +44,8 @@ class MeinHausregelSheet extends ActorSheet {
       "HP": "HP", "MP": "MP", "AP": "AP"
     };
 
+    context.armorWearChoices = ARMOR_WEAR_CHOICES;
+
     context.diceChoices = {
       "1d4": "W4", "1d6": "W6", "1d8": "W8", "1d10": "W10", "1d12": "W12"
     };
@@ -49,7 +55,7 @@ class MeinHausregelSheet extends ActorSheet {
     const int = getAttr("INT"), wis = getAttr("WIS"), cha = getAttr("CHA");
 
     // SICHERSTELLEN, DASS ALLE LISTEN (inkl. Titel) EXISTIEREN UND RICHTIG UMGESETZT WERDEN
-    const listen = ['skills', 'equipment', 'weapons', 'titles', 'isekaiSkills'];
+    const listen = ['skills', 'equipment', 'weapons', 'titles', 'isekaiSkills', 'armors'];
     listen.forEach(key => {
       if (!systemData[key]) {
         systemData[key] = [];
@@ -107,6 +113,13 @@ class MeinHausregelSheet extends ActorSheet {
       skill.cap = (attrVal * 3) + (skillRarityR * 5);
     });
 
+    // RÜSTUNG: DR-SUMME UND ZUSTAND JE TEIL
+    systemData.armors.forEach(armor => {
+      if (!armor) return;
+      armor.intact = isIntact(armor);
+    });
+    const totalDR = armorState(context.actor).totalDR;
+
     // WAFFENSCHADEN BERECHNEN
     const halfAwSkillCeil = Math.ceil(awSkillLvl / 2);
     systemData.weapons.forEach(w => {
@@ -120,13 +133,30 @@ class MeinHausregelSheet extends ActorSheet {
     });
 
     // AKTEUR-MAX-WERTE DIREKT IN DIE DATENBANK SCHREIBEN (Falls abweichend)
-    if (systemData.attributes?.hp?.max !== hpMax || 
-        systemData.resources?.mp?.max !== mpMax || 
-        systemData.resources?.ap?.max !== apMax) {
+    // Ohne gesetzten value-Wert bleiben die Token-Balken leer, deshalb wird er
+    // beim ersten Mal auf max gesetzt und danach nur noch nach unten geklemmt.
+    const syncPool = (current, max) => {
+      const value = current === undefined || current === null ? max : Number(current);
+      return Math.max(0, Math.min(value, max));
+    };
+
+    const hpValue = syncPool(systemData.attributes?.hp?.value, hpMax);
+    const mpValue = syncPool(systemData.resources?.mp?.value, mpMax);
+    const apValue = syncPool(systemData.resources?.ap?.value, apMax);
+
+    if (systemData.attributes?.hp?.max !== hpMax ||
+        systemData.resources?.mp?.max !== mpMax ||
+        systemData.resources?.ap?.max !== apMax ||
+        systemData.attributes?.hp?.value !== hpValue ||
+        systemData.resources?.mp?.value !== mpValue ||
+        systemData.resources?.ap?.value !== apValue) {
       this.actor.update({
         "system.attributes.hp.max": hpMax,
+        "system.attributes.hp.value": hpValue,
         "system.resources.mp.max": mpMax,
-        "system.resources.ap.max": apMax
+        "system.resources.mp.value": mpValue,
+        "system.resources.ap.max": apMax,
+        "system.resources.ap.value": apValue
       }, { render: false });
     }
 
@@ -138,7 +168,7 @@ class MeinHausregelSheet extends ActorSheet {
       }, { render: false });
     }         
 
-    context.derived = { hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget };
+    context.derived = { hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget, totalDR };
     return context;
   }
 
@@ -212,6 +242,10 @@ class MeinHausregelSheet extends ActorSheet {
     // WAFFEN
     html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", bonus: 0, description: "" }));
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
+
+    // RÜSTUNG
+    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, description: "" }));
+    html.find('.delete-armor').click(ev => handleArrayAction(ev, 'armors', 'delete'));
 
     // TITEL
     html.find('.add-title').click(ev => handleArrayAction(ev, 'titles', 'add', { name: "Neuer Titel", type: "STR", bonus: 0, comment: "" }));
@@ -300,6 +334,14 @@ async function executeAttack(actor, weapon) {
             chatContent += `<br><span style="font-size: 11px;">(Kein Schaden, da verfehlt)</span>`;
           }
 
+          // TREFFER AUF EIN MARKIERTES ZIEL: DR ABZIEHEN, REST VON DEN HP,
+          // ÜBERSCHUSS VON DER HALTBARKEIT DER RÜSTUNG
+          if (targetActor && isHit) {
+            const resolved = resolveDamage(targetActor, finalDamage);
+            chatContent += `<hr>` + describeDamage(targetName, resolved);
+            await applyDamage(targetActor, resolved);
+          }
+
           await ChatMessage.create({
             speaker: ChatMessage.getSpeaker({ actor: actor }),
             content: chatContent,
@@ -318,3 +360,21 @@ Hooks.once('init', () => {
     label: "ISEKAI Hausregel-Bogen"
   });
 });
+
+// MP und AP gehören nicht zum pf1-Datenmodell und tauchen deshalb weder in der
+// Token-Konfiguration noch in Bar Brawl auf. Hier werden sie nachgetragen.
+// setup statt init, damit die Liste des Systems bereits steht.
+Hooks.once('setup', () => {
+  const tracked = CONFIG.Actor?.trackableAttributes;
+  if (!tracked) return;
+
+  const bars = ["attributes.hp", "resources.mp", "resources.ap"];
+  for (const config of Object.values(tracked)) {
+    config.bar ??= [];
+    for (const path of bars) {
+      if (!config.bar.includes(path)) config.bar.push(path);
+    }
+  }
+});
+
+Hooks.once('ready', () => registerDamageSocket());
