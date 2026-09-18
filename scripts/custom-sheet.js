@@ -1,4 +1,4 @@
-import { attackFromMacro, executeAttack } from "./attack.js";
+import { attackFromMacro, damageBonus, executeAttack } from "./attack.js";
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorState, isIntact, registerDamageSocket } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
@@ -127,13 +127,11 @@ class MeinHausregelSheet extends ActorSheet {
     }, { "": "— kein Skill —" });
 
     // WAFFENSCHADEN BERECHNEN
-    const halfAwSkillCeil = Math.ceil(awSkillLvl / 2);
     systemData.weapons.forEach(w => {
       if (!w) return;
       const m = MACHTFAKTOR_MAP[w.rarity] || 1;
       const diceLabel = context.diceChoices[w.dice] || "W6";
-      const bonusVal = Number(w.bonus || 0);
-      const flatBonus = str + halfAwSkillCeil + bonusVal;
+      const flatBonus = damageBonus(context.actor, w);
       const bonusStr = flatBonus >= 0 ? `+ ${flatBonus}` : `- ${Math.abs(flatBonus)}`;
       w.calculatedDamage = `${diceLabel} × ${m} ${bonusStr}`;
     });

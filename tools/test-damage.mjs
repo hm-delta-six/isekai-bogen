@@ -58,7 +58,7 @@ check("HP-Boden bei 0", resolveDamage(e, 50).hpAfter, 0);
 
 
 // --- Waffen-Skill aus der Skill-Liste ---
-const { weaponSkill } = await import("../scripts/attack.js");
+const { weaponSkill, damageBonus } = await import("../scripts/attack.js");
 
 const held = {
   system: {
@@ -76,6 +76,22 @@ check("ohne Verknuepfung: Level 0", weaponSkill(held, { skillName: "" }).level, 
 check("ohne Verknuepfung: STR", weaponSkill(held, {}).attribute, "STR");
 check("unbekannter Skill wird gemeldet", weaponSkill(held, { skillName: "Bogen" }).missing, true);
 check("unbekannter Skill zaehlt 0", weaponSkill(held, { skillName: "Bogen" }).level, 0);
+
+
+// --- Schadensbonus: STR + halber AW-Skill + Waffen-Skill + Waffenbonus ---
+const kaempfer = {
+  system: {
+    abilities: { STR: { value: 6 } },
+    boni: { awSkill: 5 },
+    titles: [{ type: "STR", bonus: 2 }],
+    isekaiSkills: [{ name: "Morgenstern", level: 4, attribute: "STR" }]
+  }
+};
+
+// STR 6+2=8, halber AW-Skill ceil(5/2)=3, Skill 4, Bonus 3 => 18
+check("Schadensbonus mit Skill", damageBonus(kaempfer, { skillName: "Morgenstern", bonus: 3 }), 18);
+check("Schadensbonus ohne Skill", damageBonus(kaempfer, { bonus: 3 }), 14);
+check("Schadensbonus ohne Waffenbonus", damageBonus(kaempfer, { skillName: "Morgenstern" }), 15);
 
 
 // --- Token-Balken: Erweiterung der Attributliste ---

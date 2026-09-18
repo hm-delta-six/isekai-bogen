@@ -60,6 +60,14 @@ function attackValue(actor, weapon) {
     Number(weapon.bonus || 0);
 }
 
+// Schaden = Würfel × Machtfaktor + STR + halber AW-Skill + Waffen-Skill + Bonus
+export function damageBonus(actor, weapon) {
+  return effectiveAttribute(actor, "STR") +
+    Math.ceil(Number(actor?.system?.boni?.awSkill || 0) / 2) +
+    weaponSkill(actor, weapon).level +
+    Number(weapon?.bonus || 0);
+}
+
 function attackBreakdown(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
   const parts = [
@@ -194,7 +202,8 @@ export async function executeAttack(actor, weapon = null) {
           const strength = effectiveAttribute(actor, "STR");
           const halfAwSkill = Math.ceil(Number(actor.system?.boni?.awSkill || 0) / 2);
           const weaponBonus = Number(used.bonus || 0);
-          const flatBonus = strength + halfAwSkill + weaponBonus;
+          const skill = weaponSkill(actor, used);
+          const flatBonus = damageBonus(actor, used);
           const diceType = used.dice || "1d6";
 
           const damageRoll = await new Roll(`(${diceType} * ${factor}) + ${flatBonus}`).evaluate({ async: true });
@@ -212,7 +221,8 @@ export async function executeAttack(actor, weapon = null) {
               `💥 <strong>Schaden (${used.name}):</strong><br>` +
               `<span style="font-size: 26px; font-weight: bold; line-height: 1.2;">${damageRoll.total}</span><br>` +
               `<small>Rechenweg: (${damageRoll.result}) [${diceType} × Machtfaktor ${factor}] ` +
-              `+ STR (${strength}) + Halber AW-Skill (${halfAwSkill}) + Bonus (${weaponBonus})</small>`;
+              `+ STR (${strength}) + Halber AW-Skill (${halfAwSkill}) ` +
+              `+ ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})</small>`;
           } else {
             content += `<br><span style="font-size: 11px;">(Kein Schaden, da verfehlt)</span>`;
           }

@@ -53,6 +53,13 @@ AW = 10 + AW-Skill + Skill-Level der Waffe + steuerndes Attribut des Skills
      + allgemeine Boni + Waffenbonus
 ```
 
+Derselbe Skill zaehlt auch auf den Schaden:
+
+```
+Schaden = Wuerfel x Machtfaktor + STR + halber AW-Skill
+          + Skill-Level der Waffe + Waffenbonus
+```
+
 Das Level wird nicht an der Waffe gepflegt. Steigt der Skill in der Skill-Liste,
 steigt der Angriffswert sofort mit. Ohne Verknuepfung zaehlt der Skill als 0 und
 das Attribut ist STR.
