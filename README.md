@@ -30,6 +30,11 @@ ohne pf1-Klassen auf 0 setzt. Ein Balken darauf zeigt 45/0 und bleibt leer.
 Damit die Felder ueberhaupt existieren, muss der Bogen eines Charakters einmal
 geoeffnet worden sein.
 
+Die drei Pfade stehen sowohl in der Token-Konfiguration eines Akteurs als auch
+in der Standard-Token-Konfiguration zur Auswahl. Letztere kennt keinen Akteur
+und leitet ihre Liste sonst aus dem pf1-Datenmodell ab, in dem die Felder nicht
+vorkommen; scripts/token-bars.js erweitert deshalb die Ermittlung selbst.
+
 ## Funktionen
 
 - Abgeleitete Werte (HP/MP/AP, AW, VW, Initiative, Skill-Caps, Waffenschaden) aus Rasse, Klasse, Raritaet und Titel-Boni

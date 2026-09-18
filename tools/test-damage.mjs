@@ -77,5 +77,31 @@ check("ohne Verknuepfung: STR", weaponSkill(held, {}).attribute, "STR");
 check("unbekannter Skill wird gemeldet", weaponSkill(held, { skillName: "Bogen" }).missing, true);
 check("unbekannter Skill zaehlt 0", weaponSkill(held, { skillName: "Bogen" }).level, 0);
 
+
+// --- Token-Balken: Erweiterung der Attributliste ---
+globalThis.CONFIG = { Actor: { trackableAttributes: { character: { bar: ["attributes.hp"], value: [] } } }, Token: {} };
+globalThis.TokenDocument = class {
+  static getTrackedAttributes(data, path = []) {
+    return path.length ? { bar: [], value: [] } : { bar: [["attributes", "hp"]], value: [["details", "xp"]] };
+  }
+};
+
+const { registerTokenBars } = await import("../scripts/token-bars.js");
+registerTokenBars();
+registerTokenBars(); // zweimal: darf nichts doppeln
+
+const dotted = (result) => result.bar.map(p => p.join("."));
+
+check("Balken ergaenzt", dotted(TokenDocument.getTrackedAttributes()),
+  ["attributes.hp", "resources.hp", "resources.mp", "resources.ap"]);
+check("keine Dubletten bei mehrfachem Registrieren",
+  dotted(TokenDocument.getTrackedAttributes()).length, 4);
+check("Rekursion bleibt unberuehrt",
+  dotted(TokenDocument.getTrackedAttributes({}, ["resources"])), []);
+check("value-Liste unveraendert",
+  TokenDocument.getTrackedAttributes().value.map(p => p.join(".")), ["details.xp"]);
+check("Systemliste ergaenzt", CONFIG.Actor.trackableAttributes.character.bar,
+  ["attributes.hp", "resources.hp", "resources.mp", "resources.ap"]);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

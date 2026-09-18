@@ -1,6 +1,7 @@
 import { attackFromMacro, executeAttack } from "./attack.js";
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorState, isIntact, registerDamageSocket } from "./damage.js";
+import { registerTokenBars } from "./token-bars.js";
 
 const RARITY_MAP = {
   "Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5, "Transzendiert": 6
@@ -267,21 +268,7 @@ Hooks.once('init', () => {
   });
 });
 
-// MP und AP gehören nicht zum pf1-Datenmodell und tauchen deshalb weder in der
-// Token-Konfiguration noch in Bar Brawl auf. Hier werden sie nachgetragen.
-// setup statt init, damit die Liste des Systems bereits steht.
-Hooks.once('setup', () => {
-  const tracked = CONFIG.Actor?.trackableAttributes;
-  if (!tracked) return;
-
-  const bars = ["resources.hp", "resources.mp", "resources.ap"];
-  for (const config of Object.values(tracked)) {
-    config.bar ??= [];
-    for (const path of bars) {
-      if (!config.bar.includes(path)) config.bar.push(path);
-    }
-  }
-});
+Hooks.once('setup', () => registerTokenBars());
 
 Hooks.once('ready', () => {
   registerDamageSocket();
