@@ -1,0 +1,422 @@
+<form class="{{cssClass}} isekai-sheet" autocomplete="off">
+  <style>
+    .isekai-sheet {
+      background: #1e293b !important;
+      color: #f8fafc !important;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      padding: 12px;
+    }
+    .isekai-sheet input, .isekai-sheet select {
+      background: #0f172a !important;
+      color: #f8fafc !important;
+      border: 1px solid #334155 !important;
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 12px;
+    }
+    .isekai-sheet input:focus, .isekai-sheet select:focus {
+      border-color: #38bdf8 !important;
+    }
+    .isekai-sheet input[type="number"].num-short {
+      width: 42px !important;
+      text-align: center;
+    }
+    .isekai-sheet .header-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(30, 41, 59, 0.7);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 6px;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .isekai-sheet .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 10px 0 4px 0;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 2px;
+    }
+    .isekai-sheet .section-header a {
+      color: #38bdf8;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .isekai-sheet .attr-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+    }
+    .isekai-sheet .attr-card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 4px;
+      text-align: center;
+    }
+    .isekai-sheet .attr-card label {
+      display: block;
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: bold;
+    }
+    .isekai-sheet table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .isekai-sheet table th {
+      color: #94a3b8;
+      font-size: 11px;
+      text-align: left;
+      padding: 4px;
+    }
+    .isekai-sheet table td {
+      padding: 2px 4px;
+    }
+    .isekai-sheet .btn-del {
+      color: #ef4444;
+      cursor: pointer;
+      text-align: center;
+    }
+    .isekai-sheet .btn-roll {
+      color: #38bdf8;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    /* Tab-Leiste Navigation */
+    .isekai-sheet .sheet-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid #334155;
+      margin: 10px 0;
+      padding-bottom: 0;
+    }
+    .isekai-sheet .sheet-tabs .item {
+      padding: 6px 14px;
+      background: #0f172a;
+      color: #94a3b8;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      border: 1px solid #334155;
+      border-bottom: none;
+      text-decoration: none;
+    }
+    .isekai-sheet .sheet-tabs .item.active {
+      background: rgba(30, 41, 59, 0.9);
+      color: #38bdf8;
+      border-color: #38bdf8;
+      border-bottom: 2px solid #1e293b;
+      margin-bottom: -2px;
+    }
+    .isekai-sheet .tab {
+      display: none;
+    }
+    .isekai-sheet .tab.active {
+      display: block;
+    }
+  </style>
+
+  <!-- KOPFBEREICH: LINKE INFOS & RECHTES TOKEN-BILD -->
+  <div style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 6px;">
+    
+    <!-- Linke Spalte -->
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+      
+      <!-- CHARAKTERNAME -->
+      <div class="header-row" style="margin-bottom: 0; flex: 1;">
+        <strong style="color: #38bdf8;">Name:</strong>
+        <input type="text" name="name" value="{{actor.name}}" placeholder="Name" style="flex: 1; font-weight: bold;"/>
+      </div>
+
+      <!-- RASSE -->
+      <div class="header-row" style="margin-bottom: 0; flex: 1;">
+        <strong style="color: #38bdf8;">Rasse:</strong>
+        <input type="text" name="system.details.race.name" value="{{actor.system.details.race.name}}" placeholder="Rasse" style="flex: 1; min-width: 70px;"/>
+        <select name="system.details.race.rarity" style="width: 90px;">
+          {{selectOptions rarityChoices selected=actor.system.details.race.rarity}}
+        </select>
+        <span style="color:#94a3b8;">Stufe:</span>
+        <input type="number" class="num-short" name="system.details.race.level" value="{{actor.system.details.race.level}}"/>
+      </div>
+
+      <!-- KLASSE -->
+      <div class="header-row" style="margin-bottom: 0; flex: 1;">
+        <strong style="color: #38bdf8;">Klasse:</strong>
+        <input type="text" name="system.details.class.name" value="{{actor.system.details.class.name}}" placeholder="Klasse" style="flex: 1; min-width: 70px;"/>
+        <select name="system.details.class.rarity" style="width: 90px;">
+          {{selectOptions rarityChoices selected=actor.system.details.class.rarity}}
+        </select>
+        <span style="color:#94a3b8;">Stufe:</span>
+        <input type="number" class="num-short" name="system.details.class.level" value="{{actor.system.details.class.level}}"/>
+      </div>
+
+    </div>
+
+    <!-- Rechte Spalte: EP-Felder & Token-Bild -->
+    <div style="display: flex; gap: 6px;">
+      
+      <!-- ERFAHRUNGSPUNKTE (Aktuell & Nächster Level untereinander mit Label darüber im Attribut-Card Stil) -->
+      <div style="display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+        
+        <!-- Aktuelle EP -->
+        <div class="attr-card" style="display: flex; flex-direction: column; justify-content: center; height: 44px; padding: 2px 6px;">
+          <label style="font-size: 9px; color: #94a3b8; font-weight: bold; margin-bottom: 2px; text-transform: uppercase;">EP Aktuell</label>
+          <input type="number" name="system.details.xp.value" value="{{actor.system.details.xp.value}}" placeholder="0" style="width: 75px; text-align: center;"/>
+        </div>
+
+        <!-- Nächster Level (Nur Anzeige, nicht editierbar, berechnet aus Rasse + Klasse) -->
+        <div class="attr-card" style="display: flex; flex-direction: column; justify-content: center; height: 44px; padding: 2px 6px;" title="Benötigte EP für die nächste Stufe (Basierend auf Rassenstufe + Klassenstufe)">
+          <label style="font-size: 9px; color: #94a3b8; font-weight: bold; margin-bottom: 2px; text-transform: uppercase;">Nächster Lvl</label>
+          <div style="width: 75px; text-align: center; background: #0f172a; color: #38bdf8; font-weight: bold; border: 1px solid #334155; border-radius: 5px; padding: 3px 0; font-size: 12px; margin: 0 auto;">{{derived.nextXpTarget}}</div>
+        </div>
+
+      </div>
+
+      <!-- Token-Bild -->
+      <div style="width: 94px; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="font-size: 9px; color: #94a3b8; margin-bottom: 2px; text-align: center; text-transform: uppercase; font-weight: bold;">Token</div>
+        <div class="profile-img" style="width: 82px; height: 82px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Klicken, um Bild auszuwählen oder hochzuladen">
+          <img src="{{actor.img}}" alt="{{actor.name}}" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;" />
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- TAB NAVIGATION -->
+  <nav class="sheet-tabs tabs" data-group="primary">
+    <a class="item active" data-tab="combat">Kampf & Waffen</a>
+    <a class="item" data-tab="skills">Skills</a>
+    <a class="item" data-tab="equipment">Ausrüstung</a>
+    <a class="item" data-tab="titles">Titel</a>
+  </nav>
+
+  <section class="sheet-body">
+
+    <!-- TAB 1: KAMPF & WAFFEN -->
+    <div class="tab active" data-group="primary" data-tab="combat">
+      <!-- ATTRIBUTE -->
+      <div class="section-header"><span>Attribute</span></div>
+      <div class="attr-grid">
+        <div class="attr-card">
+          <label>STR <small style="color:#38bdf8;">({{effectiveAbilities.STR}})</small></label>
+          <input type="number" class="num-short" name="system.abilities.STR.value" value="{{actor.system.abilities.STR.value}}"/>
+        </div>
+        <div class="attr-card">
+          <label>DEX <small style="color:#38bdf8;">({{effectiveAbilities.DEX}})</small></label>
+          <input type="number" class="num-short" name="system.abilities.DEX.value" value="{{actor.system.abilities.DEX.value}}"/>
+        </div>
+        <div class="attr-card">
+          <label>CON <small style="color:#38bdf8;">({{effectiveAbilities.CON}})</small></label>
+          <input type="number" class="num-short" name="system.abilities.CON.value" value="{{actor.system.abilities.CON.value}}"/>
+        </div>
+        <div class="attr-card">
+          <label>INT <small style="color:#38bdf8;">({{effectiveAbilities.INT}})</small></label>
+          <input type="number" class="num-short" name="system.abilities.INT.value" value="{{actor.system.abilities.INT.value}}"/>
+        </div>
+        <div class="attr-card">
+          <label>WIS <small style="color:#38bdf8;">({{effectiveAbilities.WIS}})</small></label>
+          <input type="number" class="num-short" name="system.abilities.WIS.value" value="{{actor.system.abilities.WIS.value}}"/>
+        </div>
+        <div class="attr-card">
+          <label>CHA <small style="color:#38bdf8;">({{effectiveAbilities.CHA}})</small></label>
+          <input type="number" class="num-short" name="system.abilities.CHA.value" value="{{actor.system.abilities.CHA.value}}"/>
+        </div>
+      </div>
+
+      <!-- VITALWERTE -->
+      <div class="section-header"><span>Vitalwerte</span></div>
+      <div class="header-row" style="justify-content: space-between;">
+        <div><strong>HP:</strong> <input type="number" class="num-short" name="system.resources.hp.value" value="{{actor.system.resources.hp.value}}"/> / <strong style="color:#38bdf8;">{{derived.hpMax}}</strong> <small style="color:#94a3b8;">(+Boni: <input type="number" class="num-short" name="system.boni.hp" value="{{actor.system.boni.hp}}"/>)</small></div>
+        <div><strong>MP:</strong> <input type="number" class="num-short" name="system.resources.mp.value" value="{{actor.system.resources.mp.value}}"/> / <strong style="color:#38bdf8;">{{derived.mpMax}}</strong> <small style="color:#94a3b8;">(+Boni: <input type="number" class="num-short" name="system.boni.mp" value="{{actor.system.boni.mp}}"/>)</small></div>
+        <div><strong>AP:</strong> <input type="number" class="num-short" name="system.resources.ap.value" value="{{actor.system.resources.ap.value}}"/> / <strong style="color:#38bdf8;">{{derived.apMax}}</strong> <small style="color:#94a3b8;">(+Boni: <input type="number" class="num-short" name="system.boni.ap" value="{{actor.system.boni.ap}}"/>)</small></div>
+      </div>
+
+      <!-- KAMPFWERTE -->
+      <div class="section-header"><span>Kampfwerte</span></div>
+      <div class="header-row" style="justify-content: space-between; font-size: 12px;">
+        <div><strong>Ini:</strong> <strong style="color:#38bdf8;">{{derived.initTotal}}</strong> <small style="color:#94a3b8;">(DEX {{effectiveAbilities.DEX}} + Boni: <input type="number" class="num-short" name="system.boni.init" value="{{actor.system.boni.init}}"/>)</small></div>
+        <div><strong>AW:</strong> <strong style="color:#38bdf8;">{{derived.awTotal}}</strong> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.awSkill" value="{{actor.system.boni.awSkill}}"/> + STR {{effectiveAbilities.STR}} + Boni: <input type="number" class="num-short" name="system.boni.aw" value="{{actor.system.boni.aw}}"/>)</small></div>
+        <div><strong>VW:</strong> <strong style="color:#38bdf8;">{{derived.vwTotal}}</strong> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/> + DEX {{effectiveAbilities.DEX}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small></div>
+      </div>
+
+      <!-- WAFFEN TABELLE -->
+      <div class="section-header">
+        <span>Waffen & Angriffe</span>
+        <a class="add-weapon" title="Waffe hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20px;"></th>
+            <th>Waffe</th>
+            <th style="width: 100px;">Rarität</th>
+            <th style="width: 60px;">Würfel</th>
+            <th style="width: 45px;">Bonus</th>
+            <th style="width: 80px; text-align: center; color: #38bdf8;">Schaden</th>
+            <th>Beschreibung</th>
+            <th style="width: 20px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each actor.system.weapons as |weapon index|}}
+            <tr>
+              <td style="text-align: center;">
+                <a class="roll-weapon btn-roll" data-index="{{index}}" title="Angriff würfeln & Ziel-HP abziehen">
+                  <i class="fas fa-dice-d20"></i>
+                </a>
+              </td>
+              <td><input type="text" style="width:100%;" name="system.weapons.{{index}}.name" value="{{weapon.name}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.weapons.{{index}}.rarity">
+                  {{selectOptions ../rarityChoices selected=weapon.rarity}}
+                </select>
+              </td>
+              <td>
+                <select style="width:100%;" name="system.weapons.{{index}}.dice">
+                  {{selectOptions ../diceChoices selected=weapon.dice}}
+                </select>
+              </td>
+              <td><input type="number" class="num-short" name="system.weapons.{{index}}.bonus" value="{{weapon.bonus}}"/></td>
+              <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{weapon.calculatedDamage}}</td>
+              <td><input type="text" style="width:100%;" name="system.weapons.{{index}}.description" value="{{weapon.description}}"/></td>
+              <td><a class="delete-weapon btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 2: SKILLS -->
+    <div class="tab" data-group="primary" data-tab="skills">
+      <div class="section-header">
+        <span>Fertigkeiten / Skills</span>
+        <a class="add-skill" title="Skill hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20px;"></th>
+            <th>Skill</th>
+            <th style="width: 100px;">Rarität</th>
+            <th style="width: 45px;">Lvl</th>
+            <th style="width: 65px;">Attr.</th>
+            <th style="width: 40px; text-align:center;">Cap</th>
+            <th>Wirkung</th>
+            <th style="width: 20px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each actor.system.isekaiSkills as |skill index|}}
+            <tr>
+              <td style="text-align: center;">
+                <a class="roll-skill btn-roll" data-index="{{index}}" title="Skill-Probe würfeln (markierte Tokens = vergleichender Wurf)">
+                  <i class="fas fa-dice-d20"></i>
+                </a>
+              </td>
+              <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{index}}.name" value="{{skill.name}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.isekaiSkills.{{index}}.rarity">
+                  {{selectOptions ../rarityChoices selected=skill.rarity}}
+                </select>
+              </td>
+              <td><input type="number" class="num-short" name="system.isekaiSkills.{{index}}.level" value="{{skill.level}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.isekaiSkills.{{index}}.attribute">
+                  {{selectOptions ../attributeChoices selected=skill.attribute}}
+                </select>
+              </td>
+              <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{skill.cap}}</td>
+              <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{index}}.effect" value="{{skill.effect}}"/></td>
+              <td><a class="delete-skill btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 3: AUSRÜSTUNG -->
+    <div class="tab" data-group="primary" data-tab="equipment">
+      <div class="section-header">
+        <span>Ausrüstung</span>
+        <a class="add-equipment" title="Gegenstand hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Gegenstand</th>
+            <th style="width: 100px;">Rarität</th>
+            <th style="width: 45px;">Anz.</th>
+            <th>Wirkung / Werte</th>
+            <th style="width: 20px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each actor.system.equipment as |item index|}}
+            <tr>
+              <td><input type="text" style="width:100%;" name="system.equipment.{{index}}.name" value="{{item.name}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.equipment.{{index}}.rarity">
+                  {{selectOptions ../rarityChoices selected=item.rarity}}
+                </select>
+              </td>
+              <td><input type="number" class="num-short" name="system.equipment.{{index}}.quantity" value="{{item.quantity}}"/></td>
+              <td><input type="text" style="width:100%;" name="system.equipment.{{index}}.effect" value="{{item.effect}}"/></td>
+              <td><a class="delete-equipment btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TAB 4: TITEL -->
+    <div class="tab" data-group="primary" data-tab="titles">
+      <div class="section-header">
+        <span>Titel & Ehrungen</span>
+        <a class="add-title" title="Titel hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Titel</th>
+            <th style="width: 85px;">Typ</th>
+            <th style="width: 60px; text-align: center;">Bonus</th>
+            <th>Kommentar</th>
+            <th style="width: 20px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each actor.system.titles as |title index|}}
+            <tr>
+              <td><input type="text" style="width:100%;" name="system.titles.{{index}}.name" value="{{title.name}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.titles.{{index}}.type">
+                  {{selectOptions ../titleTypeChoices selected=title.type}}
+                </select>
+              </td>
+              <td style="text-align: center;"><input type="number" class="num-short" name="system.titles.{{index}}.bonus" value="{{title.bonus}}"/></td>
+              <td><input type="text" style="width:100%;" name="system.titles.{{index}}.comment" value="{{title.comment}}"/></td>
+              <td><a class="delete-title btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+</form>
