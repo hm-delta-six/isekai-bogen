@@ -61,7 +61,7 @@ export function resolveDamage(targetActor, rawDamage) {
   const absorbed = Math.min(damage, totalDR);
   const hpLoss = damage - absorbed;
 
-  const currentHP = Number(targetActor?.system?.attributes?.hp?.value || 0);
+  const currentHP = Number(targetActor?.system?.resources?.hp?.value || 0);
   const wear = wearArmor(targetActor, list, pieces, hpLoss);
 
   return {
@@ -85,8 +85,11 @@ async function applyLocally({ actorUuid, hpLoss, wear }) {
   const update = {};
 
   if (hpLoss > 0) {
-    const current = Number(actor.system?.attributes?.hp?.value || 0);
-    update["system.attributes.hp.value"] = Math.max(0, current - hpLoss);
+    const current = Number(actor.system?.resources?.hp?.value || 0);
+    const next = Math.max(0, current - hpLoss);
+    update["system.resources.hp.value"] = next;
+    // Spiegel für pf1-Interna und Token-Balken, die auf attributes.hp zeigen.
+    update["system.attributes.hp.value"] = next;
   }
 
   if (wear?.length) {

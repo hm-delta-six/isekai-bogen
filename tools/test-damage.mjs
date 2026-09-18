@@ -1,7 +1,7 @@
 import { resolveDamage, armorState } from "../scripts/damage.js";
 
 const actor = (armors, hp = 100, wear = "highest") => ({
-  system: { armors, armorWear: wear, attributes: { hp: { value: hp } } }
+  system: { armors, armorWear: wear, resources: { hp: { value: hp } } }
 });
 
 let fails = 0;

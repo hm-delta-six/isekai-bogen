@@ -140,24 +140,27 @@ class MeinHausregelSheet extends ActorSheet {
       return Math.max(0, Math.min(value, max));
     };
 
-    const hpValue = syncPool(systemData.attributes?.hp?.value, hpMax);
+    // Massgeblich ist system.resources.hp — das Feld, in das der Bogen schreibt.
+    // pf1 legt daneben ein eigenes attributes.hp an, das bei 0 stehen bleibt;
+    // es wird nur noch gespiegelt, damit Token-Balken auf beiden Pfaden stimmen.
+    const hpValue = syncPool(systemData.resources?.hp?.value, hpMax);
     const mpValue = syncPool(systemData.resources?.mp?.value, mpMax);
     const apValue = syncPool(systemData.resources?.ap?.value, apMax);
 
-    if (systemData.attributes?.hp?.max !== hpMax ||
-        systemData.resources?.mp?.max !== mpMax ||
-        systemData.resources?.ap?.max !== apMax ||
-        systemData.attributes?.hp?.value !== hpValue ||
-        systemData.resources?.mp?.value !== mpValue ||
-        systemData.resources?.ap?.value !== apValue) {
-      this.actor.update({
-        "system.attributes.hp.max": hpMax,
-        "system.attributes.hp.value": hpValue,
-        "system.resources.mp.max": mpMax,
-        "system.resources.mp.value": mpValue,
-        "system.resources.ap.max": apMax,
-        "system.resources.ap.value": apValue
-      }, { render: false });
+    const pools = {
+      "system.resources.hp.max": hpMax,
+      "system.resources.hp.value": hpValue,
+      "system.resources.mp.max": mpMax,
+      "system.resources.mp.value": mpValue,
+      "system.resources.ap.max": apMax,
+      "system.resources.ap.value": apValue,
+      "system.attributes.hp.max": hpMax,
+      "system.attributes.hp.value": hpValue
+    };
+
+    if (Object.entries(pools).some(([path, value]) =>
+        foundry.utils.getProperty(context.actor, path) !== value)) {
+      this.actor.update(pools, { render: false });
     }
 
     if (systemData.attributes?.aw?.value !== awTotal || 
@@ -368,7 +371,7 @@ Hooks.once('setup', () => {
   const tracked = CONFIG.Actor?.trackableAttributes;
   if (!tracked) return;
 
-  const bars = ["attributes.hp", "resources.mp", "resources.ap"];
+  const bars = ["resources.hp", "resources.mp", "resources.ap", "attributes.hp"];
   for (const config of Object.values(tracked)) {
     config.bar ??= [];
     for (const path of bars) {
