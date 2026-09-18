@@ -93,6 +93,18 @@ check("Schadensbonus mit Skill", damageBonus(kaempfer, { skillName: "Morgenstern
 check("Schadensbonus ohne Skill", damageBonus(kaempfer, { bonus: 3 }), 14);
 check("Schadensbonus ohne Waffenbonus", damageBonus(kaempfer, { skillName: "Morgenstern" }), 15);
 
+// Das Schadensattribut folgt dem Skill: DEX 9+1=10, halber AW-Skill 3, Skill 7, Bonus 0 => 20
+const schuetze = {
+  system: {
+    abilities: { STR: { value: 2 }, DEX: { value: 9 } },
+    boni: { awSkill: 5 },
+    titles: [{ type: "DEX", bonus: 1 }],
+    isekaiSkills: [{ name: "Elbenbogen", level: 7, attribute: "DEX" }]
+  }
+};
+check("Schaden nutzt DEX des Skills", damageBonus(schuetze, { skillName: "Elbenbogen" }), 20);
+check("ohne Skill faellt es auf STR zurueck", damageBonus(schuetze, {}), 5);
+
 
 // --- Token-Balken: Erweiterung der Attributliste ---
 globalThis.CONFIG = { Actor: { trackableAttributes: { character: { bar: ["attributes.hp"], value: [] } } }, Token: {} };

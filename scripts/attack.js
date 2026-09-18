@@ -60,11 +60,13 @@ function attackValue(actor, weapon) {
     Number(weapon.bonus || 0);
 }
 
-// Schaden = Würfel × Machtfaktor + STR + halber AW-Skill + Waffen-Skill + Bonus
+// Schaden = Würfel × Machtfaktor + Attribut + halber AW-Skill + Waffen-Skill + Bonus
+// Das Attribut ist das des verknüpften Skills, ohne Verknüpfung STR.
 export function damageBonus(actor, weapon) {
-  return effectiveAttribute(actor, "STR") +
+  const skill = weaponSkill(actor, weapon);
+  return effectiveAttribute(actor, skill.attribute) +
     Math.ceil(Number(actor?.system?.boni?.awSkill || 0) / 2) +
-    weaponSkill(actor, weapon).level +
+    skill.level +
     Number(weapon?.bonus || 0);
 }
 
@@ -199,10 +201,10 @@ export async function executeAttack(actor, weapon = null) {
           const isHit = attack.value <= chance;
 
           const factor = MACHTFAKTOR_MAP[used.rarity] || 1;
-          const strength = effectiveAttribute(actor, "STR");
+          const skill = weaponSkill(actor, used);
+          const attributeValue = effectiveAttribute(actor, skill.attribute);
           const halfAwSkill = Math.ceil(Number(actor.system?.boni?.awSkill || 0) / 2);
           const weaponBonus = Number(used.bonus || 0);
-          const skill = weaponSkill(actor, used);
           const flatBonus = damageBonus(actor, used);
           const diceType = used.dice || "1d6";
 
@@ -221,7 +223,7 @@ export async function executeAttack(actor, weapon = null) {
               `💥 <strong>Schaden (${used.name}):</strong><br>` +
               `<span style="font-size: 26px; font-weight: bold; line-height: 1.2;">${damageRoll.total}</span><br>` +
               `<small>Rechenweg: (${damageRoll.result}) [${diceType} × Machtfaktor ${factor}] ` +
-              `+ STR (${strength}) + Halber AW-Skill (${halfAwSkill}) ` +
+              `+ ${skill.attribute} (${attributeValue}) + Halber AW-Skill (${halfAwSkill}) ` +
               `+ ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})</small>`;
           } else {
             content += `<br><span style="font-size: 11px;">(Kein Schaden, da verfehlt)</span>`;
