@@ -1,8 +1,6 @@
+import { attackFromMacro, executeAttack } from "./attack.js";
 import { rollSkillCheck } from "./skill-check.js";
-import {
-  ARMOR_WEAR_CHOICES, applyDamage, armorState, describeDamage,
-  isIntact, registerDamageSocket, resolveDamage
-} from "./damage.js";
+import { ARMOR_WEAR_CHOICES, armorState, isIntact, registerDamageSocket } from "./damage.js";
 
 const RARITY_MAP = {
   "Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5, "Transzendiert": 6
@@ -256,107 +254,6 @@ class MeinHausregelSheet extends ActorSheet {
   }
 }
 
-// ANGRIFFSMAGIE & WÜRFEL-FUNKTION (Mit verbesserter Schadensanzeige & Lesbarkeit)
-async function executeAttack(actor, weapon) {
-  const targetedToken = game.user.targets.first();
-  const targetActor = targetedToken?.actor;
-  const targetName = targetedToken ? targetedToken.name : (actor.system.target?.name || "Ziel");
-  
-  let targetVW = 10;
-  if (targetActor) {
-    targetVW = Number(targetActor.system.attributes?.vw?.value || 10);
-  } else {
-    targetVW = Number(actor.system.target?.vw || 10);
-  }
-
-  const attackType = weapon.attribute || "STR"; 
-  const governingAttrVal = Number(actor.system.abilities?.[attackType]?.value || 0);
-
-  const awSkillLvl = Number(actor.system.boni?.awSkill || 0);
-  const generalAwBonus = Number(actor.system.boni?.aw || 0);
-  
-  const weaponSkillLvl = Number(weapon.skill || 0);
-  const weaponTempBonus = Number(weapon.bonus || 0);
-
-  const actorAW = 10 + awSkillLvl + weaponSkillLvl + governingAttrVal + generalAwBonus + weaponTempBonus;
-
-  let hitChance = 50 * (actorAW / targetVW);
-  hitChance = Math.max(5, Math.min(95, Math.round(hitChance)));
-
-  const str = Number(actor.system.abilities?.STR?.value || 0);
-  const halfAwSkill = Math.ceil(awSkillLvl / 2);
-  const m = MACHTFAKTOR_MAP[weapon.rarity] || 1;
-  const wBonus = Number(weapon.bonus || 0);
-  const diceType = weapon.dice || "1d6";
-  const flatDamageBonus = str + halfAwSkill + wBonus;
-
-  new Dialog({
-    title: `Angriff mit ${weapon.name}`,
-    content: `
-      <form>
-        <div style="font-size: 12px; margin-bottom: 8px;">
-          <p>⚔️ <strong>Dein AW:</strong> ${actorAW} (${attackType}: ${governingAttrVal} + AW-Skill: ${awSkillLvl} + Waffen-Skill: ${weaponSkillLvl} + Temp: ${weaponTempBonus} + 10)</p>
-          <p>🛡️ <strong>Ziel (${targetName}) VW:</strong> ${targetVW} ${targetedToken ? '(aus Ziel-Token)' : '(Standard)'}</p>
-          <p style="margin-top: 4px;">🎯 <strong>Trefferchance:</strong> ${hitChance}% (Min 5% / Max 95%)</p>
-          <hr>
-          <p>💥 <strong>Schaden-Formel:</strong> (${diceType} × Machtfaktor ${m}) + ${flatDamageBonus}</p>
-        </div>
-        <p style="font-size: 11px;">Es wird ein W100 für den Treffer und ${diceType} für den Schaden gewürfelt.</p>
-      </form>
-    `,
-    buttons: {
-      roll: {
-        icon: '<i class="fas fa-dice-d20"></i>',
-        label: "Angreifen",
-        callback: async () => {
-          const attackRoll = await new Roll("1d100").evaluate({async: true});
-          const rollVal = attackRoll.total;
-          const isHit = rollVal <= hitChance;
-
-          const hitResultText = isHit 
-            ? `<strong>TREFFER! (W100: ${rollVal} vs. Chance: ${hitChance}%)</strong>` 
-            : `<strong>VERFEHLT! (W100: ${rollVal} vs. Chance: ${hitChance}%)</strong>`;
-
-          const damageRoll = await new Roll(diceType).evaluate({async: true});
-          const rawDiceValue = damageRoll.total;
-          const multipliedDiceValue = rawDiceValue * m;
-          const finalDamage = multipliedDiceValue + flatDamageBonus;
-
-          let chatContent = `🎯 <strong>Angriff mit ${weapon.name} auf ${targetName}</strong><br>${hitResultText}<br><br>🎲 <strong>Angriffswurf:</strong> ${attackRoll.result} = <b>${rollVal}</b>`;
-
-          if (!targetedToken || isHit) {
-            chatContent += `<hr>` +
-                           `<div>` +
-                           `💥 <strong>Schaden (${weapon.name}):</strong> <span style="font-size: 20px; font-weight: bold; display: inline-block; margin-top: 2px;">${finalDamage}</span><br>` +
-                           `<hr>` +
-                           `<span style="font-size: 11px; line-height: 1.4; display: block;">` +
-                           `🎲 <strong>Gewürfelt:</strong> ${damageRoll.result} (${diceType}) × Faktor ${m} = <b>${multipliedDiceValue}</b><br>` +
-                           `➕ <strong>Bonus:</strong> +${flatDamageBonus} <span>[STR: ${str}, AW-Skill/2: ${halfAwSkill}, Bonus: ${wBonus}]</span>` +
-                           `</span></div>`;
-          } else {
-            chatContent += `<br><span style="font-size: 11px;">(Kein Schaden, da verfehlt)</span>`;
-          }
-
-          // TREFFER AUF EIN MARKIERTES ZIEL: DR ABZIEHEN, REST VON DEN HP,
-          // ÜBERSCHUSS VON DER HALTBARKEIT DER RÜSTUNG
-          if (targetActor && isHit) {
-            const resolved = resolveDamage(targetActor, finalDamage);
-            chatContent += `<hr>` + describeDamage(targetName, resolved);
-            await applyDamage(targetActor, resolved);
-          }
-
-          await ChatMessage.create({
-            speaker: ChatMessage.getSpeaker({ actor: actor }),
-            content: chatContent,
-            rolls: [attackRoll, damageRoll]
-          });
-        }
-      }
-    },
-    default: "roll"
-  }).render(true);
-}
-
 Hooks.once('init', () => {
   Actors.registerSheet("pf1", MeinHausregelSheet, {
     makeDefault: false,
@@ -380,4 +277,13 @@ Hooks.once('setup', () => {
   }
 });
 
-Hooks.once('ready', () => registerDamageSocket());
+Hooks.once('ready', () => {
+  registerDamageSocket();
+
+  // Einstiegspunkte für die Makroleiste
+  game.isekaiBogen = {
+    attack: attackFromMacro,
+    attackWith: executeAttack,
+    rollSkillCheck
+  };
+});

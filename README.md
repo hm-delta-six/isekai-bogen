@@ -42,6 +42,27 @@ Heimlichkeit:DEX <-> Wahrnehmung:WIS
 Ein Paar pro Zeile. Das Attribut hinter dem Doppelpunkt ist optional und greift nur,
 wenn das Ziel den Skill nicht auf dem Bogen hat.
 
+## Aus der Makroleiste
+
+Ein Skript-Makro mit genau dieser Zeile:
+
+```js
+game.isekaiBogen.attack();
+```
+
+Es nimmt den ausgewaehlten Token, sonst den eigenen Charakter, und oeffnet
+denselben Angriffsdialog wie der Wuerfel im Bogen: Waffenauswahl (zuletzt
+benutzte Waffe vorausgewaehlt), Wurf-Modus Normal / Vorteil / Nachteil,
+Trefferchance live berechnet. Schaden, DR und Haltbarkeit laufen durch
+dieselbe Logik wie beim Angriff aus dem Bogen.
+
+Weitere Einstiegspunkte:
+
+```js
+game.isekaiBogen.attackWith(actor, weapon);  // feste Waffe
+game.isekaiBogen.rollSkillCheck(actor, 0);   // Skill nach Index
+```
+
 ## Release bauen
 
 ```
