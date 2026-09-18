@@ -146,8 +146,9 @@ class MeinHausregelSheet extends ActorSheet {
     };
 
     // Massgeblich ist system.resources.hp — das Feld, in das der Bogen schreibt.
-    // pf1 legt daneben ein eigenes attributes.hp an, das bei 0 stehen bleibt;
-    // es wird nur noch gespiegelt, damit Token-Balken auf beiden Pfaden stimmen.
+    // Nach system.attributes.hp wird bewusst NICHT gespiegelt: pf1 berechnet
+    // dessen max bei jeder Datenvorbereitung aus Klassen-Trefferwuerfeln neu und
+    // setzt es ohne pf1-Klassen auf 0. Ein Token-Balken darauf bleibt leer.
     const hpValue = syncPool(systemData.resources?.hp?.value, hpMax);
     const mpValue = syncPool(systemData.resources?.mp?.value, mpMax);
     const apValue = syncPool(systemData.resources?.ap?.value, apMax);
@@ -158,9 +159,7 @@ class MeinHausregelSheet extends ActorSheet {
       "system.resources.mp.max": mpMax,
       "system.resources.mp.value": mpValue,
       "system.resources.ap.max": apMax,
-      "system.resources.ap.value": apValue,
-      "system.attributes.hp.max": hpMax,
-      "system.attributes.hp.value": hpValue
+      "system.resources.ap.value": apValue
     };
 
     if (Object.entries(pools).some(([path, value]) =>
@@ -275,7 +274,7 @@ Hooks.once('setup', () => {
   const tracked = CONFIG.Actor?.trackableAttributes;
   if (!tracked) return;
 
-  const bars = ["resources.hp", "resources.mp", "resources.ap", "attributes.hp"];
+  const bars = ["resources.hp", "resources.mp", "resources.ap"];
   for (const config of Object.values(tracked)) {
     config.bar ??= [];
     for (const path of bars) {

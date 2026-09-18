@@ -12,6 +12,24 @@ https://github.com/hm-delta-six/isekai-bogen/releases/latest/download/module.jso
 
 Danach meldet Foundry neue Versionen selbst, ein Klick auf **Update** genuegt.
 
+## Token-Balken
+
+Die drei Pools liegen unter diesen Pfaden und sind in der Token-Konfiguration
+bzw. in Bar Brawl als Attribut einzutragen:
+
+```
+resources.hp
+resources.mp
+resources.ap
+```
+
+Nicht `attributes.hp` verwenden. Dieses Feld gehoert dem pf1-System, das sein
+max bei jeder Datenvorbereitung aus Klassen-Trefferwuerfeln neu berechnet und
+ohne pf1-Klassen auf 0 setzt. Ein Balken darauf zeigt 45/0 und bleibt leer.
+
+Damit die Felder ueberhaupt existieren, muss der Bogen eines Charakters einmal
+geoeffnet worden sein.
+
 ## Funktionen
 
 - Abgeleitete Werte (HP/MP/AP, AW, VW, Initiative, Skill-Caps, Waffenschaden) aus Rasse, Klasse, Raritaet und Titel-Boni

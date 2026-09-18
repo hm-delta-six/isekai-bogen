@@ -86,10 +86,7 @@ async function applyLocally({ actorUuid, hpLoss, wear }) {
 
   if (hpLoss > 0) {
     const current = Number(actor.system?.resources?.hp?.value || 0);
-    const next = Math.max(0, current - hpLoss);
-    update["system.resources.hp.value"] = next;
-    // Spiegel für pf1-Interna und Token-Balken, die auf attributes.hp zeigen.
-    update["system.attributes.hp.value"] = next;
+    update["system.resources.hp.value"] = Math.max(0, current - hpLoss);
   }
 
   if (wear?.length) {
