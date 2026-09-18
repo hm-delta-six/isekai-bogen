@@ -56,5 +56,26 @@ check("ohne Ruestung: kein Verschleiss", r5.wear, []);
 const e = actor([], 4);
 check("HP-Boden bei 0", resolveDamage(e, 50).hpAfter, 0);
 
+
+// --- Waffen-Skill aus der Skill-Liste ---
+const { weaponSkill } = await import("../scripts/attack.js");
+
+const held = {
+  system: {
+    isekaiSkills: [
+      { name: "Elbenschwert (Hieb)", level: 8, attribute: "DEX" },
+      { name: "Faustkampf", level: 3, attribute: "STR" }
+    ]
+  }
+};
+
+check("Skill verknuepft: Level", weaponSkill(held, { skillName: "Elbenschwert (Hieb)" }).level, 8);
+check("Skill verknuepft: Attribut", weaponSkill(held, { skillName: "Elbenschwert (Hieb)" }).attribute, "DEX");
+check("Gross-/Kleinschreibung egal", weaponSkill(held, { skillName: "  faustkampf " }).level, 3);
+check("ohne Verknuepfung: Level 0", weaponSkill(held, { skillName: "" }).level, 0);
+check("ohne Verknuepfung: STR", weaponSkill(held, {}).attribute, "STR");
+check("unbekannter Skill wird gemeldet", weaponSkill(held, { skillName: "Bogen" }).missing, true);
+check("unbekannter Skill zaehlt 0", weaponSkill(held, { skillName: "Bogen" }).level, 0);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

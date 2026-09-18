@@ -118,6 +118,13 @@ class MeinHausregelSheet extends ActorSheet {
     });
     const totalDR = armorState(context.actor).totalDR;
 
+    // AUSWAHLLISTE DER EIGENEN SKILLS FÜR DIE WAFFENTABELLE
+    context.weaponSkillChoices = systemData.isekaiSkills.reduce((choices, skill) => {
+      const name = String(skill?.name || "").trim();
+      if (name) choices[name] = `${name} (${Number(skill.level || 0)})`;
+      return choices;
+    }, { "": "— kein Skill —" });
+
     // WAFFENSCHADEN BERECHNEN
     const halfAwSkillCeil = Math.ceil(awSkillLvl / 2);
     systemData.weapons.forEach(w => {
@@ -241,7 +248,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-equipment').click(ev => handleArrayAction(ev, 'equipment', 'delete'));
 
     // WAFFEN
-    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", bonus: 0, description: "" }));
+    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", bonus: 0, description: "" }));
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
 
     // RÜSTUNG

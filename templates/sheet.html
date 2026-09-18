@@ -267,6 +267,7 @@
             <th>Waffe</th>
             <th style="width: 100px;">Rarität</th>
             <th style="width: 60px;">Würfel</th>
+            <th style="width: 110px;">Skill</th>
             <th style="width: 45px;">Bonus</th>
             <th style="width: 80px; text-align: center; color: #38bdf8;">Schaden</th>
             <th>Beschreibung</th>
@@ -290,6 +291,11 @@
               <td>
                 <select style="width:100%;" name="system.weapons.{{index}}.dice">
                   {{selectOptions ../diceChoices selected=weapon.dice}}
+                </select>
+              </td>
+              <td>
+                <select style="width:100%;" name="system.weapons.{{index}}.skillName" title="Skill, der den Angriffswert und das steuernde Attribut liefert">
+                  {{selectOptions ../weaponSkillChoices selected=weapon.skillName}}
                 </select>
               </td>
               <td><input type="number" class="num-short" name="system.weapons.{{index}}.bonus" value="{{weapon.bonus}}"/></td>

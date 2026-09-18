@@ -30,13 +30,48 @@ function usableWeapons(actor) {
       (entry.weapon.name || entry.weapon.dice || entry.weapon.attribute));
 }
 
+// Die Waffe verweist per Namen auf einen Skill des Charakters. Von dort kommen
+// Skill-Level und steuerndes Attribut — so gilt eine Skill-Steigerung sofort,
+// ohne das Level an der Waffe nachzupflegen.
+export function weaponSkill(actor, weapon) {
+  const wanted = String(weapon?.skillName || "").trim().toLowerCase();
+  if (!wanted) return { level: 0, attribute: "STR", name: null, missing: false };
+
+  const found = toArray(actor?.system?.isekaiSkills)
+    .find(skill => String(skill?.name || "").trim().toLowerCase() === wanted);
+
+  if (!found) return { level: 0, attribute: "STR", name: weapon.skillName, missing: true };
+
+  return {
+    level: Number(found.level || 0),
+    attribute: found.attribute || "STR",
+    name: found.name,
+    missing: false
+  };
+}
+
 function attackValue(actor, weapon) {
+  const skill = weaponSkill(actor, weapon);
   return 10 +
     Number(actor.system?.boni?.awSkill || 0) +
-    Number(weapon.skill || 0) +
-    effectiveAttribute(actor, weapon.attribute) +
+    skill.level +
+    effectiveAttribute(actor, skill.attribute) +
     Number(actor.system?.boni?.aw || 0) + bonusForType(actor, "AW") +
     Number(weapon.bonus || 0);
+}
+
+function attackBreakdown(actor, weapon) {
+  const skill = weaponSkill(actor, weapon);
+  const parts = [
+    `10`,
+    `AW-Skill ${Number(actor.system?.boni?.awSkill || 0)}`,
+    `${skill.name ? `${skill.name} ` : "Waffen-Skill "}${skill.level}`,
+    `${skill.attribute} ${effectiveAttribute(actor, skill.attribute)}`
+  ];
+  const general = Number(actor.system?.boni?.aw || 0) + bonusForType(actor, "AW");
+  if (general) parts.push(`Boni ${general}`);
+  if (Number(weapon.bonus || 0)) parts.push(`Waffenbonus ${Number(weapon.bonus)}`);
+  return parts.join(" + ") + (skill.missing ? ` — Skill "${skill.name}" nicht im Bogen, als 0 gewertet` : "");
 }
 
 // Der Bogen schreibt den fertigen VW nach system.attributes.vw.value.
@@ -55,6 +90,7 @@ function buildDialogContent(actor, entries, selectedIndex, targetName, targetVW)
 
   const selected = entries.find(e => e.index === selectedIndex).weapon;
   const aw = attackValue(actor, selected);
+  const breakdown = attackBreakdown(actor, selected);
 
   return `
     <form>
@@ -71,7 +107,8 @@ function buildDialogContent(actor, entries, selectedIndex, targetName, targetVW)
         </select>
       </div>
       <div style="font-size: 12px;">
-        <p>⚔️ <strong>Dein AW:</strong> <span class="display-aw">${aw}</span></p>
+        <p>⚔️ <strong>Dein AW:</strong> <span class="display-aw">${aw}</span><br>
+          <span style="font-size: 11px;" class="display-breakdown">${breakdown}</span></p>
         <p>🛡️ <strong>Ziel (${targetName}) VW:</strong> ${targetVW}</p>
         <p style="margin-top: 4px;">🎯 <strong>Trefferchance:</strong>
           <span class="display-chance">${hitChanceFor(aw, targetVW)}</span>% (Min 5% / Max 95%)</p>
@@ -130,6 +167,7 @@ export async function executeAttack(actor, weapon = null) {
         if (!chosen) return;
         const aw = attackValue(actor, chosen.weapon);
         html.find(".display-aw").text(aw);
+        html.find(".display-breakdown").text(attackBreakdown(actor, chosen.weapon));
         html.find(".display-chance").text(hitChanceFor(aw, targetVW));
       });
     },
@@ -166,7 +204,8 @@ export async function executeAttack(actor, weapon = null) {
             (isHit
               ? `<strong>TREFFER! (W100: ${attack.value} vs. Chance: ${chance}%)</strong>`
               : `<strong>VERFEHLT! (W100: ${attack.value} vs. Chance: ${chance}%)</strong>`) +
-            `<br><br>${attack.label}`;
+            `<br><br>${attack.label}` +
+            `<br><small>AW ${aw} = ${attackBreakdown(actor, used)}</small>`;
 
           if (!targetedToken || isHit) {
             content += `<hr>` +

@@ -20,6 +20,20 @@ Danach meldet Foundry neue Versionen selbst, ein Klick auf **Update** genuegt.
 - Vergleichende Proben gegen beliebig viele markierte Tokens
 - Verdeckte Wuerfe fuer den Spielleiter
 
+## Waffen und Skills
+
+Jede Waffe verweist in der Spalte **Skill** auf einen Skill aus der Skill-Liste
+des Charakters. Von dort kommen beide Werte, die der Angriffswert braucht:
+
+```
+AW = 10 + AW-Skill + Skill-Level der Waffe + steuerndes Attribut des Skills
+     + allgemeine Boni + Waffenbonus
+```
+
+Das Level wird nicht an der Waffe gepflegt. Steigt der Skill in der Skill-Liste,
+steigt der Angriffswert sofort mit. Ohne Verknuepfung zaehlt der Skill als 0 und
+das Attribut ist STR.
+
 ## Vergleichende Proben
 
 Ein Klick auf den Wuerfel neben einem Skill oeffnet den Probendialog.
