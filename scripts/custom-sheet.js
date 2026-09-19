@@ -1,15 +1,8 @@
-import { attackFromMacro, damageBonus, executeAttack } from "./attack.js";
+import { areaAttack, areaAttackFromMacro, attackFromMacro, attackValue, damageBonus, executeAttack } from "./attack.js";
 import { rollSkillCheck } from "./skill-check.js";
-import { ARMOR_WEAR_CHOICES, armorState, isIntact, registerDamageSocket } from "./damage.js";
+import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageSocket } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
-
-const RARITY_MAP = {
-  "Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5, "Transzendiert": 6
-};
-
-const MACHTFAKTOR_MAP = {
-  "Common": 1, "Uncommon": 2, "Rare": 4, "Epic": 8, "Legendary": 16, "Transzendiert": 32
-};
+import { DAMAGE_TYPES, RARITY_CHOICES, machtfaktor, rarityRank, typeLabels, typeList } from "./rules.js";
 
 class MeinHausregelSheet extends ActorSheet {
 
@@ -27,10 +20,8 @@ class MeinHausregelSheet extends ActorSheet {
     const context = super.getData();
     const systemData = context.actor.system;
 
-    context.rarityChoices = {
-      "Common": "Common", "Uncommon": "Uncommon", "Rare": "Rare",
-      "Epic": "Epic", "Legendary": "Legendary", "Transzendiert": "Transzendiert"
-    };
+    context.rarityChoices = RARITY_CHOICES;
+    context.damageTypes = DAMAGE_TYPES;
 
     context.attributeChoices = {
       "STR": "STR", "DEX": "DEX", "CON": "CON",
@@ -54,7 +45,7 @@ class MeinHausregelSheet extends ActorSheet {
     const int = getAttr("INT"), wis = getAttr("WIS"), cha = getAttr("CHA");
 
     // SICHERSTELLEN, DASS ALLE LISTEN (inkl. Titel) EXISTIEREN UND RICHTIG UMGESETZT WERDEN
-    const listen = ['skills', 'equipment', 'weapons', 'titles', 'isekaiSkills', 'armors'];
+    const listen = ['skills', 'equipment', 'weapons', 'titles', 'isekaiSkills', 'armors', 'resistances'];
     listen.forEach(key => {
       if (!systemData[key]) {
         systemData[key] = [];
@@ -75,9 +66,9 @@ class MeinHausregelSheet extends ActorSheet {
       CHA: cha + getTitleBonus("CHA")
     };
 
-    const raceRarityR = RARITY_MAP[systemData.details?.race?.rarity] || 1;
+    const raceRarityR = rarityRank(systemData.details?.race?.rarity);
     const raceLvl = Number(systemData.details?.race?.level || 1);
-    const classRarityR = RARITY_MAP[systemData.details?.class?.rarity] || 1;
+    const classRarityR = rarityRank(systemData.details?.class?.rarity);
     const classLvl = Number(systemData.details?.class?.level || 0);
 
     const raceBonus = raceLvl * (5 * raceRarityR);
@@ -108,7 +99,7 @@ class MeinHausregelSheet extends ActorSheet {
     systemData.isekaiSkills.forEach(skill => {
       if (!skill) return;
       const attrVal = getAttr(skill.attribute || "STR");
-      const skillRarityR = RARITY_MAP[skill.rarity] || 1;
+      const skillRarityR = rarityRank(skill.rarity);
       skill.cap = (attrVal * 3) + (skillRarityR * 5);
     });
 
@@ -116,8 +107,21 @@ class MeinHausregelSheet extends ActorSheet {
     systemData.armors.forEach(armor => {
       if (!armor) return;
       armor.intact = isIntact(armor);
+      armor.typeLabel = typeLabels(armor.types).join(", ") || "alle Arten";
     });
-    const totalDR = armorState(context.actor).totalDR;
+    const drSummary = armorSummary(context.actor);
+
+    // RESISTENZEN: Level kommt aus dem verknüpften Skill
+    systemData.resistances.forEach(resistance => {
+      if (!resistance) return;
+      resistance.typeLabel = typeLabels(resistance.types).join(", ") || "keine Auswahl";
+      const linked = systemData.isekaiSkills.find(skill =>
+        String(skill?.name || "").trim().toLowerCase() ===
+        String(resistance.skillName || "").trim().toLowerCase());
+      resistance.level = Number(linked?.level || 0);
+      resistance.rank = rarityRank(resistance.rarity);
+      resistance.reduction = resistance.level * resistance.rank;
+    });
 
     // AUSWAHLLISTE DER EIGENEN SKILLS FÜR DIE WAFFENTABELLE
     context.weaponSkillChoices = systemData.isekaiSkills.reduce((choices, skill) => {
@@ -129,11 +133,13 @@ class MeinHausregelSheet extends ActorSheet {
     // WAFFENSCHADEN BERECHNEN
     systemData.weapons.forEach(w => {
       if (!w) return;
-      const m = MACHTFAKTOR_MAP[w.rarity] || 1;
+      const m = machtfaktor(w.rarity);
       const diceLabel = context.diceChoices[w.dice] || "W6";
       const flatBonus = damageBonus(context.actor, w);
       const bonusStr = flatBonus >= 0 ? `+ ${flatBonus}` : `- ${Math.abs(flatBonus)}`;
       w.calculatedDamage = `${diceLabel} × ${m} ${bonusStr}`;
+      w.typeLabel = typeLabels(w.damageTypes).join(", ") || "kein Typ";
+      w.calculatedAW = attackValue(context.actor, w);
     });
 
     // AKTEUR-MAX-WERTE DIREKT IN DIE DATENBANK SCHREIBEN (Falls abweichend)
@@ -174,8 +180,14 @@ class MeinHausregelSheet extends ActorSheet {
       }, { render: false });
     }         
 
-    context.derived = { hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget, totalDR };
+    context.derived = { hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget, drSummary };
     return context;
+  }
+
+  // Offene Eingaben sichern, bevor ein Listeneintrag neu geschrieben wird.
+  async _saveForm(html) {
+    const form = html.closest('form')[0];
+    await this.actor.update(this._getSubmitData(form));
   }
 
   activateListeners(html) {
@@ -219,10 +231,7 @@ class MeinHausregelSheet extends ActorSheet {
     // DYNAMISCHE ARRAYS (Skills, Ausrüstung, Waffen, Titel)
     const handleArrayAction = async (ev, fieldKey, action, defaultObj = {}) => {
       ev.preventDefault();
-      
-      const form = html.closest('form')[0];
-      const formData = this._getSubmitData(form);
-      await this.actor.update(formData);
+      await this._saveForm(html);
 
       let list = foundry.utils.duplicate(this.actor.system[fieldKey] || []);
       if (!Array.isArray(list)) list = Object.values(list);
@@ -246,17 +255,78 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-equipment').click(ev => handleArrayAction(ev, 'equipment', 'delete'));
 
     // WAFFEN
-    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", bonus: 0, description: "" }));
+    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", damageTypes: [], bonus: 0, description: "" }));
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
 
+    // SCHADENSTYPEN WÄHLEN (Waffe, Rüstung, Resistenz)
+    html.find('.pick-types').click(async ev => {
+      ev.preventDefault();
+      const { field, index, key } = ev.currentTarget.dataset;
+      await this._saveForm(html);
+      await openTypePicker(this.actor, field, Number(index), key);
+    });
+
+    // FLÄCHENANGRIFF
+    html.find('.area-attack').click(ev => {
+      ev.preventDefault();
+      areaAttack(this.actor);
+    });
+
+    // RESISTENZEN
+    html.find('.add-resistance').click(ev => handleArrayAction(ev, 'resistances', 'add', { name: "", rarity: "Common", skillName: "", types: [], description: "" }));
+    html.find('.delete-resistance').click(ev => handleArrayAction(ev, 'resistances', 'delete'));
+
     // RÜSTUNG
-    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, description: "" }));
+    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, types: [], description: "" }));
     html.find('.delete-armor').click(ev => handleArrayAction(ev, 'armors', 'delete'));
 
     // TITEL
     html.find('.add-title').click(ev => handleArrayAction(ev, 'titles', 'add', { name: "Neuer Titel", type: "STR", bonus: 0, comment: "" }));
     html.find('.delete-title').click(ev => handleArrayAction(ev, 'titles', 'delete'));
   }
+}
+
+/**
+ * Kleines Auswahlfenster für die Schadenstypen. Die Typen sind ein Array im
+ * Listeneintrag und lassen sich deshalb nicht über das normale Formular
+ * speichern — der Eintrag wird hier direkt zurückgeschrieben.
+ */
+async function openTypePicker(actor, field, index, key) {
+  let list = foundry.utils.duplicate(actor.system[field] || []);
+  if (!Array.isArray(list)) list = Object.values(list);
+
+  const entry = list[index];
+  if (!entry) return;
+
+  const selected = typeList(entry[key]);
+  const boxes = Object.entries(DAMAGE_TYPES).map(([value, label]) =>
+    `<label style="display:flex; align-items:center; gap:5px; font-size:12px;">
+       <input type="checkbox" value="${value}" style="width:auto; margin:0;"
+         ${selected.includes(value) ? "checked" : ""}/> ${label}
+     </label>`).join("");
+
+  const picked = await new Promise(resolve => {
+    new Dialog({
+      title: `Schadensarten: ${entry.name || "Ohne Namen"}`,
+      content: `<form><div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 12px;">${boxes}</div></form>`,
+      buttons: {
+        save: {
+          icon: '<i class="fas fa-check"></i>',
+          label: "Übernehmen",
+          callback: (dialogHtml) => resolve(
+            dialogHtml.find('input[type="checkbox"]:checked').map((_, el) => el.value).get()
+          )
+        },
+        cancel: { icon: '<i class="fas fa-times"></i>', label: "Abbrechen", callback: () => resolve(null) }
+      },
+      default: "save",
+      close: () => resolve(null)
+    }).render(true);
+  });
+
+  if (!picked) return;
+  entry[key] = picked;
+  await actor.update({ [`system.${field}`]: list });
 }
 
 Hooks.once('init', () => {
@@ -275,6 +345,7 @@ Hooks.once('ready', () => {
   game.isekaiBogen = {
     attack: attackFromMacro,
     attackWith: executeAttack,
+    areaAttack: areaAttackFromMacro,
     rollSkillCheck
   };
 });

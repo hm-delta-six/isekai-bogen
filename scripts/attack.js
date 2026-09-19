@@ -1,13 +1,6 @@
 import { applyDamage, describeDamage, resolveDamage } from "./damage.js";
-
-const MACHTFAKTOR_MAP = {
-  "Common": 1, "Uncommon": 2, "Rare": 4, "Epic": 8, "Legendary": 16, "Transzendiert": 32
-};
-
-const toArray = (value) => {
-  if (!value) return [];
-  return Array.isArray(value) ? value : Object.values(value);
-};
+import { placeTemplate, tokensInTemplate } from "./area-template.js";
+import { machtfaktor, toArray, typeLabels } from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
 // Ausrüstung trägt derzeit keine type/bonus-Felder, wird aber mitgelesen,
@@ -50,7 +43,7 @@ export function weaponSkill(actor, weapon) {
   };
 }
 
-function attackValue(actor, weapon) {
+export function attackValue(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
   return 10 +
     Number(actor.system?.boni?.awSkill || 0) +
@@ -200,7 +193,7 @@ export async function executeAttack(actor, weapon = null) {
           const attack = await rollAttack(mode);
           const isHit = attack.value <= chance;
 
-          const factor = MACHTFAKTOR_MAP[used.rarity] || 1;
+          const factor = machtfaktor(used.rarity);
           const skill = weaponSkill(actor, used);
           const attributeValue = effectiveAttribute(actor, skill.attribute);
           const halfAwSkill = Math.ceil(Number(actor.system?.boni?.awSkill || 0) / 2);
@@ -222,6 +215,8 @@ export async function executeAttack(actor, weapon = null) {
             content += `<hr>` +
               `💥 <strong>Schaden (${used.name}):</strong><br>` +
               `<span style="font-size: 26px; font-weight: bold; line-height: 1.2;">${damageRoll.total}</span><br>` +
+              (typeLabels(used.damageTypes).length
+                ? `<br><small>Schadensart: ${typeLabels(used.damageTypes).join(", ")}</small>` : "") +
               `<small>Rechenweg: (${damageRoll.result}) [${diceType} × Machtfaktor ${factor}] ` +
               `+ ${skill.attribute} (${attributeValue}) + Halber AW-Skill (${halfAwSkill}) ` +
               `+ ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})</small>`;
@@ -231,7 +226,10 @@ export async function executeAttack(actor, weapon = null) {
 
           // DR abziehen, Rest von den HP, Überschuss von der Haltbarkeit
           if (targetActor && isHit) {
-            const resolved = resolveDamage(targetActor, damageRoll.total);
+            const resolved = resolveDamage(targetActor, damageRoll.total, {
+              types: used.damageTypes,
+              rarity: used.rarity
+            });
             content += `<hr>` + describeDamage(targetName, resolved);
             await applyDamage(targetActor, resolved);
           }
@@ -253,4 +251,140 @@ export function attackFromMacro() {
   const actor = canvas.tokens.controlled[0]?.actor || game.user.character;
   if (!actor) return ui.notifications.warn("Bitte wähle zuerst einen Token aus!");
   return executeAttack(actor);
+}
+
+const AREA_SHAPES = { cone: "Kegel", circle: "Kreis" };
+
+/**
+ * Flächenangriff: Vorlage platzieren, ein W100 für alle Ziele, Schaden einmal
+ * würfeln. Der eine Wurf wird gegen den VW jedes getroffenen Tokens geprüft —
+ * alle Ziele teilen sich also dasselbe Glück.
+ */
+export async function areaAttack(actor) {
+  const entries = usableWeapons(actor);
+  if (!entries.length) {
+    return ui.notifications.warn("Dieser Charakter hat keine gültigen Waffen in seiner Liste!");
+  }
+
+  const remembered = Number(actor.getFlag("isekai-bogen", "lastWeaponIndex") || 0);
+  const selectedIndex = entries.some(e => e.index === remembered) ? remembered : entries[0].index;
+
+  const options = entries.map(({ weapon, index }) =>
+    `<option value="${index}" ${index === selectedIndex ? "selected" : ""}>` +
+    `${weapon.name || `Waffe ${index + 1}`} (${weapon.rarity || "Common"})</option>`).join("");
+
+  const setup = await new Promise(resolve => {
+    new Dialog({
+      title: `Flächenangriff von ${actor.name}`,
+      content: `
+        <form>
+          <div class="form-group">
+            <label>Waffe / Fähigkeit</label>
+            <select name="weapon" style="width:100%;">${options}</select>
+          </div>
+          <div class="form-group">
+            <label>Form</label>
+            <select name="shape" style="width:100%;">
+              <option value="cone">Kegel</option>
+              <option value="circle">Kreis</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reichweite / Radius (Felder)</label>
+            <input type="number" name="distance" value="6" min="1"/>
+          </div>
+          <div class="form-group">
+            <label>Öffnungswinkel des Kegels (Grad)</label>
+            <input type="number" name="angle" value="53" min="5" max="360"/>
+          </div>
+          <p style="font-size:11px;">Ein W100 gilt für alle Ziele, der Schaden wird einmal gewürfelt.</p>
+        </form>
+      `,
+      buttons: {
+        place: {
+          icon: '<i class="fas fa-bullseye"></i>',
+          label: "Fläche platzieren",
+          callback: (html) => resolve({
+            index: Number(html.find('select[name="weapon"]').val()),
+            shape: html.find('select[name="shape"]').val(),
+            distance: Number(html.find('input[name="distance"]').val() || 6),
+            angle: Number(html.find('input[name="angle"]').val() || 53)
+          })
+        },
+        cancel: { icon: '<i class="fas fa-times"></i>', label: "Abbrechen", callback: () => resolve(null) }
+      },
+      default: "place",
+      close: () => resolve(null)
+    }).render(true);
+  });
+  if (!setup) return;
+
+  const chosen = entries.find(e => e.index === setup.index);
+  if (!chosen) return;
+  await actor.setFlag("isekai-bogen", "lastWeaponIndex", setup.index);
+
+  const placement = await placeTemplate({
+    shape: setup.shape,
+    distance: setup.distance,
+    angle: setup.angle,
+    actor
+  });
+  if (!placement) return ui.notifications.info("Flächenangriff abgebrochen.");
+
+  const used = chosen.weapon;
+  const targets = tokensInTemplate(placement)
+    .filter(token => token?.actor && token.actor.id !== actor.id);
+
+  const attack = await rollAttack("normal");
+  const aw = attackValue(actor, used);
+
+  const factor = machtfaktor(used.rarity);
+  const flatBonus = damageBonus(actor, used);
+  const diceType = used.dice || "1d6";
+  const damageRoll = await new Roll(`(${diceType} * ${factor}) + ${flatBonus}`).evaluate({ async: true });
+
+  let content =
+    `💥 <strong>Flächenangriff mit ${used.name}</strong> ` +
+    `<span style="font-size:11px;">(${AREA_SHAPES[setup.shape]}, ${setup.distance} Felder)</span><br>` +
+    `${attack.label} — ein Wurf für alle Ziele<br>` +
+    `<small>AW ${aw} = ${attackBreakdown(actor, used)}</small><hr>` +
+    `💥 <strong>Schaden:</strong> ` +
+    `<span style="font-size: 22px; font-weight: bold;">${damageRoll.total}</span> ` +
+    `<small>(${damageRoll.result})</small>` +
+    (typeLabels(used.damageTypes).length
+      ? `<br><small>Schadensart: ${typeLabels(used.damageTypes).join(", ")}</small>` : "");
+
+  if (!targets.length) {
+    content += `<hr><span style="font-size:11px;">Kein Ziel in der Fläche.</span>`;
+  }
+
+  for (const token of targets) {
+    const vw = defenceValue(token.actor);
+    const chance = hitChanceFor(aw, vw);
+    const isHit = attack.value <= chance;
+
+    content += `<hr><strong>${token.name}</strong> — VW ${vw}, Chance ${chance}% → ` +
+      (isHit ? `<strong>TREFFER</strong>` : `<strong>verfehlt</strong>`);
+
+    if (!isHit) continue;
+
+    const resolved = resolveDamage(token.actor, damageRoll.total, {
+      types: used.damageTypes,
+      rarity: used.rarity
+    });
+    content += describeDamage(token.name, resolved);
+    await applyDamage(token.actor, resolved);
+  }
+
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content,
+    rolls: [...attack.rolls, damageRoll]
+  });
+}
+
+export function areaAttackFromMacro() {
+  const actor = canvas.tokens.controlled[0]?.actor || game.user.character;
+  if (!actor) return ui.notifications.warn("Bitte wähle zuerst einen Token aus!");
+  return areaAttack(actor);
 }

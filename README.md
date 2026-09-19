@@ -53,6 +53,9 @@ AW = 10 + AW-Skill + Skill-Level der Waffe + steuerndes Attribut des Skills
      + allgemeine Boni + Waffenbonus
 ```
 
+Jede Waffe traegt ausserdem eine Mehrfachauswahl der Schadensarten
+(Hieb, Stich, Wucht, Feuer, Saeure, Elektrizitaet, Schall, Kaelte, Energie).
+
 Derselbe Skill zaehlt auch auf den Schaden:
 
 ```
@@ -67,6 +70,43 @@ Verknuepfung ist es STR.
 Das Level wird nicht an der Waffe gepflegt. Steigt der Skill in der Skill-Liste,
 steigt der Angriffswert sofort mit. Ohne Verknuepfung zaehlt der Skill als 0 und
 das Attribut ist STR.
+
+## Ruestung, Resistenzen und Schadensarten
+
+Eine Ruestung hat DR, Haltbarkeit und eine Mehrfachauswahl der Schadensarten,
+gegen die ihre DR ueberhaupt zaehlt. Gegen jede nicht gewaehlte Art ist ihre DR
+null. Ein Eintrag ohne Auswahl schuetzt gegen alles, damit alte Eintraege
+gueltig bleiben.
+
+Resistenzen stehen in einer eigenen Tabelle und rechnen nach Kapitel 9.3:
+
+```
+Reduktion = Skill-Level x Raritaetsstufe
+```
+
+gedeckelt auf einen Anteil des eingehenden Schadens, der vom Stufenabstand
+zum Angriff abhaengt: 2+ Stufen hoeher 100 %, 1 hoeher 75 %, gleich 50 %,
+1 niedriger 25 %, 2+ niedriger 0 %. Das Level kommt aus dem verknuepften Skill.
+Deckt eine Resistenz mehrere Arten ab, gilt sie als allgemein und rechnet mit
+Skill-Level x (Raritaetsstufe - 1), mindestens Skill-Level / 2.
+
+Reihenfolge eines Treffers: **Ruestung, dann Resistenz.** Die Haltbarkeit nimmt
+Schaden in Hoehe dessen, was die Ruestung nicht aufhalten konnte, also vor der
+Resistenz. Bei mehreren Schadensarten einer Waffe gilt der beste Durchgriff:
+es zaehlt die Art, bei der am Ende der meiste Schaden ankommt.
+
+## Flaechenangriff
+
+Knopf FLAECHE ueber der Waffenliste, oder aus der Makroleiste:
+
+```js
+game.isekaiBogen.areaAttack();
+```
+
+Kegel oder Kreis werden auf der Karte platziert (Klick setzt, Mausrad mit Shift
+oder Strg dreht, Rechtsklick bricht ab). Ein einziger W100 gilt fuer alle Ziele
+und wird gegen den VW jedes getroffenen Tokens geprueft, der Schaden wird
+einmal gewuerfelt.
 
 ## Vergleichende Proben
 

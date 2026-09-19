@@ -94,6 +94,67 @@
       text-align: center;
     }
 
+    /* Eintrags-Karten (Waffen, Ruestung, Resistenz) */
+    .isekai-sheet .entry {
+      display: flex;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      background: rgba(15, 23, 42, 0.35);
+    }
+    .isekai-sheet .entry-fields { flex: 1; min-width: 0; }
+    .isekai-sheet .entry-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 6px;
+    }
+    .isekai-sheet .entry-row + .entry-row { border-top: 1px dashed #334155; }
+    .isekai-sheet .f { display: flex; align-items: center; gap: 3px; min-width: 0; }
+    .isekai-sheet .f > label {
+      font-size: 8px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      white-space: nowrap;
+    }
+    .isekai-sheet .grow { flex: 1; min-width: 0; }
+    .isekai-sheet .grow input { width: 100%; box-sizing: border-box; }
+    .isekai-sheet .entry-values {
+      width: 126px;
+      border-left: 1px solid #334155;
+      padding: 4px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+    .isekai-sheet .stat {
+      font-size: 8px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      display: block;
+    }
+    .isekai-sheet .statval {
+      color: #38bdf8;
+      font-weight: bold;
+      font-size: 15px;
+      line-height: 1.1;
+    }
+    .isekai-sheet .statval small { color: #94a3b8; font-weight: normal; font-size: 11px; }
+    .isekai-sheet .typepick {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      padding: 3px 7px;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #38bdf8;
+    }
+    .isekai-sheet .typepick.empty { color: #64748b; }
+
     /* Tab-Leiste Navigation */
     .isekai-sheet .sheet-tabs {
       display: flex;
@@ -255,57 +316,67 @@
         <div><strong>VW:</strong> <strong style="color:#38bdf8;">{{derived.vwTotal}}</strong> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/> + DEX {{effectiveAbilities.DEX}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small></div>
       </div>
 
-      <!-- WAFFEN TABELLE -->
+      <!-- WAFFEN -->
       <div class="section-header">
-        <span>Waffen & Angriffe</span>
-        <a class="add-weapon" title="Waffe hinzufügen">+ HINZUFÜGEN</a>
+        <span>Waffen &amp; Angriffe</span>
+        <span>
+          <a class="area-attack" title="Flächenangriff: Kegel oder Kreis platzieren">FLÄCHE</a>
+          &nbsp;<a class="add-weapon" title="Waffe hinzufügen">+ HINZUFÜGEN</a>
+        </span>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 20px;"></th>
-            <th>Waffe</th>
-            <th style="width: 100px;">Rarität</th>
-            <th style="width: 60px;">Würfel</th>
-            <th style="width: 110px;">Skill</th>
-            <th style="width: 45px;">Bonus</th>
-            <th style="width: 80px; text-align: center; color: #38bdf8;">Schaden</th>
-            <th>Beschreibung</th>
-            <th style="width: 20px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each actor.system.weapons as |weapon index|}}
-            <tr>
-              <td style="text-align: center;">
-                <a class="roll-weapon btn-roll" data-index="{{index}}" title="Angriff würfeln & Ziel-HP abziehen">
-                  <i class="fas fa-dice-d20"></i>
-                </a>
-              </td>
-              <td><input type="text" style="width:100%;" name="system.weapons.{{index}}.name" value="{{weapon.name}}"/></td>
-              <td>
-                <select style="width:100%;" name="system.weapons.{{index}}.rarity">
+      {{#each actor.system.weapons as |weapon index|}}
+        <div class="entry">
+          <div class="entry-fields">
+            <div class="entry-row">
+              <a class="roll-weapon btn-roll" data-index="{{index}}" title="Angriff würfeln"><i class="fas fa-dice-d20"></i></a>
+              <div class="f grow">
+                <label>Waffe</label>
+                <input type="text" name="system.weapons.{{index}}.name" value="{{weapon.name}}"/>
+              </div>
+              <div class="f">
+                <label>Rarität</label>
+                <select style="width:96px;" name="system.weapons.{{index}}.rarity">
                   {{selectOptions ../rarityChoices selected=weapon.rarity}}
                 </select>
-              </td>
-              <td>
-                <select style="width:100%;" name="system.weapons.{{index}}.dice">
-                  {{selectOptions ../diceChoices selected=weapon.dice}}
-                </select>
-              </td>
-              <td>
-                <select style="width:100%;" name="system.weapons.{{index}}.skillName" title="Skill, der den Angriffswert und das steuernde Attribut liefert">
+              </div>
+              <div class="f">
+                <label>Skill</label>
+                <select style="width:122px;" name="system.weapons.{{index}}.skillName">
                   {{selectOptions ../weaponSkillChoices selected=weapon.skillName}}
                 </select>
-              </td>
-              <td><input type="number" class="num-short" name="system.weapons.{{index}}.bonus" value="{{weapon.bonus}}"/></td>
-              <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{weapon.calculatedDamage}}</td>
-              <td><input type="text" style="width:100%;" name="system.weapons.{{index}}.description" value="{{weapon.description}}"/></td>
-              <td><a class="delete-weapon btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
-            </tr>
-          {{/each}}
-        </tbody>
-      </table>
+              </div>
+              <div class="f">
+                <label>Bonus</label>
+                <input type="number" class="num-short" name="system.weapons.{{index}}.bonus" value="{{weapon.bonus}}"/>
+              </div>
+              <a class="delete-weapon btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a>
+            </div>
+            <div class="entry-row">
+              <div class="f">
+                <label>Würfel</label>
+                <select style="width:62px;" name="system.weapons.{{index}}.dice">
+                  {{selectOptions ../diceChoices selected=weapon.dice}}
+                </select>
+              </div>
+              <div class="f">
+                <label>Typ</label>
+                <span class="typepick" data-field="weapons" data-index="{{index}}" data-key="damageTypes"
+                      title="Schadensarten wählen">{{weapon.typeLabel}} &#9662;</span>
+              </div>
+            </div>
+            <div class="entry-row">
+              <div class="f grow">
+                <label>Beschreibung</label>
+                <input type="text" name="system.weapons.{{index}}.description" value="{{weapon.description}}"/>
+              </div>
+            </div>
+          </div>
+          <div class="entry-values">
+            <div><span class="stat">Angriffswert</span><span class="statval">{{weapon.calculatedAW}}</span></div>
+            <div><span class="stat">Schaden</span><span class="statval" style="font-size:12px;">{{weapon.calculatedDamage}}</span></div>
+          </div>
+        </div>
+      {{/each}}
     </div>
 
     <!-- TAB 2: SKILLS -->
@@ -389,10 +460,13 @@
         </tbody>
       </table>
 
-      <!-- RÜSTUNGS TABELLE -->
+      <!-- RÜSTUNG -->
       <div class="section-header">
-        <span>Rüstung (gesamte DR: {{derived.totalDR}})</span>
+        <span>Rüstung</span>
         <a class="add-armor" title="Rüstung hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <div style="font-size: 10px; color: #94a3b8; margin-bottom: 5px;">
+        DR je Schadensart: {{derived.drSummary}}
       </div>
       <div style="font-size: 11px; margin-bottom: 6px;">
         Abnutzung bei Treffern:
@@ -400,37 +474,102 @@
           {{selectOptions armorWearChoices selected=actor.system.armorWear}}
         </select>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Rüstung</th>
-            <th style="width: 100px;">Rarität</th>
-            <th style="width: 45px;">DR</th>
-            <th style="width: 70px;">Haltbarkeit</th>
-            <th>Beschreibung</th>
-            <th style="width: 20px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each actor.system.armors as |armor index|}}
-            <tr>
-              <td><input type="text" style="width:100%;" name="system.armors.{{index}}.name" value="{{armor.name}}"/></td>
-              <td>
-                <select style="width:100%;" name="system.armors.{{index}}.rarity">
+      {{#each actor.system.armors as |armor index|}}
+        <div class="entry">
+          <div class="entry-fields">
+            <div class="entry-row">
+              <div class="f grow">
+                <label>Rüstung</label>
+                <input type="text" name="system.armors.{{index}}.name" value="{{armor.name}}"/>
+              </div>
+              <div class="f">
+                <label>Rarität</label>
+                <select style="width:96px;" name="system.armors.{{index}}.rarity">
                   {{selectOptions ../rarityChoices selected=armor.rarity}}
                 </select>
-              </td>
-              <td><input type="number" class="num-short" name="system.armors.{{index}}.dr" value="{{armor.dr}}"/></td>
-              <td>
+              </div>
+              <div class="f">
+                <label>DR</label>
+                <input type="number" class="num-short" name="system.armors.{{index}}.dr" value="{{armor.dr}}"/>
+              </div>
+              <div class="f">
+                <label>Haltbarkeit</label>
                 <input type="number" class="num-short" name="system.armors.{{index}}.durability" value="{{armor.durability}}"/>
-                {{#unless armor.intact}}<strong>defekt</strong>{{/unless}}
-              </td>
-              <td><input type="text" style="width:100%;" name="system.armors.{{index}}.description" value="{{armor.description}}"/></td>
-              <td><a class="delete-armor btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
-            </tr>
-          {{/each}}
-        </tbody>
-      </table>
+              </div>
+              <a class="delete-armor btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a>
+            </div>
+            <div class="entry-row">
+              <div class="f">
+                <label>Schützt gegen</label>
+                <span class="typepick" data-field="armors" data-index="{{index}}" data-key="types"
+                      title="Schadensarten wählen">{{armor.typeLabel}} &#9662;</span>
+              </div>
+            </div>
+            <div class="entry-row">
+              <div class="f grow">
+                <label>Beschreibung</label>
+                <input type="text" name="system.armors.{{index}}.description" value="{{armor.description}}"/>
+              </div>
+            </div>
+          </div>
+          <div class="entry-values">
+            <div><span class="stat">Zustand</span>
+              <span class="statval" style="font-size:12px;">{{#if armor.intact}}intakt{{else}}defekt{{/if}}</span></div>
+          </div>
+        </div>
+      {{/each}}
+
+      <!-- RESISTENZEN -->
+      <div class="section-header">
+        <span>Resistenzen</span>
+        <a class="add-resistance" title="Resistenz hinzufügen">+ HINZUFÜGEN</a>
+      </div>
+      <div style="font-size: 10px; color: #94a3b8; margin-bottom: 5px;">
+        Reduktion = Skill-Level × Raritätsstufe, gedeckelt nach Stufenabstand zum Angriff
+      </div>
+      {{#each actor.system.resistances as |resistance index|}}
+        <div class="entry">
+          <div class="entry-fields">
+            <div class="entry-row">
+              <div class="f grow">
+                <label>Resistenz</label>
+                <input type="text" name="system.resistances.{{index}}.name" value="{{resistance.name}}"/>
+              </div>
+              <div class="f">
+                <label>Rarität</label>
+                <select style="width:96px;" name="system.resistances.{{index}}.rarity">
+                  {{selectOptions ../rarityChoices selected=resistance.rarity}}
+                </select>
+              </div>
+              <div class="f">
+                <label>Skill</label>
+                <select style="width:122px;" name="system.resistances.{{index}}.skillName">
+                  {{selectOptions ../weaponSkillChoices selected=resistance.skillName}}
+                </select>
+              </div>
+              <a class="delete-resistance btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a>
+            </div>
+            <div class="entry-row">
+              <div class="f">
+                <label>Schützt gegen</label>
+                <span class="typepick" data-field="resistances" data-index="{{index}}" data-key="types"
+                      title="Schadensarten wählen">{{resistance.typeLabel}} &#9662;</span>
+              </div>
+            </div>
+            <div class="entry-row">
+              <div class="f grow">
+                <label>Beschreibung</label>
+                <input type="text" name="system.resistances.{{index}}.description" value="{{resistance.description}}"/>
+              </div>
+            </div>
+          </div>
+          <div class="entry-values">
+            <div><span class="stat">Reduktion</span><span class="statval">{{resistance.reduction}}</span></div>
+            <div><span class="stat">Level × Stufe</span>
+              <span class="statval" style="font-size:11px;">{{resistance.level}} × {{resistance.rank}}</span></div>
+          </div>
+        </div>
+      {{/each}}
     </div>
 
     <!-- TAB 4: TITEL -->
