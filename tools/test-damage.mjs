@@ -152,5 +152,19 @@ check("Balken ergaenzt", dotted(TokenDocument.getTrackedAttributes()),
 check("keine Dubletten", dotted(TokenDocument.getTrackedAttributes()).length, 4);
 check("Rekursion unberuehrt", dotted(TokenDocument.getTrackedAttributes({}, ["resources"])), []);
 
+
+// --- Typlisten als Zeichenkette (Speicherform im Formular) ---
+const { typeList, typeValue } = await import("../scripts/rules.js");
+check("Zeichenkette wird gelesen", typeList("hieb,feuer"), ["hieb", "feuer"]);
+check("Leerzeichen stoeren nicht", typeList(" hieb , feuer "), ["hieb", "feuer"]);
+check("Array wird weiter gelesen", typeList(["wucht"]), ["wucht"]);
+check("unbekannte Werte fliegen raus", typeList("hieb,quatsch"), ["hieb"]);
+check("leere Eingabe", typeList(""), []);
+check("Speicherform", typeValue(["hieb", "feuer"]), "hieb,feuer");
+
+const stringArmor = actor({ armors: [{ name: "Panzer", dr: 6, durability: 20, types: "hieb,wucht" }] });
+check("DR aus Zeichenkette gegen Wucht", armorState(stringArmor, "wucht").totalDR, 6);
+check("DR aus Zeichenkette gegen Feuer", armorState(stringArmor, "feuer").totalDR, 0);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

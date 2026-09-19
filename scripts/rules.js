@@ -35,8 +35,20 @@ export const toArray = (value) => {
   return Array.isArray(value) ? value : Object.values(value);
 };
 
-// Gespeicherte Typlisten können aus alten Daten als Objekt kommen.
-export const typeList = (value) => toArray(value).filter(key => key in DAMAGE_TYPES);
+/**
+ * Typlisten werden als kommagetrennte Zeichenkette gespeichert, damit sie ein
+ * normales Formularfeld sein können: _getSubmitData sammelt nur Felder, die im
+ * Formular stehen, und ersetzt die ganze Liste — ein Feld ausserhalb des
+ * Formulars wäre beim nächsten Speichern weg.
+ *
+ * Ältere Einträge können noch ein Array oder Objekt enthalten.
+ */
+export const typeList = (value) => {
+  const raw = typeof value === "string" ? value.split(",") : toArray(value);
+  return raw.map(key => String(key).trim()).filter(key => key in DAMAGE_TYPES);
+};
+
+export const typeValue = (value) => typeList(value).join(",");
 
 export const typeLabels = (value) => typeList(value).map(key => DAMAGE_TYPES[key]);
 

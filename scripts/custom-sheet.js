@@ -2,7 +2,7 @@ import { areaAttack, areaAttackFromMacro, attackFromMacro, attackValue, damageBo
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageSocket } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
-import { DAMAGE_TYPES, RARITY_CHOICES, machtfaktor, rarityRank, typeLabels, typeList } from "./rules.js";
+import { DAMAGE_TYPES, RARITY_CHOICES, machtfaktor, rarityRank, typeLabels, typeList, typeValue } from "./rules.js";
 
 class MeinHausregelSheet extends ActorSheet {
 
@@ -108,6 +108,7 @@ class MeinHausregelSheet extends ActorSheet {
       if (!armor) return;
       armor.intact = isIntact(armor);
       armor.typeLabel = typeLabels(armor.types).join(", ") || "alle Arten";
+      armor.typeValue = typeValue(armor.types);
     });
     const drSummary = armorSummary(context.actor);
 
@@ -115,6 +116,7 @@ class MeinHausregelSheet extends ActorSheet {
     systemData.resistances.forEach(resistance => {
       if (!resistance) return;
       resistance.typeLabel = typeLabels(resistance.types).join(", ") || "keine Auswahl";
+      resistance.typeValue = typeValue(resistance.types);
       const linked = systemData.isekaiSkills.find(skill =>
         String(skill?.name || "").trim().toLowerCase() ===
         String(resistance.skillName || "").trim().toLowerCase());
@@ -139,6 +141,7 @@ class MeinHausregelSheet extends ActorSheet {
       const bonusStr = flatBonus >= 0 ? `+ ${flatBonus}` : `- ${Math.abs(flatBonus)}`;
       w.calculatedDamage = `${diceLabel} × ${m} ${bonusStr}`;
       w.typeLabel = typeLabels(w.damageTypes).join(", ") || "kein Typ";
+      w.typeValue = typeValue(w.damageTypes);
       w.calculatedAW = attackValue(context.actor, w);
     });
 
@@ -255,7 +258,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-equipment').click(ev => handleArrayAction(ev, 'equipment', 'delete'));
 
     // WAFFEN
-    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", damageTypes: [], bonus: 0, description: "" }));
+    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", damageTypes: "", bonus: 0, description: "" }));
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
 
     // SCHADENSTYPEN WÄHLEN (Waffe, Rüstung, Resistenz)
@@ -273,11 +276,11 @@ class MeinHausregelSheet extends ActorSheet {
     });
 
     // RESISTENZEN
-    html.find('.add-resistance').click(ev => handleArrayAction(ev, 'resistances', 'add', { name: "", rarity: "Common", skillName: "", types: [], description: "" }));
+    html.find('.add-resistance').click(ev => handleArrayAction(ev, 'resistances', 'add', { name: "", rarity: "Common", skillName: "", types: "", description: "" }));
     html.find('.delete-resistance').click(ev => handleArrayAction(ev, 'resistances', 'delete'));
 
     // RÜSTUNG
-    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, types: [], description: "" }));
+    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, types: "", description: "" }));
     html.find('.delete-armor').click(ev => handleArrayAction(ev, 'armors', 'delete'));
 
     // TITEL
@@ -325,7 +328,7 @@ async function openTypePicker(actor, field, index, key) {
   });
 
   if (!picked) return;
-  entry[key] = picked;
+  entry[key] = picked.join(",");
   await actor.update({ [`system.${field}`]: list });
 }
 

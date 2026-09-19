@@ -60,5 +60,19 @@ for (const match of html.matchAll(/<span class="typepick"([^>]*)>/g)) {
 }
 console.log("ok   alle typepick tragen data-field, data-index und data-key");
 
+// Jeder Typ-Wert braucht ein Formularfeld. _getSubmitData sammelt nur, was im
+// Formular steht, und ersetzt damit die ganze Liste — ein Wert ohne Feld wird
+// beim naechsten Speichern still geloescht.
+for (const match of html.matchAll(/data-field="([a-zA-Z]+)" data-index="\{\{index\}\}" data-key="([a-zA-Z]+)"/g)) {
+  const [, field, key] = match;
+  const expected = `name="system.${field}.{{index}}.${key}"`;
+  if (html.includes(expected)) {
+    console.log(`ok   ${field}.${key} hat ein Formularfeld`);
+  } else {
+    fails += 1;
+    console.log(`FAIL ${field}.${key} hat kein Formularfeld — der Wert geht beim Speichern verloren`);
+  }
+}
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

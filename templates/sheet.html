@@ -360,6 +360,7 @@
               </div>
               <div class="f">
                 <label>Typ</label>
+                <input type="hidden" name="system.weapons.{{index}}.damageTypes" value="{{weapon.typeValue}}"/>
                 <span class="typepick" data-field="weapons" data-index="{{index}}" data-key="damageTypes"
                       title="Schadensarten wählen">{{weapon.typeLabel}} &#9662;</span>
               </div>
@@ -501,6 +502,7 @@
             <div class="entry-row">
               <div class="f">
                 <label>Schützt gegen</label>
+                <input type="hidden" name="system.armors.{{index}}.types" value="{{armor.typeValue}}"/>
                 <span class="typepick" data-field="armors" data-index="{{index}}" data-key="types"
                       title="Schadensarten wählen">{{armor.typeLabel}} &#9662;</span>
               </div>
@@ -552,6 +554,7 @@
             <div class="entry-row">
               <div class="f">
                 <label>Schützt gegen</label>
+                <input type="hidden" name="system.resistances.{{index}}.types" value="{{resistance.typeValue}}"/>
                 <span class="typepick" data-field="resistances" data-index="{{index}}" data-key="types"
                       title="Schadensarten wählen">{{resistance.typeLabel}} &#9662;</span>
               </div>
