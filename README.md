@@ -151,6 +151,18 @@ game.isekaiBogen.attackWith(actor, weapon);  // feste Waffe
 game.isekaiBogen.rollSkillCheck(actor, 0);   // Skill nach Index
 ```
 
+## Tests
+
+```
+node tools/test-damage.mjs
+node tools/test-wiring.mjs
+```
+
+Der erste prueft die Rechenwege (Ruestung, Resistenzen, Waffen-Skill,
+Token-Balken) und rechnet die Beispieltabelle aus Wiki-Kapitel 9.3 nach.
+Der zweite prueft, dass jeder Klick-Listener im Bogen eine Klasse im Template
+findet und umgekehrt.
+
 ## Release bauen
 
 ```

@@ -259,7 +259,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
 
     // SCHADENSTYPEN WÄHLEN (Waffe, Rüstung, Resistenz)
-    html.find('.pick-types').click(async ev => {
+    html.find('.typepick').click(async ev => {
       ev.preventDefault();
       const { field, index, key } = ev.currentTarget.dataset;
       await this._saveForm(html);
