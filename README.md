@@ -120,8 +120,9 @@ bekommt -1 AW pro Kaestchen. Weniger markierte Ziele kosten nichts.
   Getroffen ist jeder Token, der mindestens zur Haelfte in der Flaeche steht,
   ausser dem Angreifer selbst.
 
-Ein W100 gilt fuer alle Ziele und wird gegen den VW jedes einzelnen geprueft,
-der Schaden wird einmal gewuerfelt.
+Jedes Ziel bekommt einen eigenen Angriffswurf gegen seinen VW und bei einem
+Treffer einen eigenen Schadenswurf. Gegner im selben Angriff koennen also
+unterschiedlich getroffen werden.
 
 ## Vergleichende Proben
 

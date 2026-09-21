@@ -166,7 +166,7 @@ function buildDialogContent(actor, entries, selectedIndex, targets) {
         </select>
       </div>
       <div class="attack-info" style="font-size: 12px;">${infoHtml(actor, selected, targets)}</div>
-      <p style="font-size: 11px; margin-top: 8px;">Ein W100 gilt für alle Ziele, der Schaden wird einmal gewürfelt.</p>
+      <p style="font-size: 11px; margin-top: 8px;">Jedes Ziel bekommt einen eigenen Angriffs- und Schadenswurf.</p>
     </form>
   `;
 }
@@ -295,7 +295,6 @@ async function resolveAttack(actor, used, mode) {
   if (victims === null) return;
 
   const aw = attackValue(actor, used) - area.malus;
-  const attack = await rollAttack(mode);
 
   const factor = machtfaktor(used.rarity);
   const skill = weaponSkill(actor, used);
@@ -303,7 +302,7 @@ async function resolveAttack(actor, used, mode) {
   const halfAwSkill = Math.ceil(Number(actor.system?.boni?.awSkill || 0) / 2);
   const weaponBonus = Number(used.bonus || 0);
   const diceType = used.dice || "1d6";
-  const damageRoll = await new Roll(`(${diceType} * ${factor}) + ${damageBonus(actor, used)}`).evaluate({ async: true });
+  const damageFormula = `(${diceType} * ${factor}) + ${damageBonus(actor, used)}`;
 
   // Ohne Ziel wird beim Einzelangriff wie bisher gegen VW 10 geprüft,
   // damit der Wurf auch ohne markierten Token am Tisch nutzbar bleibt.
@@ -311,56 +310,59 @@ async function resolveAttack(actor, used, mode) {
     ? victims.map(token => ({ token, vw: defenceValue(token.actor) }))
     : [{ token: null, vw: 10 }];
 
-  const results = checks.map(check => {
-    const chance = hitChanceFor(aw, check.vw);
-    return { ...check, chance, isHit: attack.value <= chance };
-  });
-
   const title = area.mode === "single"
-    ? `Angriff mit ${used.name} auf ${results[0]?.token?.name || "Ziel"}`
+    ? `Angriff mit ${used.name} auf ${checks[0]?.token?.name || "Ziel"}`
     : `${areaDescription(area).split(",")[0]} mit ${used.name}`;
 
   let content =
     `🎯 <strong>${title}</strong><br>` +
     (area.mode === "single" ? "" : `<small>${areaDescription(area)}</small><br>`) +
-    `${attack.label}` +
-    `<br><small>AW ${aw} = ${attackBreakdown(actor, used)}${area.malus ? ` − Flächenmalus ${area.malus}` : ""}</small>`;
+    `<small>AW ${aw} = ${attackBreakdown(actor, used)}${area.malus ? ` − Flächenmalus ${area.malus}` : ""}</small><br>` +
+    `<small>Schaden: ${diceType} × Machtfaktor ${factor} + ${skill.attribute} (${attributeValue}) ` +
+    `+ Halber AW-Skill (${halfAwSkill}) + ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})` +
+    (typeLabels(used.damageTypes).length ? ` · ${typeLabels(used.damageTypes).join(", ")}` : "") +
+    `</small>`;
 
-  const anyHit = results.some(r => r.isHit);
-  if (anyHit) {
-    content += `<hr>` +
-      `💥 <strong>Schaden (${used.name}):</strong><br>` +
-      `<span style="font-size: 26px; font-weight: bold; line-height: 1.2;">${damageRoll.total}</span><br>` +
-      (typeLabels(used.damageTypes).length
-        ? `<small>Schadensart: ${typeLabels(used.damageTypes).join(", ")}</small><br>` : "") +
-      `<small>Rechenweg: (${damageRoll.result}) [${diceType} × Machtfaktor ${factor}] ` +
-      `+ ${skill.attribute} (${attributeValue}) + Halber AW-Skill (${halfAwSkill}) ` +
-      `+ ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})</small>`;
-  }
-
-  if (!results.length) {
+  if (!checks.length) {
     content += `<hr><span style="font-size: 11px;">Niemand steht mindestens zur Hälfte in der Fläche.</span>`;
   }
 
-  for (const result of results) {
-    const name = result.token?.name || "Ziel";
-    content += `<hr><strong>${name}</strong> — VW ${result.vw}, Chance ${result.chance}% → ` +
-      (result.isHit ? `<strong>TREFFER</strong>` : `<strong>verfehlt</strong>`);
+  // Jedes Ziel bekommt eigenen Angriffs- und Schadenswurf, damit Gegner
+  // unterschiedlich getroffen werden können.
+  const rolls = [];
+  for (const check of checks) {
+    const name = check.token?.name || "Ziel";
+    const chance = hitChanceFor(aw, check.vw);
+    const attack = await rollAttack(mode);
+    const isHit = attack.value <= chance;
+    rolls.push(...attack.rolls);
 
-    if (!result.isHit || !result.token) continue;
+    content += `<hr><strong>${name}</strong> — VW ${check.vw}, Chance ${chance}%<br>` +
+      `${attack.label} → ${isHit ? "<strong>TREFFER</strong>" : "<strong>verfehlt</strong>"}`;
 
-    const resolved = resolveDamage(result.token.actor, damageRoll.total, {
+    if (!isHit) continue;
+
+    const damageRoll = await new Roll(damageFormula).evaluate({ async: true });
+    rolls.push(damageRoll);
+
+    content += `<br>💥 <strong>Schaden:</strong> ` +
+      `<span style="font-size: 20px; font-weight: bold;">${damageRoll.total}</span> ` +
+      `<small>(${damageRoll.result})</small>`;
+
+    if (!check.token) continue;
+
+    const resolved = resolveDamage(check.token.actor, damageRoll.total, {
       types: used.damageTypes,
       rarity: used.rarity
     });
     content += describeDamage(name, resolved);
-    await applyDamage(result.token.actor, resolved);
+    await applyDamage(check.token.actor, resolved);
   }
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
-    rolls: [...attack.rolls, damageRoll]
+    rolls
   });
 }
 
