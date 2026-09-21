@@ -95,18 +95,33 @@ Schaden in Hoehe dessen, was die Ruestung nicht aufhalten konnte, also vor der
 Resistenz. Bei mehreren Schadensarten einer Waffe gilt der beste Durchgriff:
 es zaehlt die Art, bei der am Ende der meiste Schaden ankommt.
 
-## Flaechenangriff
+## Angriffsbereich
 
-Knopf FLAECHE ueber der Waffenliste, oder aus der Makroleiste:
+Jede Waffe hat ein Feld **Bereich** und dahinter ein Groessenfeld. Der Wuerfel
+an der Waffe und `game.isekaiBogen.attack()` greifen danach an.
 
-```js
-game.isekaiBogen.areaAttack();
-```
+| Bereich | Groesse (1 Kaestchen = 5 Fuss / 1,5 m) |
+|---|---|
+| Einzelangriff | keine, Feld gesperrt |
+| Markierte Gegner | hoechstens Skill-Level Ziele |
+| Kegel | Raritaetsstufe x Skill-Level Kaestchen lang, 53 Grad |
+| Kreis | Raritaetsstufe x Skill-Level / 2 Kaestchen Durchmesser |
+| Linie | Raritaetsstufe x Skill-Level x 2 Kaestchen lang, 1 breit |
 
-Kegel oder Kreis werden auf der Karte platziert (Klick setzt, Mausrad mit Shift
-oder Strg dreht, Rechtsklick bricht ab). Ein einziger W100 gilt fuer alle Ziele
-und wird gegen den VW jedes getroffenen Tokens geprueft, der Schaden wird
-einmal gewuerfelt.
+Raritaetsstufe und Skill-Level sind die der Waffe bzw. ihres verknuepften
+Skills. Leeres Groessenfeld heisst volle Groesse; der Hoechstwert steht als
+Platzhalter darin und waechst mit dem Skill. Wer die Flaeche kleiner eintraegt,
+bekommt -1 AW pro Kaestchen. Weniger markierte Ziele kosten nichts.
+
+- **Markierte Gegner:** Schaden auf alle markierten Tokens. Sind mehr markiert
+  als erlaubt, wird der Angriff mit Hinweis verweigert.
+- **Kegel, Kreis, Linie:** nach dem Dialog wird die Flaeche auf der Karte
+  platziert (Klick setzt, Shift/Strg + Mausrad dreht, Rechtsklick bricht ab).
+  Getroffen ist jeder Token, der mindestens zur Haelfte in der Flaeche steht,
+  ausser dem Angreifer selbst.
+
+Ein W100 gilt fuer alle Ziele und wird gegen den VW jedes einzelnen geprueft,
+der Schaden wird einmal gewuerfelt.
 
 ## Vergleichende Proben
 
@@ -155,6 +170,7 @@ game.isekaiBogen.rollSkillCheck(actor, 0);   // Skill nach Index
 
 ```
 node tools/test-damage.mjs
+node tools/test-area.mjs
 node tools/test-wiring.mjs
 ```
 

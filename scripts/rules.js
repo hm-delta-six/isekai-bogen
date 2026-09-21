@@ -64,3 +64,52 @@ export function resistanceCapFactor(resistanceRarity, attackRarity) {
   if (difference === -1) return 0.25;
   return 0;
 }
+
+// Angriffsbereich einer Waffe
+export const AREA_MODES = {
+  single: "Einzelangriff",
+  marked: "Markierte Gegner",
+  cone: "Kegel",
+  circle: "Kreis",
+  line: "Linie"
+};
+
+/**
+ * Größte zulässige Ausdehnung in Kästchen (1 Kästchen = 5 Fuß / 1,5 m),
+ * bei "marked" die Zahl der Ziele. Einzelangriff hat keine Größe.
+ *
+ *   Markierte Gegner  Skill-Level
+ *   Kegel             Raritätsstufe × Skill-Level        (Länge)
+ *   Kreis             Raritätsstufe × Skill-Level / 2    (Durchmesser)
+ *   Linie             Raritätsstufe × Skill-Level × 2    (Länge, 1 breit)
+ */
+export function areaMaximum(mode, rarity, skillLevel) {
+  const level = Math.max(0, Number(skillLevel || 0));
+  const base = rarityRank(rarity) * level;
+  switch (mode) {
+    case "marked": return Math.max(1, level);
+    case "cone":   return Math.max(1, base);
+    case "circle": return Math.max(1, Math.floor(base / 2));
+    case "line":   return Math.max(1, base * 2);
+    default:       return null;
+  }
+}
+
+/**
+ * Tatsächliche Größe aus der Eingabe im Bogen. Leeres Feld bedeutet volle
+ * Größe — so wächst die Fläche mit dem Skill mit, ohne dass ein einmal
+ * gespeicherter Wert veraltet. Wer die Fläche verkleinert, zahlt −1 AW pro
+ * Kästchen; weniger markierte Ziele kosten nichts.
+ */
+export function areaSetting(mode, rarity, skillLevel, requested) {
+  const key = mode in AREA_MODES ? mode : "single";
+  const max = areaMaximum(key, rarity, skillLevel);
+  if (max === null) return { mode: key, max: null, size: null, malus: 0 };
+
+  const wanted = Math.floor(Number(requested));
+  const empty = requested === "" || requested === null || requested === undefined;
+  const size = empty || !Number.isFinite(wanted) || wanted <= 0 ? max : Math.min(wanted, max);
+  const malus = key === "marked" ? 0 : max - size;
+
+  return { mode: key, max, size, malus };
+}

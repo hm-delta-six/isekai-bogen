@@ -1,8 +1,8 @@
-import { areaAttack, areaAttackFromMacro, attackFromMacro, attackValue, damageBonus, executeAttack } from "./attack.js";
+import { areaDescription, attackFromMacro, attackValue, damageBonus, executeAttack, weaponArea } from "./attack.js";
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageSocket } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
-import { DAMAGE_TYPES, RARITY_CHOICES, machtfaktor, rarityRank, typeLabels, typeList, typeValue } from "./rules.js";
+import { AREA_MODES, DAMAGE_TYPES, RARITY_CHOICES, machtfaktor, rarityRank, typeLabels, typeList, typeValue } from "./rules.js";
 
 class MeinHausregelSheet extends ActorSheet {
 
@@ -22,6 +22,7 @@ class MeinHausregelSheet extends ActorSheet {
 
     context.rarityChoices = RARITY_CHOICES;
     context.damageTypes = DAMAGE_TYPES;
+    context.areaModes = AREA_MODES;
 
     context.attributeChoices = {
       "STR": "STR", "DEX": "DEX", "CON": "CON",
@@ -142,7 +143,14 @@ class MeinHausregelSheet extends ActorSheet {
       w.calculatedDamage = `${diceLabel} × ${m} ${bonusStr}`;
       w.typeLabel = typeLabels(w.damageTypes).join(", ") || "kein Typ";
       w.typeValue = typeValue(w.damageTypes);
-      w.calculatedAW = attackValue(context.actor, w);
+      // Bereich: leeres Größenfeld heißt volle Größe, der Maximalwert steht als Platzhalter
+      const area = weaponArea(context.actor, w);
+      w.areaMode = area.mode;
+      w.areaMax = area.max;
+      w.areaSingle = area.mode === "single";
+      w.areaMalus = area.malus;
+      w.areaText = areaDescription(area);
+      w.calculatedAW = attackValue(context.actor, w) - area.malus;
     });
 
     // AKTEUR-MAX-WERTE DIREKT IN DIE DATENBANK SCHREIBEN (Falls abweichend)
@@ -258,7 +266,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-equipment').click(ev => handleArrayAction(ev, 'equipment', 'delete'));
 
     // WAFFEN
-    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", damageTypes: "", bonus: 0, description: "" }));
+    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", damageTypes: "", areaMode: "single", areaSize: "", bonus: 0, description: "" }));
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
 
     // SCHADENSTYPEN WÄHLEN (Waffe, Rüstung, Resistenz)
@@ -267,12 +275,6 @@ class MeinHausregelSheet extends ActorSheet {
       const { field, index, key } = ev.currentTarget.dataset;
       await this._saveForm(html);
       await openTypePicker(this.actor, field, Number(index), key);
-    });
-
-    // FLÄCHENANGRIFF
-    html.find('.area-attack').click(ev => {
-      ev.preventDefault();
-      areaAttack(this.actor);
     });
 
     // RESISTENZEN
@@ -348,7 +350,6 @@ Hooks.once('ready', () => {
   game.isekaiBogen = {
     attack: attackFromMacro,
     attackWith: executeAttack,
-    areaAttack: areaAttackFromMacro,
     rollSkillCheck
   };
 });

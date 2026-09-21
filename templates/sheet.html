@@ -319,10 +319,7 @@
       <!-- WAFFEN -->
       <div class="section-header">
         <span>Waffen &amp; Angriffe</span>
-        <span>
-          <a class="area-attack" title="Flächenangriff: Kegel oder Kreis platzieren">FLÄCHE</a>
-          &nbsp;<a class="add-weapon" title="Waffe hinzufügen">+ HINZUFÜGEN</a>
-        </span>
+        <a class="add-weapon" title="Waffe hinzufügen">+ HINZUFÜGEN</a>
       </div>
       {{#each actor.system.weapons as |weapon index|}}
         <div class="entry">
@@ -364,6 +361,19 @@
                 <span class="typepick" data-field="weapons" data-index="{{index}}" data-key="damageTypes"
                       title="Schadensarten wählen">{{weapon.typeLabel}} &#9662;</span>
               </div>
+              <div class="f">
+                <label>Bereich</label>
+                <select style="width:118px;" name="system.weapons.{{index}}.areaMode">
+                  {{selectOptions ../areaModes selected=weapon.areaMode}}
+                </select>
+              </div>
+              <div class="f">
+                <label>{{#if weapon.areaSingle}}Größe{{else}}max. {{weapon.areaMax}}{{/if}}</label>
+                <input type="number" class="num-short" min="1" name="system.weapons.{{index}}.areaSize"
+                       value="{{weapon.areaSize}}" placeholder="{{weapon.areaMax}}"
+                       title="Leer lassen für volle Größe. Kleiner kostet −1 AW pro Kästchen."
+                       {{#if weapon.areaSingle}}disabled{{/if}}/>
+              </div>
             </div>
             <div class="entry-row">
               <div class="f grow">
@@ -373,7 +383,8 @@
             </div>
           </div>
           <div class="entry-values">
-            <div><span class="stat">Angriffswert</span><span class="statval">{{weapon.calculatedAW}}</span></div>
+            <div><span class="stat">Angriffswert</span><span class="statval">{{weapon.calculatedAW}}</span>
+              {{#if weapon.areaMalus}}<small style="color:#94a3b8; font-size:10px;"> (−{{weapon.areaMalus}} Fläche)</small>{{/if}}</div>
             <div><span class="stat">Schaden</span><span class="statval" style="font-size:12px;">{{weapon.calculatedDamage}}</span></div>
           </div>
         </div>

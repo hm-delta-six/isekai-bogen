@@ -1,22 +1,25 @@
 /**
- * Platzieren einer Kegel- oder Kreisvorlage auf der Karte.
+ * Platzieren einer Kegel-, Kreis- oder Linienvorlage auf der Karte.
  *
- * Foundry bietet dafür keine fertige Funktion an. Der Ablauf ist derselbe wie
- * im dnd5e-System: eine Vorschau auf die Vorlagenebene legen, der Maus folgen,
- * mit Mausrad drehen, per Klick bestätigen und per Rechtsklick abbrechen.
+ * Foundry bietet dafür keine fertige Funktion an. Der Ablauf folgt dem
+ * dnd5e-System: Vorschau auf die Vorlagenebene legen, der Maus folgen, mit
+ * Shift/Strg + Mausrad drehen, per Klick bestätigen, per Rechtsklick abbrechen.
+ *
+ * Zurück kommt nur { x, y, direction } — welche Tokens getroffen sind, rechnet
+ * area.js aus, damit das nicht von Foundry-Interna abhängt.
  */
-export async function placeTemplate({ shape = "cone", distance = 6, angle = 53, actor = null }) {
+export async function placeTemplate({ t, distance, angle = 53, width = null }) {
   const data = {
-    t: shape,
+    t,
     user: game.user.id,
     distance,
     direction: 0,
     x: 0,
     y: 0,
-    fillColor: game.user.color,
-    flags: { "isekai-bogen": { actorUuid: actor?.uuid ?? null } }
+    fillColor: game.user.color
   };
-  if (shape === "cone") data.angle = angle;
+  if (t === "cone") data.angle = angle;
+  if (t === "ray" && width) data.width = width;
 
   const cls = CONFIG.MeasuredTemplate.documentClass;
   const document = new cls(data, { parent: canvas.scene });
@@ -24,22 +27,39 @@ export async function placeTemplate({ shape = "cone", distance = 6, angle = 53, 
 
   const layer = canvas.templates;
   await preview.draw();
-  preview.layer.preview.addChild(preview);
+  layer.preview.addChild(preview);
 
   const initialLayer = canvas.activeLayer;
   layer.activate();
-  ui.notifications.info("Fläche platzieren: Klick setzt, Mausrad dreht, Rechtsklick bricht ab.");
+  ui.notifications.info("Fläche platzieren: Klick setzt, Shift/Strg + Mausrad dreht, Rechtsklick bricht ab.");
+
+  const redraw = () => {
+    if (typeof preview.refresh === "function") preview.refresh();
+    else preview.renderFlags?.set({ refresh: true });
+  };
+
+  const snap = (point) => {
+    try {
+      if (canvas.grid.getSnappedPoint) {
+        const modes = CONST.GRID_SNAPPING_MODES;
+        return canvas.grid.getSnappedPoint(point, { mode: modes.CENTER | modes.VERTEX, resolution: 1 });
+      }
+      return canvas.grid.getSnappedPosition(point.x, point.y, 2);
+    } catch {
+      return point;
+    }
+  };
 
   return new Promise(resolve => {
     let moveTime = 0;
 
     const finish = (result) => {
-      preview.destroy();
-      layer.preview.removeChildren();
       canvas.stage.off("mousemove", onMove);
       canvas.stage.off("mousedown", onConfirm);
       canvas.app.view.oncontextmenu = null;
       canvas.app.view.onwheel = null;
+      layer.preview.removeChildren();
+      preview.destroy();
       initialLayer.activate();
       resolve(result);
     };
@@ -50,25 +70,26 @@ export async function placeTemplate({ shape = "cone", distance = 6, angle = 53, 
       if (now - moveTime <= 20) return;
       moveTime = now;
 
-      const center = event.data.getLocalPosition(layer);
-      const snapped = canvas.grid.getSnappedPosition(center.x, center.y, 2);
-      preview.document.updateSource({ x: snapped.x, y: snapped.y });
-      preview.refresh();
+      const point = snap(event.data.getLocalPosition(layer));
+      preview.document.updateSource({ x: point.x, y: point.y });
+      redraw();
     };
 
     const onWheel = (event) => {
       if (!event.shiftKey && !event.ctrlKey) return;
+      event.preventDefault();
       event.stopPropagation();
       const delta = event.deltaY < 0 ? 1 : -1;
       const step = event.shiftKey ? 15 : 5;
       preview.document.updateSource({ direction: preview.document.direction + delta * step });
-      preview.refresh();
+      redraw();
     };
 
     const onConfirm = (event) => {
+      if (event.data?.button !== undefined && event.data.button !== 0) return;
       event.stopPropagation();
       const { x, y, direction } = preview.document;
-      finish({ ...data, x, y, direction });
+      finish({ x, y, direction });
     };
 
     const onCancel = (event) => {
@@ -80,25 +101,5 @@ export async function placeTemplate({ shape = "cone", distance = 6, angle = 53, 
     canvas.stage.on("mousedown", onConfirm);
     canvas.app.view.oncontextmenu = onCancel;
     canvas.app.view.onwheel = onWheel;
-  });
-}
-
-/**
- * Tokens, deren Mittelpunkt in der Vorlage liegt.
- * Die Form wird relativ zum Ursprung der Vorlage geprüft, deshalb der Versatz.
- */
-export function tokensInTemplate(templateData) {
-  const cls = CONFIG.MeasuredTemplate.documentClass;
-  const document = new cls(templateData, { parent: canvas.scene });
-  const object = new CONFIG.MeasuredTemplate.objectClass(document);
-  object._applyRenderFlags = () => {};
-  object.document.updateSource({ x: templateData.x, y: templateData.y });
-
-  const shape = object._computeShape ? object._computeShape() : object.shape;
-  if (!shape) return [];
-
-  return canvas.tokens.placeables.filter(token => {
-    const center = token.center;
-    return shape.contains(center.x - templateData.x, center.y - templateData.y);
   });
 }
