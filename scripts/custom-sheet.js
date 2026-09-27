@@ -2,7 +2,11 @@ import { areaDescription, attackFromMacro, attackValue, damageBonus, executeAtta
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageSocket } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
-import { AREA_MODES, DAMAGE_TYPES, RARITY_CHOICES, machtfaktor, rarityRank, typeLabels, typeList, typeValue } from "./rules.js";
+import {
+  AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
+  SKILL_CATEGORIES, SKILL_CATEGORY_HINTS, machtfaktor, modBonus, rarityRank,
+  skillCategory, toArray, typeLabels, typeList, typeValue
+} from "./rules.js";
 
 class MeinHausregelSheet extends ActorSheet {
 
@@ -23,6 +27,9 @@ class MeinHausregelSheet extends ActorSheet {
     context.rarityChoices = RARITY_CHOICES;
     context.damageTypes = DAMAGE_TYPES;
     context.areaModes = AREA_MODES;
+    context.skillCategories = SKILL_CATEGORIES;
+    context.modBonusTypes = MOD_BONUS_TYPES;
+    context.costTypes = COST_TYPES;
 
     context.attributeChoices = {
       "STR": "STR", "DEX": "DEX", "CON": "CON",
@@ -102,7 +109,31 @@ class MeinHausregelSheet extends ActorSheet {
       const attrVal = getAttr(skill.attribute || "STR");
       const skillRarityR = rarityRank(skill.rarity);
       skill.cap = (attrVal * 3) + (skillRarityR * 5);
+      skill.category = skillCategory(skill);
+      skill.modBonus = modBonus(skill);
     });
+
+    // VIER TABELLEN AUS EINER LISTE: der Index bleibt der der Datenliste,
+    // damit die Formularfelder und alle Verknuepfungen weiter stimmen.
+    const byName = (a, b) => String(a.skill.name || "").localeCompare(String(b.skill.name || ""), "de");
+    context.skillGroups = Object.entries(SKILL_CATEGORIES).map(([key, label]) => ({
+      key,
+      label,
+      hint: SKILL_CATEGORY_HINTS[key],
+      isMod: key === "modifikation",
+      entries: systemData.isekaiSkills
+        .map((skill, index) => ({ index, skill }))
+        .filter(entry => entry.skill && skillCategory(entry.skill) === key)
+        .sort(byName)
+    }));
+
+    // Nur Modifikations-Skills lassen sich an eine Waffe haengen.
+    context.modSkillChoices = systemData.isekaiSkills
+      .filter(skill => skill && skillCategory(skill) === "modifikation")
+      .map(skill => String(skill.name || "").trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, "de"))
+      .reduce((choices, name) => ({ ...choices, [name]: name }), { "": "\u2014 Skill waehlen \u2014" });
 
     // RÜSTUNG: DR-SUMME UND ZUSTAND JE TEIL
     systemData.armors.forEach(armor => {
@@ -151,6 +182,17 @@ class MeinHausregelSheet extends ActorSheet {
       w.areaMalus = area.malus;
       w.areaText = areaDescription(area);
       w.calculatedAW = attackValue(context.actor, w) - area.malus;
+
+      // Modifikations-Skills: Bonushoehe kommt aus dem verknuepften Skill
+      w.mods = toArray(w.mods);
+      w.mods.forEach(mod => {
+        if (!mod) return;
+        const linked = systemData.isekaiSkills.find(skill =>
+          String(skill?.name || "").trim().toLowerCase() ===
+          String(mod.skillName || "").trim().toLowerCase());
+        mod.bonus = linked ? modBonus(linked) : 0;
+        mod.missing = Boolean(mod.skillName) && !linked;
+      });
     });
 
     // AKTEUR-MAX-WERTE DIREKT IN DIE DATENBANK SCHREIBEN (Falls abweichend)
@@ -257,8 +299,36 @@ class MeinHausregelSheet extends ActorSheet {
       await this.actor.update({ [`system.${fieldKey}`]: list });
     };
 
+    // Modifikationen liegen in der Waffe, brauchen also einen eigenen Griff.
+    const handleModAction = async (ev, action) => {
+      ev.preventDefault();
+      await this._saveForm(html);
+
+      let weapons = foundry.utils.duplicate(this.actor.system.weapons || []);
+      if (!Array.isArray(weapons)) weapons = Object.values(weapons);
+
+      const weaponIndex = Number(ev.currentTarget.dataset.index);
+      const weapon = weapons[weaponIndex];
+      if (!weapon) return;
+
+      let mods = weapon.mods || [];
+      if (!Array.isArray(mods)) mods = Object.values(mods);
+
+      if (action === 'add') {
+        mods.push({ skillName: "", bonusType: "aw", costType: "mp", costValue: 0 });
+      } else {
+        mods.splice(Number(ev.currentTarget.dataset.mod), 1);
+      }
+
+      weapon.mods = mods;
+      await this.actor.update({ "system.weapons": weapons });
+    };
+
     // SKILLS
-    html.find('.add-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'add', { name: "", rarity: "Common", level: 0, attribute: "STR", effect: "" }));
+    html.find('.add-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'add', {
+      name: "", rarity: "Common", level: 0, attribute: "STR",
+      category: ev.currentTarget.dataset.category || "fertigkeit", effect: ""
+    }));
     html.find('.delete-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'delete'));
 
     // AUSRÜSTUNG
@@ -280,6 +350,10 @@ class MeinHausregelSheet extends ActorSheet {
     // RESISTENZEN
     html.find('.add-resistance').click(ev => handleArrayAction(ev, 'resistances', 'add', { name: "", rarity: "Common", skillName: "", types: "", description: "" }));
     html.find('.delete-resistance').click(ev => handleArrayAction(ev, 'resistances', 'delete'));
+
+    // MODIFIKATIONS-SKILLS AN EINER WAFFE
+    html.find('.add-weapon-mod').click(ev => handleModAction(ev, 'add'));
+    html.find('.delete-weapon-mod').click(ev => handleModAction(ev, 'delete'));
 
     // RÜSTUNG
     html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, types: "", description: "" }));

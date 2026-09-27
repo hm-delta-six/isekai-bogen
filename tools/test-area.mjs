@@ -89,5 +89,35 @@ check("Linie: Laenge in Fuss", lineShape.units, 120);
 
 check("Einzelangriff hat keine Form", templateShape("single", 5, 1.5, 100), null);
 
+
+// --- Skill-Kategorien und Modifikations-Skills ---
+const { skillCategory, modBonus, summarizeMods, SKILL_CATEGORIES } = await import("../scripts/rules.js");
+
+check("vier Kategorien", Object.keys(SKILL_CATEGORIES), ["fertigkeit", "aktiv", "modifikation", "passiv"]);
+check("ohne Angabe: Fertigkeit", skillCategory({ name: "Alt" }), "fertigkeit");
+check("unbekannte Kategorie faellt zurueck", skillCategory({ category: "quatsch" }), "fertigkeit");
+check("gueltige Kategorie bleibt", skillCategory({ category: "passiv" }), "passiv");
+
+// Bonushoehe = Raritaetsstufe x Skill-Level
+check("Rare 4 -> 12", modBonus({ rarity: "Rare", level: 4 }), 12);
+check("Common 0 -> 0", modBonus({ rarity: "Common", level: 0 }), 0);
+check("negatives Level zaehlt 0", modBonus({ rarity: "Epic", level: -3 }), 0);
+
+const summary = summarizeMods([
+  { bonusType: "aw", bonus: 6, costType: "mp", costValue: 3 },
+  { bonusType: "aw", bonus: 4, costType: "mp", costValue: 2 },
+  { bonusType: "damage", bonus: 8, costType: "ap", costValue: 1 },
+  { bonusType: "targets", bonus: 2, costType: "hp", costValue: 5 }
+]);
+check("AW summiert", summary.bonus.aw, 10);
+check("Schaden summiert", summary.bonus.damage, 8);
+check("Anzahl Gegner summiert", summary.bonus.targets, 2);
+check("Reichweite ohne Eintrag", summary.bonus.range, 0);
+check("MP-Kosten summiert", summary.cost.mp, 5);
+check("AP-Kosten summiert", summary.cost.ap, 1);
+check("HP-Kosten summiert", summary.cost.hp, 5);
+check("leere Liste", summarizeMods([]).cost, { hp: 0, mp: 0, ap: 0 });
+check("unbekannter Bonustyp wird ignoriert", summarizeMods([{ bonusType: "quatsch", bonus: 9 }]).bonus.aw, 0);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

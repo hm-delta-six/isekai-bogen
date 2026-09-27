@@ -154,6 +154,15 @@
       color: #38bdf8;
     }
     .isekai-sheet .typepick.empty { color: #64748b; }
+    .isekai-sheet .badge {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      padding: 3px 7px;
+      font-size: 11px;
+      white-space: nowrap;
+      color: #38bdf8;
+    }
 
     /* Tab-Leiste Navigation */
     .isekai-sheet .sheet-tabs {
@@ -375,6 +384,31 @@
                        {{#if weapon.areaSingle}}disabled{{/if}}/>
               </div>
             </div>
+            <div class="entry-row" style="align-items: flex-start;">
+              <label style="font-size: 8px; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; padding-top: 5px;">Mods</label>
+              <div style="flex: 1; min-width: 0;">
+                {{#each weapon.mods as |mod modIndex|}}
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 3px;">
+                    <select style="width:130px;" name="system.weapons.{{index}}.mods.{{modIndex}}.skillName">
+                      {{selectOptions ../../modSkillChoices selected=mod.skillName}}
+                    </select>
+                    <select style="width:104px;" name="system.weapons.{{index}}.mods.{{modIndex}}.bonusType">
+                      {{selectOptions ../../modBonusTypes selected=mod.bonusType}}
+                    </select>
+                    <span class="badge" title="Raritätsstufe × Skill-Level">+{{mod.bonus}}</span>
+                    <span style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Kosten</span>
+                    <input type="number" class="num-short" min="0" name="system.weapons.{{index}}.mods.{{modIndex}}.costValue" value="{{mod.costValue}}"/>
+                    <select style="width:56px;" name="system.weapons.{{index}}.mods.{{modIndex}}.costType">
+                      {{selectOptions ../../costTypes selected=mod.costType}}
+                    </select>
+                    {{#if mod.missing}}<strong style="font-size:10px;">Skill fehlt</strong>{{/if}}
+                    <a class="delete-weapon-mod btn-del" data-index="{{index}}" data-mod="{{modIndex}}"><i class="fas fa-trash"></i></a>
+                  </div>
+                {{/each}}
+                <a class="add-weapon-mod" data-index="{{index}}" style="color:#38bdf8; cursor:pointer; font-size:10px;"
+                   title="Angriffs-Modifikations-Skill hinzufügen">+ SKILL</a>
+              </div>
+            </div>
             <div class="entry-row">
               <div class="f grow">
                 <label>Beschreibung</label>
@@ -393,50 +427,60 @@
 
     <!-- TAB 2: SKILLS -->
     <div class="tab" data-group="primary" data-tab="skills">
-      <div class="section-header">
-        <span>Fertigkeiten / Skills</span>
-        <a class="add-skill" title="Skill hinzufügen">+ HINZUFÜGEN</a>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 20px;"></th>
-            <th>Skill</th>
-            <th style="width: 100px;">Rarität</th>
-            <th style="width: 45px;">Lvl</th>
-            <th style="width: 65px;">Attr.</th>
-            <th style="width: 40px; text-align:center;">Cap</th>
-            <th>Wirkung</th>
-            <th style="width: 20px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each actor.system.isekaiSkills as |skill index|}}
+      {{#each skillGroups as |group|}}
+        <div class="section-header">
+          <span>{{group.label}}</span>
+          <a class="add-skill" data-category="{{group.key}}" title="Skill hinzufügen">+ HINZUFÜGEN</a>
+        </div>
+        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">{{group.hint}}</div>
+        <table>
+          <thead>
             <tr>
-              <td style="text-align: center;">
-                <a class="roll-skill btn-roll" data-index="{{index}}" title="Skill-Probe würfeln (markierte Tokens = vergleichender Wurf)">
-                  <i class="fas fa-dice-d20"></i>
-                </a>
-              </td>
-              <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{index}}.name" value="{{skill.name}}"/></td>
-              <td>
-                <select style="width:100%;" name="system.isekaiSkills.{{index}}.rarity">
-                  {{selectOptions ../rarityChoices selected=skill.rarity}}
-                </select>
-              </td>
-              <td><input type="number" class="num-short" name="system.isekaiSkills.{{index}}.level" value="{{skill.level}}"/></td>
-              <td>
-                <select style="width:100%;" name="system.isekaiSkills.{{index}}.attribute">
-                  {{selectOptions ../attributeChoices selected=skill.attribute}}
-                </select>
-              </td>
-              <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{skill.cap}}</td>
-              <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{index}}.effect" value="{{skill.effect}}"/></td>
-              <td><a class="delete-skill btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
+              <th style="width: 20px;"></th>
+              <th>Skill</th>
+              <th style="width: 100px;">Rarität</th>
+              <th style="width: 45px;">Lvl</th>
+              <th style="width: 65px;">Attr.</th>
+              <th style="width: 40px; text-align:center;">Cap</th>
+              {{#if group.isMod}}<th style="width: 50px; text-align:center;">Bonus</th>{{/if}}
+              <th>Wirkung</th>
+              <th style="width: 20px;"></th>
             </tr>
-          {{/each}}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {{#each group.entries as |entry|}}
+              <tr>
+                <td style="text-align: center;">
+                  <a class="roll-skill btn-roll" data-index="{{entry.index}}" title="Skill-Probe würfeln (markierte Tokens = vergleichender Wurf)">
+                    <i class="fas fa-dice-d20"></i>
+                  </a>
+                </td>
+                <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{entry.index}}.name" value="{{entry.skill.name}}"/></td>
+                <td>
+                  <select style="width:100%;" name="system.isekaiSkills.{{entry.index}}.rarity">
+                    {{selectOptions ../../rarityChoices selected=entry.skill.rarity}}
+                  </select>
+                </td>
+                <td><input type="number" class="num-short" name="system.isekaiSkills.{{entry.index}}.level" value="{{entry.skill.level}}"/></td>
+                <td>
+                  <select style="width:100%;" name="system.isekaiSkills.{{entry.index}}.attribute">
+                    {{selectOptions ../../attributeChoices selected=entry.skill.attribute}}
+                  </select>
+                </td>
+                <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.cap}}</td>
+                {{#if group.isMod}}
+                  <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.modBonus}}</td>
+                {{/if}}
+                <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{entry.index}}.effect" value="{{entry.skill.effect}}"/></td>
+                <td>
+                  <input type="hidden" name="system.isekaiSkills.{{entry.index}}.category" value="{{entry.skill.category}}"/>
+                  <a class="delete-skill btn-del" data-index="{{entry.index}}"><i class="fas fa-trash"></i></a>
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      {{/each}}
     </div>
 
     <!-- TAB 3: AUSRÜSTUNG -->

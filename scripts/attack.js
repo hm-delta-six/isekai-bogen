@@ -1,7 +1,7 @@
-import { applyDamage, describeDamage, resolveDamage } from "./damage.js";
+import { applyDamage, describeDamage, payCosts, resolveDamage } from "./damage.js";
 import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
-import { areaSetting, machtfaktor, toArray, typeLabels } from "./rules.js";
+import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, summarizeMods, toArray, typeLabels } from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
 // Ausrüstung trägt derzeit keine type/bonus-Felder, wird aber mitgelesen,
@@ -87,6 +87,34 @@ function defenceValue(targetActor) {
 
 const hitChanceFor = (aw, vw) => Math.max(5, Math.min(95, Math.round(50 * (aw / vw))));
 
+/**
+ * Modifikations-Skills einer Waffe mit aufgelöster Bonushöhe und der Frage,
+ * ob der Charakter die Kosten gerade tragen kann.
+ */
+export function weaponMods(actor, weapon) {
+  return toArray(weapon?.mods).map((mod, index) => {
+    const skill = toArray(actor?.system?.isekaiSkills).find(entry =>
+      String(entry?.name || "").trim().toLowerCase() ===
+      String(mod?.skillName || "").trim().toLowerCase());
+
+    const costType = mod?.costType in COST_TYPES ? mod.costType : "mp";
+    const costValue = Math.max(0, Number(mod?.costValue || 0));
+    const available = Number(actor?.system?.resources?.[costType]?.value || 0);
+
+    return {
+      index,
+      name: skill?.name || mod?.skillName || "Ohne Skill",
+      bonusType: mod?.bonusType in MOD_BONUS_TYPES ? mod.bonusType : "aw",
+      bonus: skill ? modBonus(skill) : 0,
+      costType,
+      costValue,
+      available,
+      affordable: costValue <= available,
+      missing: Boolean(mod?.skillName) && !skill
+    };
+  }).filter(mod => mod.name !== "Ohne Skill" || mod.bonus);
+}
+
 // Bereich einer Waffe: Modus, zulässige und gewählte Größe, AW-Malus.
 export function weaponArea(actor, weapon) {
   return areaSetting(
@@ -139,6 +167,22 @@ function infoHtml(actor, weapon, targets) {
   } else {
     html += `<p style="font-size: 11px;">Getroffen ist, wer mindestens zur Hälfte in der Fläche steht. ` +
       `Die Trefferchance wird je Ziel gegen dessen VW berechnet.</p>`;
+  }
+
+  const mods = weaponMods(actor, weapon);
+  if (mods.length) {
+    html += `<p style="margin-bottom:2px;"><strong>Modifikations-Skills</strong></p>`;
+    for (const mod of mods) {
+      const cost = mod.costValue ? `${mod.costValue} ${COST_TYPES[mod.costType]}` : "keine Kosten";
+      const note = mod.missing
+        ? " — Skill nicht im Bogen"
+        : (mod.affordable ? "" : ` — nur ${mod.available} ${COST_TYPES[mod.costType]} vorhanden`);
+      html +=
+        `<label style="display:flex; align-items:center; gap:6px; font-size:11px;">` +
+        `<input type="checkbox" name="mod" value="${mod.index}" style="width:auto; margin:0;"` +
+        `${mod.affordable && !mod.missing ? "" : " disabled"}/>` +
+        `<span>${mod.name}: +${mod.bonus} ${MOD_BONUS_TYPES[mod.bonusType]}, ${cost}${note}</span></label>`;
+    }
   }
 
   return html;
@@ -281,7 +325,11 @@ export async function executeAttack(actor, weapon = null) {
           if (!chosen) return;
 
           await actor.setFlag("isekai-bogen", "lastWeaponIndex", index);
-          await resolveAttack(actor, chosen.weapon, mode);
+
+          const picked = html.find('input[name="mod"]:checked').map((_, el) => Number(el.value)).get();
+          const chosenMods = weaponMods(actor, chosen.weapon).filter(mod => picked.includes(mod.index));
+
+          await resolveAttack(actor, chosen.weapon, mode, chosenMods);
         }
       }
     },
@@ -289,12 +337,20 @@ export async function executeAttack(actor, weapon = null) {
   }).render(true);
 }
 
-async function resolveAttack(actor, used, mode) {
-  const area = weaponArea(actor, used);
+async function resolveAttack(actor, used, mode, mods = []) {
+  const { bonus, cost } = summarizeMods(mods);
+
+  // Reichweite vergroessert die Flaeche, Anzahl Gegner die Zahl der Ziele.
+  const base = weaponArea(actor, used);
+  const area = {
+    ...base,
+    size: base.size === null ? null : base.size + (base.mode === "marked" ? bonus.targets : bonus.range)
+  };
+
   const victims = await selectVictims(actor, area);
   if (victims === null) return;
 
-  const aw = attackValue(actor, used) - area.malus;
+  const aw = attackValue(actor, used) - area.malus + bonus.aw;
 
   const factor = machtfaktor(used.rarity);
   const skill = weaponSkill(actor, used);
@@ -302,7 +358,7 @@ async function resolveAttack(actor, used, mode) {
   const halfAwSkill = Math.ceil(Number(actor.system?.boni?.awSkill || 0) / 2);
   const weaponBonus = Number(used.bonus || 0);
   const diceType = used.dice || "1d6";
-  const damageFormula = `(${diceType} * ${factor}) + ${damageBonus(actor, used)}`;
+  const damageFormula = `(${diceType} * ${factor}) + ${damageBonus(actor, used) + bonus.damage}`;
 
   // Ohne Ziel wird beim Einzelangriff wie bisher gegen VW 10 geprüft,
   // damit der Wurf auch ohne markierten Token am Tisch nutzbar bleibt.
@@ -322,6 +378,13 @@ async function resolveAttack(actor, used, mode) {
     `+ Halber AW-Skill (${halfAwSkill}) + ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})` +
     (typeLabels(used.damageTypes).length ? ` · ${typeLabels(used.damageTypes).join(", ")}` : "") +
     `</small>`;
+
+  if (mods.length) {
+    content += `<br><small>Modifikationen: ` + mods.map(mod =>
+      `${mod.name} (+${mod.bonus} ${MOD_BONUS_TYPES[mod.bonusType]}` +
+      (mod.costValue ? `, ${mod.costValue} ${COST_TYPES[mod.costType]}` : "") + `)`).join(", ") + `</small>`;
+    await payCosts(actor, cost);
+  }
 
   if (!checks.length) {
     content += `<hr><span style="font-size: 11px;">Niemand steht mindestens zur Hälfte in der Fläche.</span>`;

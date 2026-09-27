@@ -43,6 +43,36 @@ vorkommen; scripts/token-bars.js erweitert deshalb die Ermittlung selbst.
 - Vergleichende Proben gegen beliebig viele markierte Tokens
 - Verdeckte Wuerfe fuer den Spielleiter
 
+## Skills
+
+Der Skill-Reiter zeigt vier Tabellen, alphabetisch sortiert. Alle Skills liegen
+weiter in einer Liste, die Kategorie steuert nur die Zuordnung — Verknuepfungen
+von Waffen und Resistenzen bleiben davon unberuehrt.
+
+| Kategorie | Bedeutung |
+|---|---|
+| Fertigkeiten | Haengen von nichts ab und aendern nichts. Offen oder vergleichend gewuerfelt. |
+| Aktive Skills | Werden mit einer Waffe oder einem Zauber eingesetzt. |
+| Angriffs-Modifikationen | Veraendern einen Angriff, vergleichbar mit Talenten. |
+| Passive Skills | Immer aktiv, kein Wurf noetig. |
+
+Bestehende Skills landen unter Fertigkeiten und lassen sich dort umsortieren,
+indem man sie loescht und in der richtigen Tabelle neu anlegt.
+
+## Angriffs-Modifikationen
+
+In der Waffenkarte legt **+ SKILL** eine Modifikation an. Sie besteht aus:
+
+- **Skill** aus der Kategorie Angriffs-Modifikationen
+- **Bonustyp**: AW, Schaden, Anzahl Gegner oder Reichweite
+- **Bonushoehe**: berechnet als Raritaetsstufe x Skill-Level, nicht eingebbar
+- **Kosten**: Wert und Ressource (HP, MP oder AP)
+
+Im Angriffsdialog steht jede Modifikation als Haken. Nicht bezahlbare
+Modifikationen sind gesperrt und nennen den fehlenden Betrag. Angehakte
+Modifikationen erhoehen AW, Schaden, Zielzahl oder Flaechengroesse, die Kosten
+werden beim Angriff abgezogen und im Chat genannt.
+
 ## Waffen und Skills
 
 Jede Waffe verweist in der Spalte **Skill** auf einen Skill aus der Skill-Liste

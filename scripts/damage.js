@@ -212,30 +212,88 @@ function isApplyingGM() {
   return activeGMs[0]?.id === game.user.id;
 }
 
+// Offene Anfragen an den SL, damit ein stiller Fehlschlag auffaellt.
+const pending = new Map();
+
 export async function applyDamage(targetActor, resolved) {
   if (!resolved.hpLoss && !resolved.wear.length) return;
 
   const payload = {
+    requestId: foundry.utils.randomID(),
     actorUuid: targetActor.uuid,
+    targetName: targetActor.name,
     hpLoss: resolved.hpLoss,
     wear: resolved.wear
   };
 
   if (targetActor.isOwner) {
+    console.debug(`${MODULE_ID} | Schaden direkt angewendet`, payload);
     await applyLocally(payload);
-  } else if (game.users.some(u => u.isGM && u.active)) {
-    game.socket.emit(SOCKET, { action: "applyDamage", payload });
-  } else {
-    ui.notifications.warn("Kein Spielleiter eingeloggt — der Schaden wurde nicht angewendet.");
+    return;
   }
+
+  if (!game.users.some(u => u.isGM && u.active)) {
+    return ui.notifications.warn("Kein Spielleiter eingeloggt — der Schaden wurde nicht angewendet.");
+  }
+
+  console.debug(`${MODULE_ID} | Schaden an den SL geschickt`, payload);
+  game.socket.emit(SOCKET, { action: "applyDamage", payload });
+
+  // Bleibt die Bestaetigung aus, war der Abzug wirkungslos. Ohne diesen
+  // Hinweis faellt das niemandem auf.
+  const timer = setTimeout(() => {
+    pending.delete(payload.requestId);
+    ui.notifications.error(
+      `Schaden an ${payload.targetName} wurde vom Spielleiter nicht bestätigt. Bitte von Hand abziehen.`);
+    console.warn(`${MODULE_ID} | keine Bestätigung für`, payload);
+  }, 5000);
+
+  pending.set(payload.requestId, timer);
 }
 
 export function registerDamageSocket() {
   game.socket.on(SOCKET, async (message) => {
+    if (message?.action === "damageApplied") {
+      const timer = pending.get(message.requestId);
+      if (!timer) return;
+      clearTimeout(timer);
+      pending.delete(message.requestId);
+      console.debug(`${MODULE_ID} | Schaden bestätigt`, message.requestId);
+      return;
+    }
+
     if (message?.action !== "applyDamage") return;
-    if (!game.user.isGM || !isApplyingGM()) return;
-    await applyLocally(message.payload);
+    if (!game.user.isGM) return;
+    if (!isApplyingGM()) {
+      console.debug(`${MODULE_ID} | anderer SL ist zustaendig`);
+      return;
+    }
+
+    try {
+      await applyLocally(message.payload);
+      game.socket.emit(SOCKET, { action: "damageApplied", requestId: message.payload?.requestId });
+      console.debug(`${MODULE_ID} | Schaden angewendet`, message.payload);
+    } catch (error) {
+      console.error(`${MODULE_ID} | Schaden konnte nicht angewendet werden`, error, message.payload);
+      ui.notifications.error(`Schaden an ${message.payload?.targetName ?? "Ziel"} fehlgeschlagen: ${error.message}`);
+    }
   });
+
+  console.debug(`${MODULE_ID} | Socket ${SOCKET} registriert, GM: ${game.user.isGM}`);
+}
+
+/**
+ * Zieht die Kosten eines Modifikations-Skills ab. Laeuft ueber denselben Weg
+ * wie der Schaden, betrifft aber immer den eigenen Akteur.
+ */
+export async function payCosts(actor, cost) {
+  const update = {};
+  for (const [key, amount] of Object.entries(cost || {})) {
+    if (!amount) continue;
+    const current = Number(actor.system?.resources?.[key]?.value || 0);
+    update[`system.resources.${key}.value`] = Math.max(0, current - amount);
+  }
+  if (Object.keys(update).length) await actor.update(update);
 }
 
 export function describeDamage(targetName, resolved) {

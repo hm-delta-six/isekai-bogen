@@ -113,3 +113,53 @@ export function areaSetting(mode, rarity, skillLevel, requested) {
 
   return { mode: key, max, size, malus };
 }
+
+// Skill-Kategorien. Alle Skills stehen weiter in einer Liste, damit
+// Verknüpfungen von Waffen und Resistenzen gültig bleiben; die Kategorie
+// steuert nur, in welcher Tabelle der Skill erscheint.
+export const SKILL_CATEGORIES = {
+  fertigkeit:   "Fertigkeiten",
+  aktiv:        "Aktive Skills",
+  modifikation: "Angriffs-Modifikationen",
+  passiv:       "Passive Skills"
+};
+
+export const SKILL_CATEGORY_HINTS = {
+  fertigkeit:   "Hängen von nichts ab und ändern nichts. Offen oder vergleichend gewürfelt.",
+  aktiv:        "Werden mit einer Waffe oder einem Zauber eingesetzt.",
+  modifikation: "Verändern einen Angriff. Lassen sich in der Waffenkarte hinzufügen.",
+  passiv:       "Immer aktiv, kein Wurf nötig."
+};
+
+export const skillCategory = (skill) =>
+  skill?.category in SKILL_CATEGORIES ? skill.category : "fertigkeit";
+
+// Was ein Modifikations-Skill am Angriff verändert.
+export const MOD_BONUS_TYPES = {
+  aw:      "AW",
+  damage:  "Schaden",
+  targets: "Anzahl Gegner",
+  range:   "Reichweite"
+};
+
+export const COST_TYPES = { hp: "HP", mp: "MP", ap: "AP" };
+
+// Bonushöhe eines Modifikations-Skills: Raritätsstufe × Skill-Level.
+export const modBonus = (skill) => rarityRank(skill?.rarity) * Math.max(0, Number(skill?.level || 0));
+
+/**
+ * Fasst die gewählten Modifikationen zu Summen je Bonustyp und zu Kosten je
+ * Ressource zusammen.
+ */
+export function summarizeMods(mods) {
+  const bonus = { aw: 0, damage: 0, targets: 0, range: 0 };
+  const cost = { hp: 0, mp: 0, ap: 0 };
+
+  for (const mod of toArray(mods)) {
+    if (!mod) continue;
+    if (mod.bonusType in bonus) bonus[mod.bonusType] += Number(mod.bonus || 0);
+    if (mod.costType in cost) cost[mod.costType] += Math.max(0, Number(mod.costValue || 0));
+  }
+
+  return { bonus, cost };
+}
