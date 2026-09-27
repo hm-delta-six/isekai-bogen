@@ -1,3 +1,5 @@
+import { SKILL_BONUS_FORMULAS, rarityRank, skillBonus, skillCategory } from "./rules.js";
+
 const MODULE_ID = "isekai-bogen";
 const SETTING_PAIRS = "skillPairs";
 const DEFAULT_PAIRS = "Heimlichkeit:DEX <-> Wahrnehmung:WIS";
@@ -78,9 +80,16 @@ function effectiveAttribute(actor, attributeKey) {
 }
 
 // 1d100 + Skill-Level + Attribut + Modifikator. Hoher Wurf ist gut.
-async function rollAdditive({ actor, skillName, level, attribute, modifier = 0 }) {
-  const attributeValue = effectiveAttribute(actor, attribute);
-  const skillLevel = Number(level || 0);
+/**
+ * Der Bonus folgt der Formel der Skill-Kategorie (siehe rules.js), bei
+ * Fertigkeiten also Skill-Level × Raritätsstufe + Attribut. Fehlt der Skill
+ * beim Ziel, wird er als Level 0 gewertet — dann bleibt das Attribut übrig.
+ */
+async function rollAdditive({ actor, skillName, skill, attribute, modifier = 0 }) {
+  const attr = String(attribute || skill?.attribute || "STR").toUpperCase();
+  const attributeValue = effectiveAttribute(actor, attr);
+  const entry = skill || { level: 0, rarity: "Common", category: "fertigkeit" };
+  const bonus = skillBonus(entry, attributeValue);
   const mod = Number(modifier || 0);
 
   const roll = await new Roll("1d100").evaluate({ async: true });
@@ -89,23 +98,34 @@ async function rollAdditive({ actor, skillName, level, attribute, modifier = 0 }
   return {
     actor,
     skillName,
-    attribute: String(attribute || "STR").toUpperCase(),
+    attribute: attr,
     attributeValue,
-    skillLevel,
+    skillLevel: Number(entry.level || 0),
+    rank: rarityRank(entry.rarity),
+    category: skillCategory(entry),
+    formula: SKILL_BONUS_FORMULAS[skillCategory(entry)],
+    bonus,
     modifier: mod,
     roll,
     die,
-    total: die + skillLevel + attributeValue + mod,
+    total: die + bonus + mod,
     isCritical: die === 100,
     isFumble: die === 1
   };
 }
 
 function formatBreakdown(result) {
+  // Rechenweg je nach Kategorie, damit im Chat nachvollziehbar bleibt,
+  // wie der Bonus zustande kommt.
+  const bonusText = {
+    aktiv:        `Skill ${result.skillLevel} + halbes ${result.attribute} ${Math.floor(result.attributeValue / 2)}`,
+    modifikation: `Skill ${result.skillLevel} × Stufe ${result.rank}`,
+    passiv:       `Skill ${result.skillLevel} × Stufe ${result.rank} / 2`
+  }[result.category] ?? `Skill ${result.skillLevel} × Stufe ${result.rank} + ${result.attribute} ${result.attributeValue}`;
+
   const parts = [
     `W100: <b>${result.die}</b>`,
-    `Skill: ${result.skillLevel}`,
-    `${result.attribute}: ${result.attributeValue}`
+    `Bonus ${result.bonus} (${bonusText})`
   ];
   let text = parts.join(" + ");
   if (result.modifier) {
@@ -249,7 +269,7 @@ export async function rollSkillCheck(actor, skillIndex) {
   const own = await rollAdditive({
     actor,
     skillName,
-    level: skill.level,
+    skill,
     attribute: skill.attribute,
     modifier: options.modifier
   });
@@ -261,7 +281,7 @@ export async function rollSkillCheck(actor, skillIndex) {
       const result = await rollAdditive({
         actor: token.actor,
         skillName: counterpart.name,
-        level: opposedSkill?.level || 0,
+        skill: opposedSkill,
         attribute: opposedSkill?.attribute || counterpart.attribute || "WIS"
       });
       comparisons.push({ name: token.name, hasSkill: Boolean(opposedSkill), result });

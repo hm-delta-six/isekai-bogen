@@ -119,5 +119,26 @@ check("HP-Kosten summiert", summary.cost.hp, 5);
 check("leere Liste", summarizeMods([]).cost, { hp: 0, mp: 0, ap: 0 });
 check("unbekannter Bonustyp wird ignoriert", summarizeMods([{ bonusType: "quatsch", bonus: 9 }]).bonus.aw, 0);
 
+
+// --- Bonusformeln je Skill-Kategorie ---
+const { skillBonus, SKILL_USES_ATTRIBUTE, SKILL_BONUS_FORMULAS } = await import("../scripts/rules.js");
+
+// Rare = Stufe 3, Level 4, Attribut 7
+const rare4 = { rarity: "Rare", level: 4 };
+check("Fertigkeit: 4 x 3 + 7", skillBonus({ ...rare4, category: "fertigkeit" }, 7), 19);
+check("ohne Kategorie wie Fertigkeit", skillBonus(rare4, 7), 19);
+check("Aktiv: 4 + floor(7/2)", skillBonus({ ...rare4, category: "aktiv" }, 7), 7);
+check("Aktiv rundet ab", skillBonus({ ...rare4, category: "aktiv" }, 9), 8);
+check("Modifikation: 4 x 3, Attribut egal", skillBonus({ ...rare4, category: "modifikation" }, 7), 12);
+check("Passiv: 4 x 3 / 2", skillBonus({ ...rare4, category: "passiv" }, 7), 6);
+check("Passiv rundet ab", skillBonus({ rarity: "Rare", level: 3, category: "passiv" }, 7), 4);
+check("Level 0 Fertigkeit: nur Attribut", skillBonus({ ...rare4, level: 0, category: "fertigkeit" }, 7), 7);
+check("negatives Level zaehlt 0", skillBonus({ ...rare4, level: -5, category: "fertigkeit" }, 7), 7);
+
+check("Attribut nur bei Fertigkeit und Aktiv", SKILL_USES_ATTRIBUTE,
+  { fertigkeit: true, aktiv: true, modifikation: false, passiv: false });
+check("zu jeder Kategorie eine Formel", Object.keys(SKILL_BONUS_FORMULAS),
+  ["fertigkeit", "aktiv", "modifikation", "passiv"]);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

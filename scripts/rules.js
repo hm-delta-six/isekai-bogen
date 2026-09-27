@@ -144,8 +144,42 @@ export const MOD_BONUS_TYPES = {
 
 export const COST_TYPES = { hp: "HP", mp: "MP", ap: "AP" };
 
+// Rechenregel des Skill-Bonus je Kategorie, für die Hilfe im Bogen.
+export const SKILL_BONUS_FORMULAS = {
+  fertigkeit:   "Skill-Level × Raritätsstufe + Attribut",
+  aktiv:        "Skill-Level + halber Attributswert (abgerundet)",
+  modifikation: "Skill-Level × Raritätsstufe",
+  passiv:       "Skill-Level × Raritätsstufe / 2 (abgerundet)"
+};
+
+// Nur bei diesen Kategorien geht das Attribut in den Bonus ein; bei den
+// anderen wird die Spalte im Bogen deshalb gar nicht erst angezeigt.
+export const SKILL_USES_ATTRIBUTE = {
+  fertigkeit:   true,
+  aktiv:        true,
+  modifikation: false,
+  passiv:       false
+};
+
+/**
+ * Bonus eines Skills. Die Formel hängt an der Kategorie.
+ * attributeValue ist der effektive Attributswert inklusive Titel-Boni.
+ */
+export function skillBonus(skill, attributeValue = 0) {
+  const level = Math.max(0, Number(skill?.level || 0));
+  const rank = rarityRank(skill?.rarity);
+  const attribute = Number(attributeValue || 0);
+
+  switch (skillCategory(skill)) {
+    case "aktiv":        return level + Math.floor(attribute / 2);
+    case "modifikation": return level * rank;
+    case "passiv":       return Math.floor(level * rank / 2);
+    default:             return level * rank + attribute;
+  }
+}
+
 // Bonushöhe eines Modifikations-Skills: Raritätsstufe × Skill-Level.
-export const modBonus = (skill) => rarityRank(skill?.rarity) * Math.max(0, Number(skill?.level || 0));
+export const modBonus = (skill) => skillBonus({ ...skill, category: "modifikation" });
 
 /**
  * Fasst die gewählten Modifikationen zu Summen je Bonustyp und zu Kosten je

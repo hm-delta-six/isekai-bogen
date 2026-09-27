@@ -154,6 +154,19 @@
       color: #38bdf8;
     }
     .isekai-sheet .typepick.empty { color: #64748b; }
+    .isekai-sheet .help {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      line-height: 13px;
+      text-align: center;
+      border: 1px solid #38bdf8;
+      border-radius: 50%;
+      font-size: 9px;
+      cursor: help;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
     .isekai-sheet .badge {
       background: #0f172a;
       border: 1px solid #334155;
@@ -429,7 +442,9 @@
     <div class="tab" data-group="primary" data-tab="skills">
       {{#each skillGroups as |group|}}
         <div class="section-header">
-          <span>{{group.label}}</span>
+          <span>{{group.label}}
+            <span class="help" title="Bonus = {{group.formula}}">?</span>
+          </span>
           <a class="add-skill" data-category="{{group.key}}" title="Skill hinzufügen">+ HINZUFÜGEN</a>
         </div>
         <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">{{group.hint}}</div>
@@ -440,9 +455,9 @@
               <th>Skill</th>
               <th style="width: 100px;">Rarität</th>
               <th style="width: 45px;">Lvl</th>
-              <th style="width: 65px;">Attr.</th>
+              {{#if group.usesAttribute}}<th style="width: 65px;">Attr.</th>{{/if}}
               <th style="width: 40px; text-align:center;">Cap</th>
-              {{#if group.isMod}}<th style="width: 50px; text-align:center;">Bonus</th>{{/if}}
+              <th style="width: 50px; text-align:center;" title="Bonus = {{group.formula}}">Bonus</th>
               <th>Wirkung</th>
               <th style="width: 20px;"></th>
             </tr>
@@ -462,15 +477,16 @@
                   </select>
                 </td>
                 <td><input type="number" class="num-short" name="system.isekaiSkills.{{entry.index}}.level" value="{{entry.skill.level}}"/></td>
-                <td>
-                  <select style="width:100%;" name="system.isekaiSkills.{{entry.index}}.attribute">
-                    {{selectOptions ../../attributeChoices selected=entry.skill.attribute}}
-                  </select>
-                </td>
-                <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.cap}}</td>
-                {{#if group.isMod}}
-                  <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.modBonus}}</td>
+                {{#if group.usesAttribute}}
+                  <td>
+                    <select style="width:100%;" name="system.isekaiSkills.{{entry.index}}.attribute">
+                      {{selectOptions ../../attributeChoices selected=entry.skill.attribute}}
+                    </select>
+                  </td>
                 {{/if}}
+                <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.cap}}</td>
+                <td style="text-align: center; color: #38bdf8; font-weight: bold;"
+                    title="{{group.formula}}">{{entry.skill.bonus}}</td>
                 <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{entry.index}}.effect" value="{{entry.skill.effect}}"/></td>
                 <td>
                   <input type="hidden" name="system.isekaiSkills.{{entry.index}}.category" value="{{entry.skill.category}}"/>

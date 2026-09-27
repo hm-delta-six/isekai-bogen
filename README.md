@@ -59,6 +59,20 @@ von Waffen und Resistenzen bleiben davon unberuehrt.
 Bestehende Skills landen unter Fertigkeiten und lassen sich dort umsortieren,
 indem man sie loescht und in der richtigen Tabelle neu anlegt.
 
+Jede Kategorie rechnet ihren Bonus anders. Das Fragezeichen neben der
+Ueberschrift zeigt die Regel beim Ueberfahren mit der Maus.
+
+| Kategorie | Bonus |
+|---|---|
+| Fertigkeiten | Skill-Level x Raritaetsstufe + Attribut |
+| Aktive Skills | Skill-Level + halber Attributswert (abgerundet) |
+| Angriffs-Modifikationen | Skill-Level x Raritaetsstufe |
+| Passive Skills | Skill-Level x Raritaetsstufe / 2 (abgerundet) |
+
+Bei Angriffs-Modifikationen und passiven Skills geht das Attribut nicht ein,
+dort fehlt die Spalte deshalb. Die Skill-Probe wuerfelt 1d100 + Bonus +
+Modifikator. Angriffswert und Resistenzen bleiben bei ihren eigenen Formeln.
+
 ## Angriffs-Modifikationen
 
 In der Waffenkarte legt **+ SKILL** eine Modifikation an. Sie besteht aus:

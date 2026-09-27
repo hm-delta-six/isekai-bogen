@@ -4,8 +4,9 @@ import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageSocket } from
 import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
-  SKILL_CATEGORIES, SKILL_CATEGORY_HINTS, machtfaktor, modBonus, rarityRank,
-  skillCategory, toArray, typeLabels, typeList, typeValue
+  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE,
+  machtfaktor, modBonus, rarityRank, skillBonus, skillCategory, toArray,
+  typeLabels, typeList, typeValue
 } from "./rules.js";
 
 class MeinHausregelSheet extends ActorSheet {
@@ -110,7 +111,8 @@ class MeinHausregelSheet extends ActorSheet {
       const skillRarityR = rarityRank(skill.rarity);
       skill.cap = (attrVal * 3) + (skillRarityR * 5);
       skill.category = skillCategory(skill);
-      skill.modBonus = modBonus(skill);
+      // Bonus nach der Formel der Kategorie, mit dem Attribut inklusive Titel-Boni
+      skill.bonus = skillBonus(skill, context.effectiveAbilities[skill.attribute || "STR"] || 0);
     });
 
     // VIER TABELLEN AUS EINER LISTE: der Index bleibt der der Datenliste,
@@ -120,7 +122,8 @@ class MeinHausregelSheet extends ActorSheet {
       key,
       label,
       hint: SKILL_CATEGORY_HINTS[key],
-      isMod: key === "modifikation",
+      formula: SKILL_BONUS_FORMULAS[key],
+      usesAttribute: SKILL_USES_ATTRIBUTE[key],
       entries: systemData.isekaiSkills
         .map((skill, index) => ({ index, skill }))
         .filter(entry => entry.skill && skillCategory(entry.skill) === key)
