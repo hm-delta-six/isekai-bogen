@@ -182,7 +182,8 @@ function infoHtml(actor, weapon, targets) {
     for (const mod of mods) {
       const cost = mod.costValue ? `${mod.costValue} ${COST_TYPES[mod.costType]}` : "keine Kosten";
       const note = mod.missing
-        ? " — Skill nicht im Bogen"
+        ? " — Skill nicht im Bogen, wirkungslos"
+        : !mod.bonus ? " — Bonus 0, der Skill steht auf Level 0"
         : mod.capped ? " — auf die Raritätsstufe begrenzt"
         : (mod.affordable ? "" : ` — nur ${mod.available} ${COST_TYPES[mod.costType]} vorhanden`);
       html +=
@@ -250,7 +251,14 @@ async function rollAttack(mode) {
 async function selectVictims(actor, area) {
   const targets = markedTargets(actor);
 
-  if (area.mode === "single") return targets.slice(0, 1);
+  if (area.mode === "single") {
+    if (targets.length > 1) {
+      ui.notifications.warn(
+        `${targets.length} Ziele markiert, aber die Waffe greift einzeln an. ` +
+        `Es wird nur ${targets[0].name} angegriffen.`);
+    }
+    return targets.slice(0, 1);
+  }
 
   if (area.mode === "marked") {
     if (!targets.length) {
@@ -399,6 +407,13 @@ async function resolveAttack(actor, used, mode, mods = []) {
       `${mod.name} (+${mod.bonus} ${MOD_BONUS_TYPES[mod.bonusType]}` +
       (mod.costValue ? `, ${mod.costValue} ${COST_TYPES[mod.costType]}` : "") + `)`).join(", ") + `</small>`;
     await payCosts(actor, cost);
+  }
+
+  const marked = markedTargets(actor).length;
+  if (area.mode === "single" && marked > 1) {
+    content += `<br><small>${marked} Ziele markiert, die Waffe greift einzeln an — nur das erste wird getroffen.</small>`;
+  } else if (area.mode === "marked" && marked > checks.length) {
+    content += `<br><small>${marked} Ziele markiert, erlaubt sind ${area.size}.</small>`;
   }
 
   if (!checks.length) {
