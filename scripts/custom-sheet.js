@@ -1,6 +1,6 @@
 import { areaDescription, attackFromMacro, attackValue, damageBonus, executeAttack, weaponArea } from "./attack.js";
 import { rollSkillCheck } from "./skill-check.js";
-import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageSocket } from "./damage.js";
+import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageHooks } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
@@ -421,7 +421,7 @@ Hooks.once('init', () => {
 Hooks.once('setup', () => registerTokenBars());
 
 Hooks.once('ready', () => {
-  registerDamageSocket();
+  registerDamageHooks();
 
   // Einstiegspunkte für die Makroleiste
   game.isekaiBogen = {

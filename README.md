@@ -82,6 +82,11 @@ In der Waffenkarte legt **+ SKILL** eine Modifikation an. Sie besteht aus:
 - **Bonushoehe**: berechnet als Raritaetsstufe x Skill-Level, nicht eingebbar
 - **Kosten**: Wert und Ressource (HP, MP oder AP)
 
+Bei Bonustyp **Anzahl Gegner** zaehlt hoechstens die Raritaetsstufe des Skills
+als zusaetzliche Ziele, nicht Level x Stufe. Steht die Waffe auf
+Einzelangriff, wird daraus automatisch ein Angriff auf markierte Gegner mit
+1 + Bonus Zielen.
+
 Im Angriffsdialog steht jede Modifikation als Haken. Nicht bezahlbare
 Modifikationen sind gesperrt und nennen den fehlenden Betrag. Angehakte
 Modifikationen erhoehen AW, Schaden, Zielzahl oder Flaechengroesse, die Kosten

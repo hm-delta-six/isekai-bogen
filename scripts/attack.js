@@ -1,7 +1,7 @@
-import { applyDamage, describeDamage, payCosts, resolveDamage } from "./damage.js";
+import { describeDamage, payCosts, prepareDamage, resolveDamage } from "./damage.js";
 import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
-import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, summarizeMods, toArray, typeLabels } from "./rules.js";
+import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, rarityRank, summarizeMods, toArray, typeLabels } from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
 // Ausrüstung trägt derzeit keine type/bonus-Felder, wird aber mitgelesen,
@@ -97,6 +97,7 @@ export function weaponMods(actor, weapon) {
       String(entry?.name || "").trim().toLowerCase() ===
       String(mod?.skillName || "").trim().toLowerCase());
 
+    const bonusType = mod?.bonusType in MOD_BONUS_TYPES ? mod.bonusType : "aw";
     const costType = mod?.costType in COST_TYPES ? mod.costType : "mp";
     const costValue = Math.max(0, Number(mod?.costValue || 0));
     const available = Number(actor?.system?.resources?.[costType]?.value || 0);
@@ -104,8 +105,13 @@ export function weaponMods(actor, weapon) {
     return {
       index,
       name: skill?.name || mod?.skillName || "Ohne Skill",
-      bonusType: mod?.bonusType in MOD_BONUS_TYPES ? mod.bonusType : "aw",
-      bonus: skill ? modBonus(skill) : 0,
+      bonusType,
+      // Bei "Anzahl Gegner" zaehlt hoechstens die Raritaetsstufe des Skills,
+      // sonst waeren es Level x Stufe zusaetzliche Ziele.
+      bonus: !skill ? 0
+        : bonusType === "targets" ? Math.min(modBonus(skill), rarityRank(skill.rarity))
+        : modBonus(skill),
+      capped: Boolean(skill) && bonusType === "targets" && modBonus(skill) > rarityRank(skill.rarity),
       costType,
       costValue,
       available,
@@ -176,6 +182,7 @@ function infoHtml(actor, weapon, targets) {
       const cost = mod.costValue ? `${mod.costValue} ${COST_TYPES[mod.costType]}` : "keine Kosten";
       const note = mod.missing
         ? " — Skill nicht im Bogen"
+        : mod.capped ? " — auf die Raritätsstufe begrenzt"
         : (mod.affordable ? "" : ` — nur ${mod.available} ${COST_TYPES[mod.costType]} vorhanden`);
       html +=
         `<label style="display:flex; align-items:center; gap:6px; font-size:11px;">` +
@@ -341,11 +348,18 @@ async function resolveAttack(actor, used, mode, mods = []) {
   const { bonus, cost } = summarizeMods(mods);
 
   // Reichweite vergroessert die Flaeche, Anzahl Gegner die Zahl der Ziele.
+  // Ein Ziel-Bonus auf einer Einzelangriffs-Waffe macht daraus einen Angriff
+  // auf markierte Gegner — sonst bliebe ein Rundumschlag wirkungslos.
   const base = weaponArea(actor, used);
-  const area = {
-    ...base,
-    size: base.size === null ? null : base.size + (base.mode === "marked" ? bonus.targets : bonus.range)
-  };
+  let area = { ...base };
+
+  if (bonus.targets > 0) {
+    area = base.mode === "single"
+      ? { ...base, mode: "marked", max: 1 + bonus.targets, size: 1 + bonus.targets }
+      : { ...base, size: base.size + bonus.targets };
+  } else if (base.size !== null) {
+    area = { ...base, size: base.size + bonus.range };
+  }
 
   const victims = await selectVictims(actor, area);
   if (victims === null) return;
@@ -393,6 +407,7 @@ async function resolveAttack(actor, used, mode, mods = []) {
   // Jedes Ziel bekommt eigenen Angriffs- und Schadenswurf, damit Gegner
   // unterschiedlich getroffen werden können.
   const rolls = [];
+  const pendingDamage = [];
   for (const check of checks) {
     const name = check.token?.name || "Ziel";
     const chance = hitChanceFor(aw, check.vw);
@@ -419,13 +434,17 @@ async function resolveAttack(actor, used, mode, mods = []) {
       rarity: used.rarity
     });
     content += describeDamage(name, resolved);
-    await applyDamage(check.token.actor, resolved);
+
+    const pending = await prepareDamage(check.token.actor, resolved);
+    if (pending) pendingDamage.push(pending);
   }
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
-    rolls
+    rolls,
+    // Der SL liest das beim Eintreffen der Nachricht und zieht ab.
+    flags: pendingDamage.length ? { "isekai-bogen": { pendingDamage } } : {}
   });
 }
 

@@ -140,5 +140,40 @@ check("Attribut nur bei Fertigkeit und Aktiv", SKILL_USES_ATTRIBUTE,
 check("zu jeder Kategorie eine Formel", Object.keys(SKILL_BONUS_FORMULAS),
   ["fertigkeit", "aktiv", "modifikation", "passiv"]);
 
+
+// --- Ziel-Bonus schaltet Einzelangriff auf mehrere Ziele um ---
+// Nachbau der Verzweigung aus resolveAttack, damit die Regel geprueft bleibt.
+const areaWithBonus = (base, bonus) => {
+  if (bonus.targets > 0) {
+    return base.mode === "single"
+      ? { ...base, mode: "marked", max: 1 + bonus.targets, size: 1 + bonus.targets }
+      : { ...base, size: base.size + bonus.targets };
+  }
+  if (base.size !== null) return { ...base, size: base.size + bonus.range };
+  return { ...base };
+};
+
+const einzel = { mode: "single", max: null, size: null, malus: 0 };
+const keiner = { aw: 0, damage: 0, targets: 0, range: 0 };
+
+check("Einzelangriff ohne Bonus bleibt einzeln", areaWithBonus(einzel, keiner).mode, "single");
+check("Rundumschlag macht daraus markierte Gegner",
+  areaWithBonus(einzel, { ...keiner, targets: 3 }).mode, "marked");
+check("Rundumschlag: eigenes Ziel plus Bonus",
+  areaWithBonus(einzel, { ...keiner, targets: 3 }).size, 4);
+check("bei markierten Gegnern wird addiert",
+  areaWithBonus({ mode: "marked", max: 4, size: 4, malus: 0 }, { ...keiner, targets: 2 }).size, 6);
+check("Reichweite vergroessert den Kegel",
+  areaWithBonus({ mode: "cone", max: 12, size: 12, malus: 0 }, { ...keiner, range: 5 }).size, 17);
+check("Reichweite laesst den Einzelangriff in Ruhe",
+  areaWithBonus(einzel, { ...keiner, range: 5 }).mode, "single");
+
+// Zielzahl ist auf die Raritaetsstufe des Skills begrenzt
+const cappedTargets = (skill) => Math.min(modBonus(skill), 
+  ({ Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Transzendiert: 6 })[skill.rarity] || 1);
+check("Rare Level 4: 12 Bonus, aber nur 3 Ziele", cappedTargets({ rarity: "Rare", level: 4 }), 3);
+check("Common Level 1: 1 Ziel", cappedTargets({ rarity: "Common", level: 1 }), 1);
+check("Level 0 gibt kein Ziel", cappedTargets({ rarity: "Epic", level: 0 }), 0);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);
