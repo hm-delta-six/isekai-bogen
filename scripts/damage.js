@@ -12,6 +12,14 @@ export const ARMOR_WEAR_CHOICES = {
 
 export const isIntact = (armor) => Number(armor?.durability || 0) > 0;
 
+/**
+ * HP, MP und AP liegen unter system.isekai. system.resources gehoert pf1 und
+ * laesst dessen Datenvorbereitung bei fremden Schluesseln abstuerzen; der
+ * Fallback liest alte Boegen, die noch nicht migriert sind.
+ */
+export const currentPool = (actor, key) =>
+  Number(actor?.system?.isekai?.[key]?.value ?? actor?.system?.resources?.[key]?.value ?? 0);
+
 // Ein Rüstungsteil ohne gewählte Typen schützt gegen alles. Das hält alte
 // Einträge gültig, die vor der Typenauswahl angelegt wurden.
 function armorCovers(armor, type) {
@@ -158,7 +166,7 @@ export function resolveDamage(targetActor, rawDamage, options = {}) {
 
   const chosen = attempts.reduce((best, attempt) => attempt.hpLoss > best.hpLoss ? attempt : best);
 
-  const currentHP = Number(targetActor?.system?.resources?.hp?.value || 0);
+  const currentHP = currentPool(targetActor, "hp");
   // Die Rüstung nutzt sich an dem ab, was sie nicht aufhalten konnte —
   // vor der Resistenz, die nicht zur Rüstung gehört.
   const wear = wearArmor(targetActor, chosen.list, chosen.pieces, chosen.afterArmor);
@@ -189,8 +197,7 @@ async function applyLocally({ actorUuid, hpLoss, wear }) {
   const update = {};
 
   if (hpLoss > 0) {
-    const current = Number(actor.system?.resources?.hp?.value || 0);
-    update["system.resources.hp.value"] = Math.max(0, current - hpLoss);
+    update["system.isekai.hp.value"] = Math.max(0, currentPool(actor, "hp") - hpLoss);
   }
 
   if (wear?.length) {
@@ -280,8 +287,7 @@ export async function payCosts(actor, cost) {
   const update = {};
   for (const [key, amount] of Object.entries(cost || {})) {
     if (!amount) continue;
-    const current = Number(actor.system?.resources?.[key]?.value || 0);
-    update[`system.resources.${key}.value`] = Math.max(0, current - amount);
+    update[`system.isekai.${key}.value`] = Math.max(0, currentPool(actor, key) - amount);
   }
   if (Object.keys(update).length) await actor.update(update);
 }

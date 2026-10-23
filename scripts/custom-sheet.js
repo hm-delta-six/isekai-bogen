@@ -198,43 +198,57 @@ class MeinHausregelSheet extends ActorSheet {
       });
     });
 
-    // AKTEUR-MAX-WERTE DIREKT IN DIE DATENBANK SCHREIBEN (Falls abweichend)
+    // EIGENE WERTE IN DIE DATENBANK SCHREIBEN
+    //
+    // Sie liegen unter system.isekai und NICHT unter system.resources oder
+    // system.attributes: beides gehoert pf1. system.resources haelt dort die
+    // Klassen-Ressourcen, und pf1 laeuft bei jeder Datenvorbereitung ueber
+    // alle Schluessel. Eigene Eintraege lassen _setSourceDetails ins Leere
+    // greifen — "Cannot read properties of undefined (reading 'push')" —, und
+    // das bei jedem actor.update, also auch beim Schadensabzug.
+    const pool = systemData.isekai || {};
+    const legacy = systemData.resources || {};
+
     // Ohne gesetzten value-Wert bleiben die Token-Balken leer, deshalb wird er
     // beim ersten Mal auf max gesetzt und danach nur noch nach unten geklemmt.
-    const syncPool = (current, max) => {
-      const value = current === undefined || current === null ? max : Number(current);
+    const syncPool = (current, fallback, max) => {
+      const raw = current ?? fallback;
+      const value = raw === undefined || raw === null ? max : Number(raw);
       return Math.max(0, Math.min(value, max));
     };
 
-    // Massgeblich ist system.resources.hp — das Feld, in das der Bogen schreibt.
-    // Nach system.attributes.hp wird bewusst NICHT gespiegelt: pf1 berechnet
-    // dessen max bei jeder Datenvorbereitung aus Klassen-Trefferwuerfeln neu und
-    // setzt es ohne pf1-Klassen auf 0. Ein Token-Balken darauf bleibt leer.
-    const hpValue = syncPool(systemData.resources?.hp?.value, hpMax);
-    const mpValue = syncPool(systemData.resources?.mp?.value, mpMax);
-    const apValue = syncPool(systemData.resources?.ap?.value, apMax);
+    const hpValue = syncPool(pool.hp?.value, legacy.hp?.value, hpMax);
+    const mpValue = syncPool(pool.mp?.value, legacy.mp?.value, mpMax);
+    const apValue = syncPool(pool.ap?.value, legacy.ap?.value, apMax);
 
-    const pools = {
-      "system.resources.hp.max": hpMax,
-      "system.resources.hp.value": hpValue,
-      "system.resources.mp.max": mpMax,
-      "system.resources.mp.value": mpValue,
-      "system.resources.ap.max": apMax,
-      "system.resources.ap.value": apValue
+    const owned = {
+      "system.isekai.hp.max": hpMax,
+      "system.isekai.hp.value": hpValue,
+      "system.isekai.mp.max": mpMax,
+      "system.isekai.mp.value": mpValue,
+      "system.isekai.ap.max": apMax,
+      "system.isekai.ap.value": apValue,
+      "system.isekai.aw.value": awTotal,
+      "system.isekai.vw.value": vwTotal
     };
 
-    if (Object.entries(pools).some(([path, value]) =>
-        foundry.utils.getProperty(context.actor, path) !== value)) {
-      this.actor.update(pools, { render: false });
+    const changed = Object.entries(owned)
+      .some(([path, value]) => foundry.utils.getProperty(context.actor, path) !== value);
+
+    // Altlasten aus system.resources entfernen, sonst wirft pf1 weiter.
+    const cleanup = {};
+    for (const key of ["hp", "mp", "ap"]) {
+      if (legacy[key] !== undefined) cleanup[`system.resources.-=${key}`] = null;
+    }
+    for (const key of ["aw", "vw"]) {
+      if (systemData.attributes?.[key] !== undefined) cleanup[`system.attributes.-=${key}`] = null;
     }
 
-    if (systemData.attributes?.aw?.value !== awTotal || 
-        systemData.attributes?.vw?.value !== vwTotal) {
-      this.actor.update({
-        "system.attributes.aw.value": awTotal,
-        "system.attributes.vw.value": vwTotal
-      }, { render: false });
-    }         
+    if (changed || Object.keys(cleanup).length) {
+      this.actor.update({ ...owned, ...cleanup }, { render: false });
+    }
+
+    context.pool = { hp: hpValue, mp: mpValue, ap: apValue };
 
     context.derived = { hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget, drSummary };
     return context;

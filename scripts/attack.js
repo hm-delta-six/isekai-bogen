@@ -1,4 +1,4 @@
-import { describeDamage, payCosts, prepareDamage, resolveDamage } from "./damage.js";
+import { currentPool, describeDamage, payCosts, prepareDamage, resolveDamage } from "./damage.js";
 import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
 import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, rarityRank, summarizeMods, toArray, typeLabels } from "./rules.js";
@@ -78,11 +78,12 @@ function attackBreakdown(actor, weapon) {
   return parts.join(" + ") + (skill.missing ? ` — Skill "${skill.name}" nicht im Bogen, als 0 gewertet` : "");
 }
 
-// Der Bogen schreibt den fertigen VW nach system.attributes.vw.value.
-// boni.vw ist nur der Zuschlag und taugt nicht als Gesamtwert.
+// Der Bogen schreibt den fertigen VW nach system.isekai.vw.value.
+// boni.vw ist nur der Zuschlag und taugt nicht als Gesamtwert; der Fallback
+// liest Boegen, die noch unter system.attributes liegen.
 function defenceValue(targetActor) {
-  const base = Number(targetActor?.system?.attributes?.vw?.value || 0) || 10;
-  return base + bonusForType(targetActor, "VW");
+  const stored = targetActor?.system?.isekai?.vw?.value ?? targetActor?.system?.attributes?.vw?.value;
+  return (Number(stored || 0) || 10) + bonusForType(targetActor, "VW");
 }
 
 const hitChanceFor = (aw, vw) => Math.max(5, Math.min(95, Math.round(50 * (aw / vw))));
@@ -100,7 +101,7 @@ export function weaponMods(actor, weapon) {
     const bonusType = mod?.bonusType in MOD_BONUS_TYPES ? mod.bonusType : "aw";
     const costType = mod?.costType in COST_TYPES ? mod.costType : "mp";
     const costValue = Math.max(0, Number(mod?.costValue || 0));
-    const available = Number(actor?.system?.resources?.[costType]?.value || 0);
+    const available = currentPool(actor, costType);
 
     return {
       index,

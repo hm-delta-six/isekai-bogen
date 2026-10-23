@@ -2,9 +2,9 @@
 // deshalb in keiner Balkenauswahl auf — weder in der Token-Konfiguration eines
 // Akteurs noch in der Standard-Token-Konfiguration.
 const BAR_PATHS = [
-  ["resources", "hp"],
-  ["resources", "mp"],
-  ["resources", "ap"]
+  ["isekai", "hp"],
+  ["isekai", "mp"],
+  ["isekai", "ap"]
 ];
 
 function appendBars(result) {

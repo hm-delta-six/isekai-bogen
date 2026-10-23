@@ -9,7 +9,7 @@ const check = (name, got, want) => {
 };
 
 const actor = ({ armors = [], resistances = [], skills = [], hp = 100, wear = "highest" } = {}) => ({
-  system: { armors, resistances, isekaiSkills: skills, armorWear: wear, resources: { hp: { value: hp } } }
+  system: { armors, resistances, isekaiSkills: skills, armorWear: wear, isekai: { hp: { value: hp } } }
 });
 
 // --- Ruestung: DR-Summe, defekte Teile, Typen ---
@@ -148,7 +148,7 @@ registerTokenBars();
 
 const dotted = (result) => result.bar.map(p => p.join("."));
 check("Balken ergaenzt", dotted(TokenDocument.getTrackedAttributes()),
-  ["attributes.hp", "resources.hp", "resources.mp", "resources.ap"]);
+  ["attributes.hp", "isekai.hp", "isekai.mp", "isekai.ap"]);
 check("keine Dubletten", dotted(TokenDocument.getTrackedAttributes()).length, 4);
 check("Rekursion unberuehrt", dotted(TokenDocument.getTrackedAttributes({}, ["resources"])), []);
 
@@ -165,6 +165,20 @@ check("Speicherform", typeValue(["hieb", "feuer"]), "hieb,feuer");
 const stringArmor = actor({ armors: [{ name: "Panzer", dr: 6, durability: 20, types: "hieb,wucht" }] });
 check("DR aus Zeichenkette gegen Wucht", armorState(stringArmor, "wucht").totalDR, 6);
 check("DR aus Zeichenkette gegen Feuer", armorState(stringArmor, "feuer").totalDR, 0);
+
+
+// --- Pools liegen unter system.isekai, nicht unter system.resources ---
+const { currentPool } = await import("../scripts/damage.js");
+check("liest system.isekai", currentPool({ system: { isekai: { mp: { value: 7 } } } }, "mp"), 7);
+check("Altbestand unter resources wird noch gelesen",
+  currentPool({ system: { resources: { ap: { value: 4 } } } }, "ap"), 4);
+check("isekai hat Vorrang vor resources",
+  currentPool({ system: { isekai: { hp: { value: 9 } }, resources: { hp: { value: 2 } } } }, "hp"), 9);
+check("fehlender Wert ist 0", currentPool({ system: {} }, "hp"), 0);
+
+const altbogen = { system: { armors: [], resistances: [], isekaiSkills: [], resources: { hp: { value: 30 } } } };
+check("Schaden rechnet auch auf einem nicht migrierten Bogen",
+  resolveDamage(altbogen, 10, {}).hpAfter, 20);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

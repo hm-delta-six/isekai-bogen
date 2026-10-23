@@ -18,14 +18,16 @@ Die drei Pools liegen unter diesen Pfaden und sind in der Token-Konfiguration
 bzw. in Bar Brawl als Attribut einzutragen:
 
 ```
-resources.hp
-resources.mp
-resources.ap
+isekai.hp
+isekai.mp
+isekai.ap
 ```
 
-Nicht `attributes.hp` verwenden. Dieses Feld gehoert dem pf1-System, das sein
-max bei jeder Datenvorbereitung aus Klassen-Trefferwuerfeln neu berechnet und
-ohne pf1-Klassen auf 0 setzt. Ein Balken darauf zeigt 45/0 und bleibt leer.
+Keine Pfade unter `attributes` oder `resources` verwenden: beide Namensraeume
+gehoeren pf1. `attributes.hp.max` berechnet pf1 aus Klassen-Trefferwuerfeln neu
+und setzt es ohne pf1-Klassen auf 0. In `resources` liegen die
+Klassen-Ressourcen; eigene Eintraege dort lassen die Datenvorbereitung von pf1
+bei jedem actor.update abstuerzen.
 
 Damit die Felder ueberhaupt existieren, muss der Bogen eines Charakters einmal
 geoeffnet worden sein.
