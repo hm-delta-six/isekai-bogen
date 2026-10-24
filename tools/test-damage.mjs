@@ -111,7 +111,7 @@ check("ohne alles: voller Schaden", resolveDamage(nackt, 13, {}).hpLoss, 13);
 check("HP-Boden bei 0", resolveDamage(actor({ hp: 4 }), 50, {}).hpAfter, 0);
 
 // --- Waffen-Skill und Schadensbonus ---
-const { weaponSkill, damageBonus } = await import("../scripts/attack.js");
+const { weaponSkill, damageBonus, damageDice, dieBonus } = await import("../scripts/attack.js");
 
 const held = {
   system: {
@@ -133,6 +133,15 @@ check("unbekannter Skill wird gemeldet", weaponSkill(held, { skillName: "Bogen" 
 // STR 6+2=8, halber AW-Skill ceil(5/2)=3, Skill 4, Bonus 3 => 18
 check("Schadensbonus mit Skill", damageBonus(held, { skillName: "Morgenstern", bonus: 3 }), 18);
 check("Schadensbonus ohne Skill", damageBonus(held, { bonus: 3 }), 14);
+
+// --- Schadensbonus pro Wuerfel: (Wuerfel + Bonus) x Machtfaktor ---
+check("ohne Wuerfelbonus", damageDice({ dice: "1d6" }, 1), "(1d6) * 1");
+check("Common 1W+Bonus", damageDice({ dice: "1d10", dieBonus: 3 }, 1), "(1d10 + 3) * 1");
+check("Uncommon 2W+2xBonus", damageDice({ dice: "1d10", dieBonus: 3 }, 2), "(1d10 + 3) * 2");
+check("negativer Bonus", damageDice({ dice: "1d8", dieBonus: -2 }, 4), "(1d8 - 2) * 4");
+check("Bonus als Text aus dem Formular", dieBonus({ dieBonus: "2" }), 2);
+check("leeres Feld zaehlt als 0", dieBonus({ dieBonus: "" }), 0);
+check("Dezimalzahl wird abgeschnitten", dieBonus({ dieBonus: 2.9 }), 2);
 
 // --- Token-Balken: Erweiterung der Attributliste ---
 globalThis.CONFIG = { Actor: { trackableAttributes: { character: { bar: ["attributes.hp"], value: [] } } }, Token: {} };

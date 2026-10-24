@@ -13,7 +13,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const js = readFileSync(join(root, "scripts/custom-sheet.js"), "utf8");
 const html = readFileSync(join(root, "templates/sheet.html"), "utf8");
 
-const HANDLER_PREFIXES = ["add-", "delete-", "roll-", "area-", "pick-"];
+const HANDLER_PREFIXES = ["add-", "delete-", "roll-", "area-", "pick-", "open-"];
 const HANDLER_EXACT = ["typepick", "profile-img"];
 
 const classesInTemplate = new Set();
@@ -71,6 +71,33 @@ for (const match of html.matchAll(/data-field="([a-zA-Z]+)" data-index="\{\{inde
   } else {
     fails += 1;
     console.log(`FAIL ${field}.${key} hat kein Formularfeld — der Wert geht beim Speichern verloren`);
+  }
+}
+
+// Der Würfelbonus der Waffe braucht ein Formularfeld, sonst geht er beim Speichern verloren.
+if (html.includes('name="system.weapons.{{index}}.dieBonus"')) {
+  console.log("ok   weapons.dieBonus hat ein Formularfeld");
+} else {
+  fails += 1;
+  console.log("FAIL weapons.dieBonus hat kein Formularfeld");
+}
+
+// Skill-Baum-Fenster: jeder Listener findet sein Element im Fenster-Template.
+const treeJs = readFileSync(join(root, "scripts/skill-tree.js"), "utf8");
+const treeHtml = readFileSync(join(root, "templates/skill-tree.html"), "utf8");
+const treeClasses = new Set();
+for (const match of treeHtml.matchAll(/class="([^"]+)"/g)) {
+  for (const cls of match[1].split(/\s+/)) treeClasses.add(cls);
+}
+const treeSelectors = [...new Set(
+  [...treeJs.matchAll(/html\.find\("([^"]+)"\)/g)].flatMap(m => m[1].split(",").map(part => part.trim()))
+)].filter(sel => sel.startsWith(".") && /^\.st-[a-z-]+$/.test(sel));
+for (const selector of treeSelectors) {
+  if (treeClasses.has(selector.slice(1))) {
+    console.log(`ok   Skill-Baum: ${selector} findet das Element`);
+  } else {
+    fails += 1;
+    console.log(`FAIL Skill-Baum: ${selector} hat keine Entsprechung im Template`);
   }
 }
 

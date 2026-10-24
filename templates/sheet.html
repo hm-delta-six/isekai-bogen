@@ -378,6 +378,11 @@
                 </select>
               </div>
               <div class="f">
+                <label title="Wird zu jedem Würfel addiert, danach mal Machtfaktor">+ je Würfel</label>
+                <input type="number" class="num-short" name="system.weapons.{{index}}.dieBonus" value="{{weapon.dieBonus}}"
+                       title="Wird zu jedem Würfel addiert, danach mal Machtfaktor. Common: 1W+Bonus, Uncommon: 2W+2×Bonus, Rare: 4W+4×Bonus usw."/>
+              </div>
+              <div class="f">
                 <label>Typ</label>
                 <input type="hidden" name="system.weapons.{{index}}.damageTypes" value="{{weapon.typeValue}}"/>
                 <span class="typepick" data-field="weapons" data-index="{{index}}" data-key="damageTypes"
@@ -440,6 +445,10 @@
 
     <!-- TAB 2: SKILLS -->
     <div class="tab" data-group="primary" data-tab="skills">
+      <div style="margin-bottom: 8px;">
+        <a class="open-skill-tree" style="color:#38bdf8; cursor:pointer; font-size:11px; font-weight:bold;"
+           title="Skill-Baum öffnen, Skills ansehen und zum Bogen hinzufügen"><i class="fas fa-sitemap"></i> SKILL-BAUM ÖFFNEN</a>
+      </div>
       {{#each skillGroups as |group|}}
         <div class="section-header">
           <span>{{group.label}}

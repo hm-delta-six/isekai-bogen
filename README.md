@@ -75,6 +75,62 @@ Bei Angriffs-Modifikationen und passiven Skills geht das Attribut nicht ein,
 dort fehlt die Spalte deshalb. Die Skill-Probe wuerfelt 1d100 + Bonus +
 Modifikator. Angriffswert und Resistenzen bleiben bei ihren eigenen Formeln.
 
+## Skill-Baum
+
+Im Reiter **Skills** öffnet **Skill-Baum öffnen** ein Fenster mit allen 304 Skills
+des TTRPG-LBDS-Baums. Ohne Bogen geht es aus der Makroleiste:
+
+```js
+game.isekaiBogen.openSkillTree();   // gewählter Token, sonst der eigene Charakter
+```
+
+- **Bereiche** als Reiter, die Skills stehen in Spalten nach Ebene (1 bis 7).
+- **Skill anklicken:** Beschreibung, Wirkung je Rarität, Voraussetzungen, alle
+  enthaltenen Vorstufen ("Enthält") und die Skills, die darauf aufbauen. Im Baum
+  sind die Vorstufen blau und die Nachfolger gelb markiert.
+- Ein **Haken** zeigt Skills, die der Charakter schon im Bogen hat.
+- **Zum Bogen hinzufügen** legt den Skill mit seiner Einstiegsrarität und Level 1 an.
+  Die Voraussetzung ist: jeder Elternskill steht im Bogen auf mindestens Level 5
+  (Ebene 2), 10 (Ebene 3), 15 (Ebene 4), 20 (Ebene 5), 30 (Ebene 6) oder 40 (Ebene 7).
+  Spieler kommen nur mit erfüllten Voraussetzungen durch, der Spielleiter darf
+  nach einer Rückfrage trotzdem vergeben.
+
+Die Daten liegen in `data/skill-baum.json`. Die Vorlage dazu mit Suche und
+Rechnern ist `docs/skill-baum.html` und läuft in jedem Browser.
+
+### Eigene Skills
+
+Der Spielleiter legt über **+ Eigener Skill** (oben rechts im Fenster) neue
+Skills an. Sie gelten für die ganze Welt und stehen im Baum kursiv.
+
+| Feld | Bedeutung |
+|---|---|
+| Ebene | 1 bis 7. Ebene 1 hat keine Eltern, ab Ebene 2 braucht der Skill mindestens einen. |
+| Elternskills | beliebig viele, aus dem ganzen Baum. Nur Skills unterhalb der Ebene sind wählbar. Mehrere Eltern machen eine Verschmelzung. |
+| Bereich, Typ, Attribut, Kosten | wie bei den mitgelieferten Skills |
+| Beschreibung | was der Skill bewirkt |
+| Neu pro Rarität | optional, eine Zeile je Rarität, z. B. `Rare: Das Licht folgt dem Ziel.` |
+
+Die Einstiegsrarität folgt der Ebene (Ebene 1 und 2 Common, 3 Uncommon, 4 Rare,
+5 Epic, 6 Legendary, 7 Transzendiert). Steht der tiefste Elternskill mehr als
+eine Ebene unter dem neuen Skill, gibt es einen Hinweis; gespeichert wird trotzdem.
+Eigene Skills lassen sich bearbeiten und löschen, solange kein anderer Skill auf
+ihnen aufbaut. Bereits vergebene Skills in Bögen bleiben davon unberührt.
+
+## Waffenschaden: Bonus pro Würfel
+
+Neben dem Festbonus hat jede Waffe das Feld **+ je Würfel**. Es wird zu jedem
+Würfel addiert, danach multipliziert der Machtfaktor:
+
+```
+Schaden = (Würfel + Würfelbonus) x Machtfaktor + Attribut + halber AW-Skill
+          + Skill-Level der Waffe + Waffenbonus
+```
+
+Mit Würfelbonus 3 auf einem W10 heißt das: Common 1W+3, Uncommon 2W+6,
+Rare 4W+12, Epic 8W+24. Der Festbonus (Spalte **Bonus**) kommt weiter nur
+einmal dazu und erhöht auch den Angriffswert.
+
 ## Angriffs-Modifikationen
 
 In der Waffenkarte legt **+ SKILL** eine Modifikation an. Sie besteht aus:
@@ -224,6 +280,7 @@ game.isekaiBogen.rollSkillCheck(actor, 0);   // Skill nach Index
 node tools/test-damage.mjs
 node tools/test-area.mjs
 node tools/test-wiring.mjs
+node tools/test-skill-graph.mjs
 ```
 
 Der erste prueft die Rechenwege (Ruestung, Resistenzen, Waffen-Skill,
@@ -239,4 +296,4 @@ git push origin v1.2.0
 ```
 
 Der Workflow in `.github/workflows/release.yml` setzt die Version aus dem Tag,
-packt `module.json`, `scripts/` und `templates/` und haengt beides ans Release.
+packt `module.json`, `scripts/`, `templates/` und `data/` und haengt beides ans Release.

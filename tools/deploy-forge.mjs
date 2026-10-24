@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const API_URL = "https://forge-vtt.com/api/data/import";
-const CONTENTS = ["module.json", "scripts", "templates"];
+const CONTENTS = ["module.json", "scripts", "templates", "data"];
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");

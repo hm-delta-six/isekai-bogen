@@ -1,0 +1,127 @@
+<style>
+  .isekai-skill-tree .window-content { padding: 0; background: #0f172a; color: #e2e8f0; overflow: hidden; }
+  .st-root { display: flex; flex-direction: column; height: 100%; font-size: 12px; }
+  .st-top { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #334155; background: #111c33; }
+  .st-tabs { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+  .st-tab { padding: 3px 9px; border-radius: 12px; border: 1px solid #334155; color: #94a3b8; cursor: pointer; white-space: nowrap; }
+  .st-tab:hover { color: #e2e8f0; border-color: #64748b; }
+  .st-tab.active { background: #38bdf8; border-color: #38bdf8; color: #0f172a; font-weight: bold; }
+  .st-search { width: 170px; flex: none; background: #0b1224; border: 1px solid #334155; color: #e2e8f0; border-radius: 4px; padding: 2px 6px; }
+  .st-new, .st-btn { padding: 3px 9px; border-radius: 4px; border: 1px solid #38bdf8; color: #38bdf8; cursor: pointer; white-space: nowrap; background: transparent; }
+  .st-new:hover, .st-btn:hover { background: #38bdf8; color: #0f172a; }
+  .st-btn.danger { border-color: #f87171; color: #f87171; }
+  .st-btn.danger:hover { background: #f87171; color: #0f172a; }
+  .st-btn.primary { background: #38bdf8; color: #0f172a; font-weight: bold; }
+  .st-body { display: flex; flex: 1; min-height: 0; }
+  .st-columns { flex: 1; display: flex; gap: 8px; padding: 8px; overflow: auto; align-items: flex-start; }
+  .st-col { min-width: 148px; width: 148px; flex: none; }
+  .st-col h4 { margin: 0 0 6px; padding: 0 0 4px; border-bottom: 1px solid #334155; font-size: 11px; color: #cbd5e1; border-top: 0; }
+  .st-col h4 small { display: block; color: #64748b; font-weight: normal; font-size: 9px; }
+  .st-chip { display: block; margin-bottom: 4px; padding: 4px 6px; border-radius: 4px; border: 1px solid #334155; border-left-width: 4px;
+             background: #16213a; color: #e2e8f0; cursor: pointer; line-height: 1.2; }
+  .st-chip:hover { background: #1e2d4d; }
+  .st-chip.hidden { display: none; }
+  .st-chip.owned::after { content: " \2713"; color: #4ade80; font-weight: bold; }
+  .st-chip.custom { font-style: italic; }
+  .st-chip.anc { background: #1e3a5f; border-color: #38bdf8; }
+  .st-chip.desc { background: #3b2f1a; border-color: #fbbf24; }
+  .st-chip.sel { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: bold; }
+  .r-Common { border-left-color: #94a3b8; } .r-Uncommon { border-left-color: #4ade80; } .r-Rare { border-left-color: #38bdf8; }
+  .r-Epic { border-left-color: #c084fc; } .r-Legendary { border-left-color: #fbbf24; } .r-Transzendiert { border-left-color: #f472b6; }
+  .st-detail { width: 360px; flex: none; border-left: 1px solid #334155; padding: 10px 12px; overflow: auto; background: #111c33; }
+  .st-detail h3 { margin: 0 0 2px; font-size: 16px; border: 0; color: #f8fafc; }
+  .st-meta { color: #94a3b8; font-size: 11px; margin-bottom: 8px; }
+  .st-detail h5 { margin: 12px 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; border: 0; }
+  .st-detail p { margin: 0 0 6px; line-height: 1.4; }
+  .st-links { display: flex; flex-wrap: wrap; gap: 4px; }
+  .st-link { padding: 1px 7px; border-radius: 10px; border: 1px solid #334155; border-left-width: 4px; cursor: pointer; color: #e2e8f0; }
+  .st-link:hover { background: #1e2d4d; }
+  .st-link.ok { border-color: #4ade80; } .st-link.bad { border-color: #f87171; }
+  .st-eff { margin-bottom: 6px; padding-left: 8px; border-left: 4px solid #334155; }
+  .st-eff b { display: block; font-size: 11px; }
+  .st-eff .extra { color: #fbbf24; }
+  .st-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .st-empty { color: #64748b; padding: 20px 4px; line-height: 1.5; }
+  .st-note { font-size: 11px; color: #94a3b8; }
+  .st-note.warn { color: #fbbf24; }
+</style>
+
+<div class="st-root">
+  <header class="st-top">
+    <nav class="st-tabs">
+      {{#each domains}}<a class="st-tab {{#if active}}active{{/if}}" data-domain="{{key}}">{{label}}</a>{{/each}}
+    </nav>
+    <input class="st-search" type="search" placeholder="Skill suchen …" value="{{query}}"/>
+    {{#if isGM}}<a class="st-new" title="Eigenen Skill anlegen, mit Ebene und Abhängigkeiten">+ Eigener Skill</a>{{/if}}
+  </header>
+
+  <div class="st-body">
+    <section class="st-columns">
+      {{#each columns}}
+        <div class="st-col">
+          <h4>Ebene {{level}}<small>ab {{floor}}{{#if req}} · Eltern ab Level {{req}}{{/if}}</small></h4>
+          {{#each skills}}
+            <a class="st-chip r-{{rarity}} {{cls}}" data-id="{{id}}" data-name="{{lname}}" title="{{title}}">{{name}}</a>
+          {{/each}}
+        </div>
+      {{/each}}
+    </section>
+
+    <aside class="st-detail">
+      {{#if detail}}
+        {{#with detail}}
+          <h3>{{name}}</h3>
+          <div class="st-meta">Ebene {{level}} · ab {{floor}} · {{domainLabel}} · {{attr}} · {{typeLabel}}{{#if res}} · Kosten {{res}}{{/if}} · {{kind}}{{#if custom}} · eigener Skill{{/if}}</div>
+          <p>{{kern}}</p>
+
+          {{#if owned}}<div class="st-note">Im Bogen vorhanden (Level {{ownedLevel}}).</div>{{/if}}
+
+          {{#if parents.length}}
+            <h5>Voraussetzung (Elternskills ab Level {{needed}})</h5>
+            <div class="st-links">
+              {{#each parents}}<a class="st-link r-{{rarity}} {{#if ../hasActor}}{{#if ok}}ok{{else}}bad{{/if}}{{/if}}" data-id="{{id}}" title="{{hint}}">{{name}}{{#if ../hasActor}} ({{level}}/{{needed}}){{/if}}</a>{{/each}}
+            </div>
+          {{/if}}
+
+          {{#if ancestors.length}}
+            <h5>Enthält ({{ancestors.length}} Vorstufen)</h5>
+            <div class="st-links">
+              {{#each ancestors}}<a class="st-link r-{{rarity}}" data-id="{{id}}">{{name}}</a>{{/each}}
+            </div>
+          {{/if}}
+
+          {{#if children.length}}
+            <h5>Führt weiter zu</h5>
+            <div class="st-links">
+              {{#each children}}<a class="st-link r-{{rarity}}" data-id="{{id}}">{{name}}</a>{{/each}}
+            </div>
+          {{/if}}
+
+          <h5>Wirkung nach Rarität</h5>
+          {{#each effects}}
+            <div class="st-eff r-{{rarity}}">
+              <b>{{rarity}}</b>
+              {{base}}
+              {{#if extra}}<div class="extra">Dazu: {{extra}}</div>{{/if}}
+            </div>
+          {{/each}}
+
+          <div class="st-actions">
+            {{#if canAdd}}<a class="st-btn primary st-add" data-id="{{id}}">Zum Bogen von {{actorName}} hinzufügen</a>{{/if}}
+            {{#if custom}}{{#if ../isGM}}
+              <a class="st-btn st-edit" data-id="{{id}}">Bearbeiten</a>
+              <a class="st-btn danger st-delete" data-id="{{id}}">Löschen</a>
+            {{/if}}{{/if}}
+          </div>
+          {{#unless hasActor}}<p class="st-note" style="margin-top:8px;">Kein Charakter gewählt. Öffne den Baum über den Bogen, um Skills hinzuzufügen.</p>{{/unless}}
+        {{/with}}
+      {{else}}
+        <div class="st-empty">
+          <b>Skill wählen</b><br>
+          Klick auf einen Skill zeigt Wirkung, Voraussetzungen und alle enthaltenen Vorstufen.
+          Blau markiert sind die Vorstufen, gelb die Skills, die darauf aufbauen. Ein Haken zeigt, was {{#if actorName}}{{actorName}}{{else}}der Charakter{{/if}} schon hat.
+        </div>
+      {{/if}}
+    </aside>
+  </div>
+</div>

@@ -1,4 +1,5 @@
-import { areaDescription, attackFromMacro, attackValue, damageBonus, executeAttack, weaponArea } from "./attack.js";
+import { areaDescription, attackFromMacro, attackValue, damageBonus, dieBonus, executeAttack, weaponArea } from "./attack.js";
+import { SkillTreeApp, registerSkillTreeSettings } from "./skill-tree.js";
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageHooks } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
@@ -174,7 +175,11 @@ class MeinHausregelSheet extends ActorSheet {
       const diceLabel = context.diceChoices[w.dice] || "W6";
       const flatBonus = damageBonus(context.actor, w);
       const bonusStr = flatBonus >= 0 ? `+ ${flatBonus}` : `- ${Math.abs(flatBonus)}`;
-      w.calculatedDamage = `${diceLabel} × ${m} ${bonusStr}`;
+      const perDie = dieBonus(w);
+      const diceText = perDie
+        ? `(${diceLabel} ${perDie > 0 ? "+" : "−"} ${Math.abs(perDie)})`
+        : diceLabel;
+      w.calculatedDamage = `${diceText} × ${m} ${bonusStr}`;
       w.typeLabel = typeLabels(w.damageTypes).join(", ") || "kein Typ";
       w.typeValue = typeValue(w.damageTypes);
       // Bereich: leeres Größenfeld heißt volle Größe, der Maximalwert steht als Platzhalter
@@ -341,6 +346,12 @@ class MeinHausregelSheet extends ActorSheet {
       await this.actor.update({ "system.weapons": weapons });
     };
 
+    // SKILL-BAUM ÖFFNEN
+    html.find('.open-skill-tree').click(ev => {
+      ev.preventDefault();
+      SkillTreeApp.open(this.actor);
+    });
+
     // SKILLS
     html.find('.add-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'add', {
       name: "", rarity: "Common", level: 0, attribute: "STR",
@@ -353,7 +364,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-equipment').click(ev => handleArrayAction(ev, 'equipment', 'delete'));
 
     // WAFFEN
-    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", skillName: "", damageTypes: "", areaMode: "single", areaSize: "", bonus: 0, description: "" }));
+    html.find('.add-weapon').click(ev => handleArrayAction(ev, 'weapons', 'add', { name: "", rarity: "Common", dice: "1d6", dieBonus: 0, skillName: "", damageTypes: "", areaMode: "single", areaSize: "", bonus: 0, description: "" }));
     html.find('.delete-weapon').click(ev => handleArrayAction(ev, 'weapons', 'delete'));
 
     // SCHADENSTYPEN WÄHLEN (Waffe, Rüstung, Resistenz)
@@ -434,6 +445,8 @@ Hooks.once('init', () => {
 
 Hooks.once('setup', () => registerTokenBars());
 
+Hooks.once('init', () => registerSkillTreeSettings());
+
 Hooks.once('ready', () => {
   registerDamageHooks();
 
@@ -441,6 +454,9 @@ Hooks.once('ready', () => {
   game.isekaiBogen = {
     attack: attackFromMacro,
     attackWith: executeAttack,
-    rollSkillCheck
+    rollSkillCheck,
+    // Skill-Baum: ohne Argument für den gewählten Token bzw. den eigenen Charakter
+    openSkillTree: (actor = null) =>
+      SkillTreeApp.open(actor || canvas.tokens?.controlled?.[0]?.actor || game.user.character || null)
   };
 });

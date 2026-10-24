@@ -64,6 +64,22 @@ export function damageBonus(actor, weapon) {
     Number(weapon?.bonus || 0);
 }
 
+// Schadensbonus pro Würfel: wird zu jedem Würfel addiert, bevor der
+// Machtfaktor multipliziert. Uncommon (M = 2) mit Bonus 3: (1W + 3) × 2.
+export const dieBonus = (weapon) => Math.trunc(Number(weapon?.dieBonus || 0)) || 0;
+
+/**
+ * Würfelausdruck der Waffe ohne den Festbonus: (Würfel + Würfelbonus) × Machtfaktor.
+ * Ein negativer Bonus wird als Subtraktion geschrieben, damit die Foundry-
+ * Formel gültig bleibt.
+ */
+export function damageDice(weapon, factor) {
+  const type = weapon?.dice || "1d6";
+  const bonus = dieBonus(weapon);
+  const inner = bonus === 0 ? type : `${type} ${bonus > 0 ? "+" : "-"} ${Math.abs(bonus)}`;
+  return `(${inner}) * ${factor}`;
+}
+
 function attackBreakdown(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
   const parts = [
@@ -380,8 +396,9 @@ async function resolveAttack(actor, used, mode, mods = []) {
   const attributeValue = effectiveAttribute(actor, skill.attribute);
   const halfAwSkill = Math.ceil(Number(actor.system?.boni?.awSkill || 0) / 2);
   const weaponBonus = Number(used.bonus || 0);
-  const diceType = used.dice || "1d6";
-  const damageFormula = `(${diceType} * ${factor}) + ${damageBonus(actor, used) + bonus.damage}`;
+  const perDie = dieBonus(used);
+  const diceType = perDie ? `(${used.dice || "1d6"} ${perDie > 0 ? "+" : "−"} ${Math.abs(perDie)})` : (used.dice || "1d6");
+  const damageFormula = `${damageDice(used, factor)} + ${damageBonus(actor, used) + bonus.damage}`;
 
   // Ohne Ziel wird beim Einzelangriff wie bisher gegen VW 10 geprüft,
   // damit der Wurf auch ohne markierten Token am Tisch nutzbar bleibt.

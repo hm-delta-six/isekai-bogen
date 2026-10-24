@@ -29,7 +29,7 @@ jobs:
           '
 
       - name: Modul packen
-        run: zip -r module.zip module.json scripts templates
+        run: zip -r module.zip module.json scripts templates data
 
       - name: Release veroeffentlichen
         uses: softprops/action-gh-release@v2
