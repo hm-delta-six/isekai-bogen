@@ -36,6 +36,8 @@
   .st-meta { color: #94a3b8; font-size: 11px; margin-bottom: 8px; }
   .st-detail h5 { margin: 12px 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; border: 0; }
   .st-detail p { margin: 0 0 6px; line-height: 1.4; }
+  .st-payoff { border: 1px solid #334155; border-radius: 3px; padding: 6px 8px; line-height: 1.5; }
+  .st-payoff-head { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; margin-bottom: 2px; }
   .st-links { display: flex; flex-wrap: wrap; gap: 4px; }
   .st-link { padding: 1px 7px; border-radius: 10px; border: 1px solid #334155; border-left-width: 4px; cursor: pointer; color: #e2e8f0; }
   .st-link:hover { background: #1e2d4d; }
@@ -100,7 +102,14 @@
             </div>
           {{/if}}
 
-          <h5>Wirkung nach Rarität</h5>
+          <h5>{{#if payoff.sample}}Was der Skill bringt (Beispiel){{else}}Was der Skill dir bringt{{/if}}</h5>
+          <div class="st-payoff">
+            <div class="st-payoff-head">{{payoff.head}}</div>
+            {{#each payoff.lines}}<div>{{{this}}}</div>{{/each}}
+          </div>
+          {{#if formula}}<p class="st-note" style="margin-top:6px;">{{formula}}</p>{{/if}}
+
+          <h5>Dazu je Rarität</h5>
           {{#each effects}}
             <div class="st-eff r-{{rarity}}">
               <b>{{rarity}}</b>

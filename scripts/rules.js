@@ -319,3 +319,20 @@ export function resistanceSources({ resistances = [], skills = [], lookup = null
 
   return list;
 }
+
+/**
+ * Rechenregel je Skill-Archetyp des Baums, fuer die Anzeige im Skill-Baum.
+ * Steht genau hier, damit eine Formel nicht in jeder Raritaetszeile wiederholt
+ * werden muss — die Zeilen nennen nur noch den konkreten Wert.
+ */
+export const ARCH_FORMULAS = {
+  resist:   `Schadensreduktion = ${RESISTANCE_FORMULA}. Mehrere Resistenzen addieren sich, es gibt keinen Deckel.`,
+  passiv:   `Passiver Wert = ${SKILL_BONUS_FORMULAS.passiv}.`,
+  mod:      `Bonus auf den Angriff = ${SKILL_BONUS_FORMULAS.modifikation}.`,
+  probe:    `Bonus auf die Probe = ${SKILL_BONUS_FORMULAS.fertigkeit}.`,
+  waffe:    "Der Machtfaktor vervielfacht Schadenswürfel und Schadensbonus; Skill-Level und Machtfaktor zählen auf den AW.",
+  zauber:   "Der Machtfaktor vervielfacht Schadenswürfel und Schadensbonus des Zaubers.",
+  abwehr:   "Die Rarität entscheidet, gegen welche Angriffsstufe die Abwehr noch voll zählt.",
+  wissen:   "",
+  handwerk: ""
+};

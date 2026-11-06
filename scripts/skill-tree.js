@@ -1,8 +1,11 @@
 import {
-  ATTRIBUTES, LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_LABELS, ancestors, buildTree, descendants, effectLines,
-  formatMilestones, makeCustomSkill, sheetEntry, unlockStatus, validateCustom
+  ATTRIBUTES, LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_CATEGORY, TYPE_LABELS, ancestors, buildTree,
+  descendants, effectLines, formatMilestones, makeCustomSkill, sheetEntry, unlockStatus, validateCustom
 } from "./skill-graph.js";
-import { DAMAGE_TYPES, RESISTANCE_FORMULA, toArray } from "./rules.js";
+import {
+  ARCH_FORMULAS, DAMAGE_TYPES, RESISTANCE_FORMULA, machtfaktor, rarityRank, resistanceDR,
+  skillBonus, toArray, typeLabels
+} from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
 const DATA_URL = `modules/${MODULE_ID}/data/skill-baum.json`;
@@ -215,8 +218,50 @@ export class SkillTreeApp extends Application {
         .sort((a, b) => (tree.skills[a].level - tree.skills[b].level) || tree.skills[a].name.localeCompare(tree.skills[b].name, "de"))
         .map(link),
       children: skill.children.map(link),
+      formula: ARCH_FORMULAS[skill.arch] || "",
+      payoff: this._payoff(skill, status),
       effects: effectLines(tree, skill.id)
     };
+  }
+
+  /**
+   * Was der Skill konkret bringt — gerechnet mit dem Level aus dem Bogen,
+   * sonst mit Level 10 als Beispiel. Die Formel selbst steht einmal in
+   * ARCH_FORMULAS und wird hier nicht wiederholt.
+   */
+  _payoff(skill, status) {
+    const level = status.owned ? Number(status.ownedLevel || 0) : 10;
+    const rank = rarityRank(skill.floor);
+    const factor = machtfaktor(skill.floor);
+    const category = TYPE_CATEGORY[skill.type] || "fertigkeit";
+    const lines = [];
+
+    const head = status.owned
+      ? `Level ${level}, ${skill.floor} (Stufe ${rank}, Machtfaktor ${factor})`
+      : `Beispiel Level 10, ${skill.floor} (Stufe ${rank}, Machtfaktor ${factor})`;
+
+    const types = typeLabels(skill.types);
+    if (types.length) {
+      lines.push(`Schadensreduktion <b>${resistanceDR({ level, rarity: skill.floor })}</b> gegen ${types.join(", ")}` +
+        (skill.cond ? ` — nur gegen ${skill.cond === "magie" ? "Magie" : "Gift und Krankheit"}` : ""));
+    }
+
+    const bonus = skillBonus({ level, rarity: skill.floor, category });
+    if (category === "modifikation") {
+      lines.push(`Bonus auf den Angriff <b>${bonus}</b>, höchstens ${rank} zusätzliche Ziele`);
+    } else if (category === "passiv") {
+      lines.push(`Passiver Wert <b>${bonus}</b>`);
+    } else if (category === "aktiv") {
+      lines.push(`Bonus <b>${bonus}</b> plus die Hälfte deines ${skill.attr} (abgerundet)`);
+    } else {
+      lines.push(`Bonus <b>${bonus}</b> plus dein ${skill.attr}`);
+    }
+
+    if (skill.arch === "waffe" || skill.arch === "zauber") {
+      lines.push(`Schadenswürfel und Schadensbonus × ${factor}`);
+    }
+
+    return { head, lines, sample: !status.owned };
   }
 
   activateListeners(html) {
