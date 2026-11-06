@@ -3,8 +3,8 @@ import {
   descendants, effectLines, formatMilestones, makeCustomSkill, sheetEntry, unlockStatus, validateCustom
 } from "./skill-graph.js";
 import {
-  ARCH_FORMULAS, DAMAGE_TYPES, RESISTANCE_FORMULA, machtfaktor, rarityRank, resistanceDR,
-  skillBonus, toArray, typeLabels
+  ARCH_FORMULAS, COND_LABELS, DAMAGE_TYPES, RESISTANCE_FORMULA, condLabel, machtfaktor, rarityRank,
+  resistanceDR, skillBonus, toArray, typeLabels
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
@@ -243,7 +243,7 @@ export class SkillTreeApp extends Application {
     const types = typeLabels(skill.types);
     if (types.length) {
       lines.push(`Schadensreduktion <b>${resistanceDR({ level, rarity: skill.floor })}</b> gegen ${types.join(", ")}` +
-        (skill.cond ? ` — nur gegen ${skill.cond === "magie" ? "Magie" : "Gift und Krankheit"}` : ""));
+        (skill.cond ? ` — nur gegen ${condLabel(skill.cond)}` : ""));
     }
 
     const bonus = skillBonus({ level, rarity: skill.floor, category });
@@ -403,8 +403,8 @@ export class SkillTreeApp extends Application {
           <label>Wirkt nur gegen
             <select name="cond">
               <option value="" ${value.cond ? "" : "selected"}>jede Quelle</option>
-              <option value="magie" ${value.cond === "magie" ? "selected" : ""}>Magie</option>
-              <option value="gift" ${value.cond === "gift" ? "selected" : ""}>Gift und Krankheit</option>
+              ${Object.entries(COND_LABELS).map(([key, label]) =>
+                `<option value="${key}" ${value.cond === key ? "selected" : ""}>${label}</option>`).join("")}
             </select>
           </label>
           <div style="font-size:11px; color:#94a3b8; margin-top:4px;">

@@ -24,7 +24,11 @@ export const DAMAGE_TYPES = {
   elektrizitaet: "Elektrizität",
   schall: "Schall",
   kaelte: "Kälte",
-  energie: "Energie"
+  energie: "Energie",
+  // Gift richtet Schaden an und ist deshalb eine Schadensart wie die anderen.
+  // Krankheit dagegen kostet Proben und Zustaende, nicht Lebenspunkte, und
+  // hat darum keine Schadensart.
+  gift: "Gift"
 };
 
 export const rarityRank = (rarity) => RARITY_MAP[rarity] || 1;
@@ -138,6 +142,13 @@ export const MOD_BONUS_TYPES = {
 };
 
 export const COST_TYPES = { hp: "HP", mp: "MP", ap: "AP" };
+
+/**
+ * Quellen, auf die sich eine Resistenz beschraenken kann. Sie zählen nicht in
+ * die flache DR, weil ein Angriff im Modul keine Quelle mitbringt.
+ */
+export const COND_LABELS = { magie: "Magie" };
+export const condLabel = (cond) => COND_LABELS[cond] || "";
 
 // Rechenregel des Skill-Bonus je Kategorie, für die Hilfe im Bogen.
 export const SKILL_BONUS_FORMULAS = {

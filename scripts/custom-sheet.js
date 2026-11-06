@@ -6,7 +6,7 @@ import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
-  SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, damageReduction,
+  SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, condLabel, damageReduction,
   machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
   skillBonus, skillCategory, toArray, typeLabels, typeList, typeValue
 } from "./rules.js";
@@ -196,7 +196,9 @@ class MeinHausregelSheet extends ActorSheet {
       cond: reduction.conditional[key]
     }));
     context.drSources = reduction.active.filter(entry => !entry.cond);
-    context.drConditional = reduction.active.filter(entry => entry.cond);
+    context.drConditional = reduction.active
+      .filter(entry => entry.cond)
+      .map(entry => ({ ...entry, condLabel: condLabel(entry.cond) }));
     // Nur stillgelegte Skills nennen, die der Charakter wirklich hat.
     const ownedResistances = new Set(sources.map(entry => String(entry.name || "").trim().toLowerCase()));
     context.drRetiredNames = reduction.retiredLabels.filter(name => ownedResistances.has(name.toLowerCase()));
@@ -214,6 +216,7 @@ class MeinHausregelSheet extends ActorSheet {
       skill.retired = retired.has(String(skill.name || "").trim().toLowerCase());
       skill.resistTypes = typeLabels(skill.types).join(", ");
       skill.resistValue = skill.resistTypes ? resistanceDR(skill) : 0;
+      skill.condLabel = condLabel(skill.cond);
     });
 
     // RESISTENZEN: Level kommt aus dem verknüpften Skill

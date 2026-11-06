@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTree } from "../scripts/skill-graph.js";
-import { damageReduction, enrichSkill, nameList, resistanceDR, resistanceSources, derivedStartLevel } from "../scripts/rules.js";
+import { COND_LABELS, DAMAGE_TYPES, damageReduction, enrichSkill, nameList, resistanceDR, resistanceSources, derivedStartLevel } from "../scripts/rules.js";
 let fails=0;
 const check=(n,g,w)=>{const ok=JSON.stringify(g)===JSON.stringify(w);
   if(!ok){fails++;console.log(`FAIL ${n}\n  erwartet ${JSON.stringify(w)}\n  bekommen ${JSON.stringify(g)}`);}
@@ -138,6 +138,34 @@ const resistOhneTyp = Object.values(echterBaum.skills)
   .filter(s => s.arch === "resist" && base.skills[s.id]?.types?.length && !s.types.length)
   .map(s => s.name);
 check("keine Schadensart verliert sich im Baum", resistOhneTyp, []);
+
+
+// --- Gift ist eine Schadensart, Krankheit nicht ---------------------------
+check("Gift ist eine Schadensart", "gift" in DAMAGE_TYPES, true);
+check("Krankheit ist keine", "krankheit" in DAMAGE_TYPES, false);
+check("Gift als Quelle gibt es nicht mehr", "gift" in COND_LABELS, false);
+
+const giftSkills = [
+  { name: "Giftfestigkeit",        level: 12, rarity: "Common", category: "passiv" },
+  { name: "Chemische Immunität",  level: 10, rarity: "Rare",   category: "passiv" }
+];
+const giftDR = damageReduction({
+  resistances: resistanceSources({ skills: giftSkills, lookup: echtesLookup })
+});
+check("Giftfestigkeit 12 + Chemische Immunitaet 40", giftDR.flat.gift, 52);
+check("Chemische Immunitaet deckt auch Saeure", giftDR.flat.saeure, 40);
+check("Giftfestigkeit erscheint in der Liste",
+  giftDR.active.map(e => e.name).includes("Giftfestigkeit"), true);
+check("Saeureresistenz bleibt stillgelegt", giftDR.retiredLabels, ["Säureresistenz"]);
+
+const giftBaum = (name) => echtesLookup.get(name.toLowerCase())?.types || [];
+check("Unverwundbarer Koerper: Gift und Saeure", giftBaum("Unverwundbarer Körper").sort(),
+  ["gift", "saeure"]);
+check("Unverwundbarer Koerper ohne Bedingung",
+  echtesLookup.get("unverwundbarer körper").cond, "");
+check("Unverwundbar deckt alle zehn", giftBaum("Unverwundbar").length, 10);
+check("Urelementar schliesst Gift ein", giftBaum("Urelementar-Unempfindlichkeit").includes("gift"), true);
+check("Hiebresistenz bleibt bei einer Art", giftBaum("Hiebresistenz"), ["hieb"]);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails?1:0);

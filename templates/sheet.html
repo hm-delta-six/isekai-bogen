@@ -357,7 +357,7 @@
       {{#if drConditional.length}}
         <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">
           Bedingt, zählt nur gegen die genannte Quelle:
-          {{#each drConditional}}{{name}} +{{value}} ({{cond}}){{#unless @last}} · {{/unless}}{{/each}}
+          {{#each drConditional}}{{name}} +{{value}} (nur {{condLabel}}){{#unless @last}} · {{/unless}}{{/each}}
         </div>
       {{/if}}
       {{#if drRetiredNames.length}}
@@ -529,7 +529,7 @@
                   <input type="text" style="width:100%;" name="system.isekaiSkills.{{entry.index}}.effect" value="{{entry.skill.effect}}"/>
                   {{#if entry.skill.resistTypes}}
                     <div style="font-size:10px; color:#94a3b8;">
-                      Resistenz {{entry.skill.resistValue}} gegen {{entry.skill.resistTypes}}{{#if entry.skill.cond}} (nur {{entry.skill.cond}}){{/if}}
+                      Resistenz {{entry.skill.resistValue}} gegen {{entry.skill.resistTypes}}{{#if entry.skill.condLabel}} (nur {{entry.skill.condLabel}}){{/if}}
                     </div>
                   {{/if}}
                 </td>
