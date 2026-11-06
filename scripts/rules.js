@@ -197,3 +197,68 @@ export function summarizeMods(mods) {
 
   return { bonus, cost };
 }
+
+/**
+ * Schadensreduktion einer Resistenz: Skill-Level × Machtfaktor der Rarität.
+ *
+ * Flach, ohne Deckel und ohne Unterschied zwischen spezialisierten und
+ * allgemeinen Resistenzen. Die früheren Prozentregeln aus Wiki 9.2 und 9.3
+ * entfallen damit vollständig — es gibt genau diese eine Formel.
+ */
+export const RESISTANCE_FORMULA = "Skill-Level × Machtfaktor der Raritätsstufe";
+
+export const resistanceDR = (skill) =>
+  Math.max(0, Number(skill?.level || 0)) * machtfaktor(skill?.rarity);
+
+/**
+ * Startlevel eines abgeleiteten Skills: Durchschnitt der Elternlevel,
+ * abgerundet. Ohne Eltern beginnt er bei 1.
+ */
+export function derivedStartLevel(parentLevels) {
+  const levels = toArray(parentLevels).map(value => Math.max(0, Number(value || 0)));
+  if (!levels.length) return 1;
+  return Math.floor(levels.reduce((sum, value) => sum + value, 0) / levels.length);
+}
+
+/**
+ * Gesamte DR je Schadensart aus Rüstung und Resistenz-Skills.
+ *
+ * Ein Skill zählt nicht, wenn ein anderer vorhandener Skill ihn stilllegt —
+ * im Baum steht dafür `replaces`. Bedingte Resistenzen (nur gegen Magie, nur
+ * gegen Gift) werden getrennt geführt, weil ein Angriff im Modul keine Quelle
+ * mitbringt und sie sonst gegen alles zählen würden.
+ */
+export function damageReduction({ armors = [], resistances = [] } = {}) {
+  const flat = {};
+  const conditional = {};
+  for (const key of Object.keys(DAMAGE_TYPES)) { flat[key] = 0; conditional[key] = 0; }
+
+  for (const armor of toArray(armors)) {
+    if (!armor || Number(armor.durability || 0) <= 0) continue;
+    const covered = typeList(armor.types);
+    const against = covered.length ? covered : Object.keys(DAMAGE_TYPES);
+    for (const key of against) flat[key] += Number(armor.dr || 0);
+  }
+
+  const retired = new Set();
+  for (const skill of toArray(resistances)) {
+    for (const name of toArray(skill?.replaces)) retired.add(String(name).trim().toLowerCase());
+  }
+
+  const active = [];
+  for (const skill of toArray(resistances)) {
+    if (!skill) continue;
+    if (retired.has(String(skill.name || "").trim().toLowerCase())) continue;
+    const value = resistanceDR(skill);
+    const types = typeList(skill.types);
+    // Ohne Schadensart traegt der Skill nichts zur DR bei — etwa Abhaertung
+    // oder Willensstaerke, die nur Proben verbessern.
+    if (!value || !types.length) continue;
+
+    const target = skill.cond ? conditional : flat;
+    for (const key of types) target[key] += value;
+    active.push({ name: skill.name, value, cond: skill.cond || "", types });
+  }
+
+  return { flat, conditional, active, retired: [...retired] };
+}

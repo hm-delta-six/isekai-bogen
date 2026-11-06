@@ -5,7 +5,8 @@ import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageHooks } from 
 import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
-  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE,
+  DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
+  SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, damageReduction,
   machtfaktor, modBonus, rarityRank, skillBonus, skillCategory, toArray,
   typeLabels, typeList, typeValue
 } from "./rules.js";
@@ -147,6 +148,23 @@ class MeinHausregelSheet extends ActorSheet {
       armor.typeValue = typeValue(armor.types);
     });
     const drSummary = armorSummary(context.actor);
+
+    // GESAMTE DR JE SCHADENSART: Ruestung plus Resistenz-Skills.
+    // Resistenzen traegt der Spielleiter als passive Skills ein; Typen und
+    // stillgelegte Eltern kommen aus dem Skill-Baum mit.
+    const reduction = damageReduction({
+      armors: systemData.armors,
+      resistances: systemData.isekaiSkills.filter(skill => skill && typeList(skill.types).length)
+    });
+
+    context.resistanceFormula = RESISTANCE_FORMULA;
+    context.drByType = Object.entries(DT).map(([key, label]) => ({
+      label,
+      flat: reduction.flat[key],
+      cond: reduction.conditional[key]
+    }));
+    context.drConditional = reduction.active.filter(entry => entry.cond);
+    context.drRetired = reduction.retired.length;
 
     // RESISTENZEN: Level kommt aus dem verknüpften Skill
     systemData.resistances.forEach(resistance => {

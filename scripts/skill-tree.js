@@ -254,9 +254,13 @@ export class SkillTreeApp extends Application {
       if (!proceed) return;
     }
 
-    list.push(sheetEntry(skill));
+    // Startlevel ist der Durchschnitt der Elternlevel, die der Charakter hat.
+    const parentLevels = status.parents.filter(parent => parent.has).map(parent => parent.level);
+    const entry = sheetEntry(skill, parentLevels);
+
+    list.push(entry);
     await actor.update({ "system.isekaiSkills": list });
-    ui.notifications.info(`${skill.name} wurde zum Bogen von ${actor.name} hinzugefügt (${skill.floor}, Level 1).`);
+    ui.notifications.info(`${skill.name} wurde zum Bogen von ${actor.name} hinzugefügt (${skill.floor}, Level ${entry.level}).`);
   }
 
   // --- Eigene Skills (Spielleiter) ---

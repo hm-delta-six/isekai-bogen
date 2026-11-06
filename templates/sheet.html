@@ -338,6 +338,24 @@
         <div><strong>VW:</strong> <strong style="color:#38bdf8;">{{derived.vwTotal}}</strong> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/> + DEX {{effectiveAbilities.DEX}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small></div>
       </div>
 
+      <!-- SCHADENSREDUKTION JE SCHADENSART -->
+      <div class="section-header">
+        <span>Schadensreduktion
+          <span class="help" title="Rüstung + Resistenz-Skills. Resistenz = {{resistanceFormula}}">?</span>
+        </span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
+        {{#each drByType}}
+          <span class="badge" title="{{label}}">{{label}} <strong>{{flat}}</strong>{{#if cond}} <small>(+{{cond}} bedingt)</small>{{/if}}</span>
+        {{/each}}
+      </div>
+      {{#if drConditional.length}}
+        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">
+          Bedingt, zählt nur gegen die genannte Quelle:
+          {{#each drConditional}}{{name}} +{{value}} ({{cond}}){{/each}}
+        </div>
+      {{/if}}
+
       <!-- WAFFEN -->
       <div class="section-header">
         <span>Waffen &amp; Angriffe</span>

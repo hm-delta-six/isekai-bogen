@@ -4,6 +4,8 @@
 // speichert der Spielleiter als Weltdaten; buildTree() setzt beides zu einem
 // Baum zusammen, in dem Kinder, Art und Einstiegsrarität berechnet sind.
 
+import { derivedStartLevel, toArray } from "./rules.js";
+
 export const MAX_LEVEL = 7;
 
 // Rarität, ab der ein Skill der Ebene existiert (Raritätsstufe 1–6)
@@ -283,14 +285,24 @@ export function shortEffect(skill) {
   return first.length > 160 ? `${first.slice(0, 157)}…` : first;
 }
 
-/** Eintrag für system.isekaiSkills. Startlevel 1, Rarität ist die Einstiegsrarität. */
-export function sheetEntry(skill) {
+/**
+ * Eintrag für system.isekaiSkills.
+ *
+ * Trägt die Schadensarten, die stillgelegten Eltern und eine etwaige
+ * Bedingung mit, damit der Bogen die DR rechnen kann, ohne den Baum zu
+ * kennen. Das Startlevel ist der abgerundete Durchschnitt der Elternlevel
+ * des Charakters; ohne Eltern beginnt der Skill bei 1.
+ */
+export function sheetEntry(skill, parentLevels = []) {
   return {
     name: skill.name,
     rarity: skill.floor,
-    level: 1,
+    level: derivedStartLevel(parentLevels),
     attribute: skill.attr,
     category: TYPE_CATEGORY[skill.type] || "fertigkeit",
+    types: toArray(skill.types).join(","),
+    replaces: toArray(skill.replaces).join(","),
+    cond: skill.cond || "",
     effect: shortEffect(skill)
   };
 }

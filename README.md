@@ -186,26 +186,29 @@ das Attribut ist STR.
 ## Ruestung, Resistenzen und Schadensarten
 
 Eine Ruestung hat DR, Haltbarkeit und eine Mehrfachauswahl der Schadensarten,
-gegen die ihre DR ueberhaupt zaehlt. Gegen jede nicht gewaehlte Art ist ihre DR
-null. Ein Eintrag ohne Auswahl schuetzt gegen alles, damit alte Eintraege
-gueltig bleiben.
+gegen die ihre DR zaehlt. Gegen jede nicht gewaehlte Art ist ihre DR null; ein
+Eintrag ohne Auswahl schuetzt gegen alles.
 
-Resistenzen stehen in einer eigenen Tabelle und rechnen nach Kapitel 9.3:
+Resistenzen sind passive Skills. Sie rechnen nach genau einer Formel:
 
 ```
-Reduktion = Skill-Level x Raritaetsstufe
+Schadensreduktion = Skill-Level x Machtfaktor der Raritaetsstufe
 ```
 
-gedeckelt auf einen Anteil des eingehenden Schadens, der vom Stufenabstand
-zum Angriff abhaengt: 2+ Stufen hoeher 100 %, 1 hoeher 75 %, gleich 50 %,
-1 niedriger 25 %, 2+ niedriger 0 %. Das Level kommt aus dem verknuepften Skill.
-Deckt eine Resistenz mehrere Arten ab, gilt sie als allgemein und rechnet mit
-Skill-Level x (Raritaetsstufe - 1), mindestens Skill-Level / 2.
+Machtfaktor: Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16,
+Transzendiert 32. Es gibt keine Prozentdeckel und keinen Unterschied zwischen
+spezialisierten und allgemeinen Resistenzen mehr.
 
-Reihenfolge eines Treffers: **Ruestung, dann Resistenz.** Die Haltbarkeit nimmt
-Schaden in Hoehe dessen, was die Ruestung nicht aufhalten konnte, also vor der
-Resistenz. Bei mehreren Schadensarten einer Waffe gilt der beste Durchgriff:
-es zaehlt die Art, bei der am Ende der meiste Schaden ankommt.
+Welche Schadensarten ein Skill abdeckt und welche Eltern er stilllegt, bringt
+er aus dem Skill-Baum mit. Legt ein vorhandener Skill einen anderen still,
+zaehlt der stillgelegte nicht mehr mit; alle uebrigen addieren sich. Bedingte
+Resistenzen wie Arkane Resistenz wirken nur gegen eine bestimmte Quelle und
+werden deshalb getrennt ausgewiesen.
+
+Ein abgeleiteter Skill startet mit dem abgerundeten Durchschnitt der
+Elternlevel, die der Charakter bereits hat.
+
+Die Kampfwerte zeigen die Summe je Schadensart aus Ruestung und Resistenzen.
 
 ## Angriffsbereich
 
