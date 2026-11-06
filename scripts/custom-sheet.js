@@ -359,10 +359,17 @@ class MeinHausregelSheet extends ActorSheet {
     return context;
   }
 
-  // Offene Eingaben sichern, bevor ein Listeneintrag neu geschrieben wird.
-  async _saveForm(html) {
-    const form = html.closest('form')[0];
-    await this.actor.update(this._getSubmitData(form));
+  /**
+   * Offene Eingaben sichern, bevor ein Listeneintrag neu geschrieben wird.
+   *
+   * _getSubmitData nimmt kein Formular, sondern zusaetzliche Daten und liest
+   * das Formular selbst aus this.form. Ein Formular-Element als Argument
+   * mischt dessen eigene Eigenschaften in die Daten: ein HTMLFormElement
+   * fuehrt seine Felder unter den Indizes 0, 1, 2 ..., die damit als
+   * Aktualisierung an den Charakter gehen.
+   */
+  async _saveForm() {
+    await this.actor.update(this._getSubmitData());
   }
 
   activateListeners(html) {
@@ -370,11 +377,13 @@ class MeinHausregelSheet extends ActorSheet {
     if (!this.isEditable) return;
 
     // EINGABEN BEIM VERLASSEN/ÄNDERN SPEICHERN
-    html.find('input, select').on('change', async (ev) => {
+    html.find('input, select, textarea').on('change', async (ev) => {
       ev.preventDefault();
-      const form = html.closest('form')[0];
-      const formData = this._getSubmitData(form);
-      await this.actor.update(formData);
+      await this.actor.update(this._getSubmitData());
+      // Angriffswert, Schaden, Schadensreduktion und die Hilfetexte werden in
+      // getData gerechnet. Haelt Foundry die Aenderung fuer unerheblich und
+      // zeichnet nicht neu, blieben sie auf dem alten Stand stehen.
+      this.render(false);
     });
 
     // ANGREIFEN / WÜRFELN
@@ -406,7 +415,7 @@ class MeinHausregelSheet extends ActorSheet {
     // DYNAMISCHE ARRAYS (Skills, Ausrüstung, Waffen, Titel)
     const handleArrayAction = async (ev, fieldKey, action, defaultObj = {}) => {
       ev.preventDefault();
-      await this._saveForm(html);
+      await this._saveForm();
 
       let list = foundry.utils.duplicate(this.actor.system[fieldKey] || []);
       if (!Array.isArray(list)) list = Object.values(list);
@@ -424,7 +433,7 @@ class MeinHausregelSheet extends ActorSheet {
     // Modifikationen liegen in der Waffe, brauchen also einen eigenen Griff.
     const handleModAction = async (ev, action) => {
       ev.preventDefault();
-      await this._saveForm(html);
+      await this._saveForm();
 
       let weapons = foundry.utils.duplicate(this.actor.system.weapons || []);
       if (!Array.isArray(weapons)) weapons = Object.values(weapons);
@@ -470,7 +479,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.typepick').click(async ev => {
       ev.preventDefault();
       const { field, index, key } = ev.currentTarget.dataset;
-      await this._saveForm(html);
+      await this._saveForm();
       await openTypePicker(this.actor, field, Number(index), key);
     });
 
