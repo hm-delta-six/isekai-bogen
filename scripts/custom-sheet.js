@@ -168,8 +168,8 @@ class MeinHausregelSheet extends ActorSheet {
     context.drSources = reduction.active.filter(entry => !entry.cond);
     context.drConditional = reduction.active.filter(entry => entry.cond);
     // Nur stillgelegte Skills nennen, die der Charakter wirklich hat.
-    const owned = new Set(sources.map(entry => String(entry.name || "").trim().toLowerCase()));
-    context.drRetiredNames = reduction.retiredLabels.filter(name => owned.has(name.toLowerCase()));
+    const ownedResistances = new Set(sources.map(entry => String(entry.name || "").trim().toLowerCase()));
+    context.drRetiredNames = reduction.retiredLabels.filter(name => ownedResistances.has(name.toLowerCase()));
     // Was der Skill selbst zur DR beitraegt, am Skill zeigen; die Felder aus
     // dem Baum werden dabei in den Bogen uebernommen, damit sie nicht bei
     // jedem Oeffnen neu nachgeschlagen werden muessen.
