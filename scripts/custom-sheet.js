@@ -371,10 +371,9 @@ class MeinHausregelSheet extends ActorSheet {
     });
 
     // SKILLS
-    html.find('.add-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'add', {
-      name: "", rarity: "Common", level: 0, attribute: "STR",
-      category: ev.currentTarget.dataset.category || "fertigkeit", effect: ""
-    }));
+    // Skills kommen ausschliesslich aus dem Baum: nur dort sind Ebene,
+    // Voraussetzungen, Schadensarten und Ersetzungen hinterlegt. Ein frei
+    // angelegter Eintrag haette davon nichts und wuerde bei der DR fehlen.
     html.find('.delete-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'delete'));
 
     // AUSRÜSTUNG
