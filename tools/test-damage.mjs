@@ -131,7 +131,8 @@ check("ohne Verknuepfung: STR", weaponSkill(held, {}).attribute, "STR");
 check("unbekannter Skill wird gemeldet", weaponSkill(held, { skillName: "Bogen" }).missing, true);
 
 // STR 6+2=8, halber AW-Skill ceil(5/2)=3, Skill 4, Bonus 3 => 18
-check("Schadensbonus mit Skill", damageBonus(held, { skillName: "Morgenstern", bonus: 3 }), 18);
+// Morgenstern hat keine Raritaet, faellt also auf Common: Machtfaktor 1.
+check("Schadensbonus mit Skill", damageBonus(held, { skillName: "Morgenstern", bonus: 3 }), 19);
 check("Schadensbonus ohne Skill", damageBonus(held, { bonus: 3 }), 14);
 
 // --- Schadensbonus pro Wuerfel: (Wuerfel + Bonus) x Machtfaktor ---
@@ -188,6 +189,32 @@ check("fehlender Wert ist 0", currentPool({ system: {} }, "hp"), 0);
 const altbogen = { system: { armors: [], resistances: [], isekaiSkills: [], resources: { hp: { value: 30 } } } };
 check("Schaden rechnet auch auf einem nicht migrierten Bogen",
   resolveDamage(altbogen, 10, {}).hpAfter, 20);
+
+
+// --- Rarität des Angriffsskills zählt als Machtfaktor auf AW und Schaden ---
+const { attackValue } = await import("../scripts/attack.js");
+
+const kaempferMit = (rarity) => ({
+  system: {
+    abilities: { STR: { value: 6 } },
+    boni: { awSkill: 5 },
+    titles: [{ type: "STR", bonus: 2 }],
+    isekaiSkills: [{ name: "Schwertkampf", level: 8, attribute: "STR", rarity }]
+  }
+});
+const klinge = { skillName: "Schwertkampf", bonus: 0 };
+
+// AW = 10 + AW-Skill 5 + Level 8 + Machtfaktor + STR 8
+check("AW Common: Machtfaktor 1", attackValue(kaempferMit("Common"), klinge), 32);
+check("AW Uncommon: Machtfaktor 2", attackValue(kaempferMit("Uncommon"), klinge), 33);
+check("AW Rare: Machtfaktor 4", attackValue(kaempferMit("Rare"), klinge), 35);
+check("AW Legendary: Machtfaktor 16", attackValue(kaempferMit("Legendary"), klinge), 47);
+
+// Schaden = STR 8 + halber AW-Skill 3 + Level 8 + Machtfaktor
+check("Schaden Common", damageBonus(kaempferMit("Common"), klinge), 20);
+check("Schaden Epic: Machtfaktor 8", damageBonus(kaempferMit("Epic"), klinge), 27);
+check("ohne verknuepften Skill kein Machtfaktor",
+  damageBonus(kaempferMit("Rare"), { bonus: 0 }), 11);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

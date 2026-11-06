@@ -156,9 +156,14 @@ Jede Waffe verweist in der Spalte **Skill** auf einen Skill aus der Skill-Liste
 des Charakters. Von dort kommen beide Werte, die der Angriffswert braucht:
 
 ```
-AW = 10 + AW-Skill + Skill-Level der Waffe + steuerndes Attribut des Skills
-     + allgemeine Boni + Waffenbonus
+AW = 10 + AW-Skill + Skill-Level der Waffe + Machtfaktor des Skills
+     + steuerndes Attribut des Skills + allgemeine Boni + Waffenbonus
 ```
+
+Der Machtfaktor des Angriffsskills kommt aus dessen Raritaet: Common 1,
+Uncommon 2, Rare 4, Epic 8, Legendary 16, Transzendiert 32. Er zaehlt flach
+auf AW und auf den Schaden. Davon getrennt multipliziert der Machtfaktor der
+*Waffe* weiterhin den Schadenswuerfel.
 
 Jede Waffe traegt ausserdem eine Mehrfachauswahl der Schadensarten
 (Hieb, Stich, Wucht, Feuer, Saeure, Elektrizitaet, Schall, Kaelte, Energie).
@@ -166,8 +171,8 @@ Jede Waffe traegt ausserdem eine Mehrfachauswahl der Schadensarten
 Derselbe Skill zaehlt auch auf den Schaden:
 
 ```
-Schaden = Wuerfel x Machtfaktor + Attribut des Skills + halber AW-Skill
-          + Skill-Level der Waffe + Waffenbonus
+Schaden = Wuerfel x Machtfaktor der Waffe + Attribut des Skills
+          + halber AW-Skill + Skill-Level + Machtfaktor des Skills + Waffenbonus
 ```
 
 Angriffswert und Schaden nutzen dasselbe Attribut: das des verknuepften Skills.

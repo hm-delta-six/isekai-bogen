@@ -29,16 +29,20 @@ function usableWeapons(actor) {
 // ohne das Level an der Waffe nachzupflegen.
 export function weaponSkill(actor, weapon) {
   const wanted = String(weapon?.skillName || "").trim().toLowerCase();
-  if (!wanted) return { level: 0, attribute: "STR", name: null, missing: false };
+  if (!wanted) return { level: 0, attribute: "STR", rarity: "Common", factor: 0, name: null, missing: false };
 
   const found = toArray(actor?.system?.isekaiSkills)
     .find(skill => String(skill?.name || "").trim().toLowerCase() === wanted);
 
-  if (!found) return { level: 0, attribute: "STR", name: weapon.skillName, missing: true };
+  if (!found) return { level: 0, attribute: "STR", rarity: "Common", factor: 0, name: weapon.skillName, missing: true };
 
   return {
     level: Number(found.level || 0),
     attribute: found.attribute || "STR",
+    rarity: found.rarity || "Common",
+    // Die Raritaet des Angriffsskills zaehlt als Machtfaktor flach auf AW und
+    // Schaden: Common 1, Uncommon 2, Rare 4, Epic 8, Legendary 16, Transz. 32.
+    factor: machtfaktor(found.rarity),
     name: found.name,
     missing: false
   };
@@ -48,19 +52,20 @@ export function attackValue(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
   return 10 +
     Number(actor.system?.boni?.awSkill || 0) +
-    skill.level +
+    skill.level + skill.factor +
     effectiveAttribute(actor, skill.attribute) +
     Number(actor.system?.boni?.aw || 0) + bonusForType(actor, "AW") +
     Number(weapon.bonus || 0);
 }
 
-// Schaden = Würfel × Machtfaktor + Attribut + halber AW-Skill + Waffen-Skill + Bonus
+// Schaden = Würfel × Machtfaktor(Waffe) + Attribut + halber AW-Skill
+//           + Waffen-Skill + Machtfaktor(Skill) + Bonus
 // Das Attribut ist das des verknüpften Skills, ohne Verknüpfung STR.
 export function damageBonus(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
   return effectiveAttribute(actor, skill.attribute) +
     Math.ceil(Number(actor?.system?.boni?.awSkill || 0) / 2) +
-    skill.level +
+    skill.level + skill.factor +
     Number(weapon?.bonus || 0);
 }
 
@@ -86,6 +91,7 @@ function attackBreakdown(actor, weapon) {
     `10`,
     `AW-Skill ${Number(actor.system?.boni?.awSkill || 0)}`,
     `${skill.name ? `${skill.name} ` : "Waffen-Skill "}${skill.level}`,
+    ...(skill.factor ? [`Machtfaktor ${skill.rarity} ${skill.factor}`] : []),
     `${skill.attribute} ${effectiveAttribute(actor, skill.attribute)}`
   ];
   const general = Number(actor.system?.boni?.aw || 0) + bonusForType(actor, "AW");
@@ -415,7 +421,9 @@ async function resolveAttack(actor, used, mode, mods = []) {
     (area.mode === "single" ? "" : `<small>${areaDescription(area)}</small><br>`) +
     `<small>AW ${aw} = ${attackBreakdown(actor, used)}${area.malus ? ` − Flächenmalus ${area.malus}` : ""}</small><br>` +
     `<small>Schaden: ${diceType} × Machtfaktor ${factor} + ${skill.attribute} (${attributeValue}) ` +
-    `+ Halber AW-Skill (${halfAwSkill}) + ${skill.name || "Waffen-Skill"} (${skill.level}) + Bonus (${weaponBonus})` +
+    `+ Halber AW-Skill (${halfAwSkill}) + ${skill.name || "Waffen-Skill"} (${skill.level})` +
+    (skill.factor ? ` + Machtfaktor ${skill.rarity} (${skill.factor})` : "") +
+    ` + Bonus (${weaponBonus})` +
     (typeLabels(used.damageTypes).length ? ` · ${typeLabels(used.damageTypes).join(", ")}` : "") +
     `</small>`;
 
