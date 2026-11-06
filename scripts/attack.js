@@ -1,7 +1,7 @@
 import { currentPool, describeDamage, payCosts, prepareDamage, resolveDamage } from "./damage.js";
 import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
-import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, rarityRank, summarizeMods, toArray, typeLabels } from "./rules.js";
+import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, summarizeMods, targetMalus, toArray, typeLabels } from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
 // Ausrüstung trägt derzeit keine type/bonus-Felder, wird aber mitgelesen,
@@ -129,12 +129,9 @@ export function weaponMods(actor, weapon) {
       index,
       name: skill?.name || mod?.skillName || "Ohne Skill",
       bonusType,
-      // Bei "Anzahl Gegner" zaehlt hoechstens die Raritaetsstufe des Skills,
-      // sonst waeren es Level x Stufe zusaetzliche Ziele.
-      bonus: !skill ? 0
-        : bonusType === "targets" ? Math.min(modBonus(skill), rarityRank(skill.rarity))
-        : modBonus(skill),
-      capped: Boolean(skill) && bonusType === "targets" && modBonus(skill) > rarityRank(skill.rarity),
+      bonus: skill ? modBonus(skill) : 0,
+      // Mehrere Ziele kosten AW: 6 - Raritaetsstufe des Skills.
+      awMalus: skill && bonusType === "targets" ? targetMalus(skill) : 0,
       costType,
       costValue,
       available,
@@ -206,13 +203,13 @@ function infoHtml(actor, weapon, targets) {
       const note = mod.missing
         ? " — Skill nicht im Bogen, wirkungslos"
         : !mod.bonus ? " — Bonus 0, der Skill steht auf Level 0"
-        : mod.capped ? " — auf die Raritätsstufe begrenzt"
         : (mod.affordable ? "" : ` — nur ${mod.available} ${COST_TYPES[mod.costType]} vorhanden`);
       html +=
         `<label style="display:flex; align-items:center; gap:6px; font-size:11px;">` +
         `<input type="checkbox" name="mod" value="${mod.index}" style="width:auto; margin:0;"` +
         `${mod.affordable && !mod.missing ? "" : " disabled"}/>` +
-        `<span>${mod.name}: +${mod.bonus} ${MOD_BONUS_TYPES[mod.bonusType]}, ${cost}${note}</span></label>`;
+        `<span>${mod.name}: +${mod.bonus} ${MOD_BONUS_TYPES[mod.bonusType]}` +
+        `${mod.awMalus ? `, −${mod.awMalus} AW` : ""}, ${cost}${note}</span></label>`;
     }
   }
 
@@ -376,7 +373,7 @@ export async function executeAttack(actor, weapon = null) {
 }
 
 async function resolveAttack(actor, used, mode, mods = []) {
-  const { bonus, cost } = summarizeMods(mods);
+  const { bonus, cost, malus } = summarizeMods(mods);
 
   // Reichweite vergroessert die Flaeche, Anzahl Gegner die Zahl der Ziele.
   // Ein Ziel-Bonus auf einer Einzelangriffs-Waffe macht daraus einen Angriff
@@ -395,7 +392,7 @@ async function resolveAttack(actor, used, mode, mods = []) {
   const victims = await selectVictims(actor, area);
   if (victims === null) return;
 
-  const aw = attackValue(actor, used) - area.malus + bonus.aw;
+  const aw = attackValue(actor, used) - area.malus - malus + bonus.aw;
 
   const factor = machtfaktor(used.rarity);
   const skill = weaponSkill(actor, used);
@@ -419,7 +416,10 @@ async function resolveAttack(actor, used, mode, mods = []) {
   let content =
     `🎯 <strong>${title}</strong><br>` +
     (area.mode === "single" ? "" : `<small>${areaDescription(area)}</small><br>`) +
-    `<small>AW ${aw} = ${attackBreakdown(actor, used)}${area.malus ? ` − Flächenmalus ${area.malus}` : ""}</small><br>` +
+    `<small>AW ${aw} = ${attackBreakdown(actor, used)}` +
+    `${area.malus ? ` − Flächenmalus ${area.malus}` : ""}` +
+    `${malus ? ` − Zielmalus ${malus}` : ""}` +
+    `${bonus.aw ? ` + Modifikationen ${bonus.aw}` : ""}</small><br>` +
     `<small>Schaden: ${diceType} × Machtfaktor ${factor} + ${skill.attribute} (${attributeValue}) ` +
     `+ Halber AW-Skill (${halfAwSkill}) + ${skill.name || "Waffen-Skill"} (${skill.level})` +
     (skill.factor ? ` + Machtfaktor ${skill.rarity} (${skill.factor})` : "") +

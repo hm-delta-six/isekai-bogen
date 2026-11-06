@@ -177,20 +177,30 @@ export function skillBonus(skill, attributeValue = 0) {
 export const modBonus = (skill) => skillBonus({ ...skill, category: "modifikation" });
 
 /**
+ * Preis dafür, einen Angriff auf mehrere Gegner zu verteilen: 6 − Raritätsstufe
+ * auf den AW. Ein Common-Rundumschlag kostet also 5 AW, ein transzendierter
+ * nichts mehr — die Zahl der Ziele selbst ist Skill-Level × Raritätsstufe und
+ * nicht begrenzt.
+ */
+export const targetMalus = (skill) => Math.max(0, 6 - rarityRank(skill?.rarity));
+
+/**
  * Fasst die gewählten Modifikationen zu Summen je Bonustyp und zu Kosten je
  * Ressource zusammen.
  */
 export function summarizeMods(mods) {
   const bonus = { aw: 0, damage: 0, targets: 0, range: 0 };
   const cost = { hp: 0, mp: 0, ap: 0 };
+  let malus = 0;
 
   for (const mod of toArray(mods)) {
     if (!mod) continue;
     if (mod.bonusType in bonus) bonus[mod.bonusType] += Number(mod.bonus || 0);
     if (mod.costType in cost) cost[mod.costType] += Math.max(0, Number(mod.costValue || 0));
+    malus += Math.max(0, Number(mod.awMalus || 0));
   }
 
-  return { bonus, cost };
+  return { bonus, cost, malus };
 }
 
 /**

@@ -91,7 +91,7 @@ check("Einzelangriff hat keine Form", templateShape("single", 5, 1.5, 100), null
 
 
 // --- Skill-Kategorien und Modifikations-Skills ---
-const { skillCategory, modBonus, summarizeMods, SKILL_CATEGORIES } = await import("../scripts/rules.js");
+const { skillCategory, modBonus, summarizeMods, targetMalus, SKILL_CATEGORIES } = await import("../scripts/rules.js");
 
 check("vier Kategorien", Object.keys(SKILL_CATEGORIES), ["fertigkeit", "aktiv", "modifikation", "passiv"]);
 check("ohne Angabe: Fertigkeit", skillCategory({ name: "Alt" }), "fertigkeit");
@@ -168,12 +168,26 @@ check("Reichweite vergroessert den Kegel",
 check("Reichweite laesst den Einzelangriff in Ruhe",
   areaWithBonus(einzel, { ...keiner, range: 5 }).mode, "single");
 
-// Zielzahl ist auf die Raritaetsstufe des Skills begrenzt
-const cappedTargets = (skill) => Math.min(modBonus(skill), 
-  ({ Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Transzendiert: 6 })[skill.rarity] || 1);
-check("Rare Level 4: 12 Bonus, aber nur 3 Ziele", cappedTargets({ rarity: "Rare", level: 4 }), 3);
-check("Common Level 1: 1 Ziel", cappedTargets({ rarity: "Common", level: 1 }), 1);
-check("Level 0 gibt kein Ziel", cappedTargets({ rarity: "Epic", level: 0 }), 0);
+// Zielzahl ist Skill-Level x Raritaetsstufe, ohne Deckel; bezahlt wird mit AW
+check("Rare Level 4: 12 Ziele", modBonus({ rarity: "Rare", level: 4 }), 12);
+check("Common Level 1: 1 Ziel", modBonus({ rarity: "Common", level: 1 }), 1);
+check("Level 0 gibt kein Ziel", modBonus({ rarity: "Epic", level: 0 }), 0);
+
+check("Common kostet 5 AW",        targetMalus({ rarity: "Common" }), 5);
+check("Uncommon kostet 4 AW",      targetMalus({ rarity: "Uncommon" }), 4);
+check("Rare kostet 3 AW",          targetMalus({ rarity: "Rare" }), 3);
+check("Epic kostet 2 AW",          targetMalus({ rarity: "Epic" }), 2);
+check("Legendary kostet 1 AW",     targetMalus({ rarity: "Legendary" }), 1);
+check("Transzendiert kostet nichts", targetMalus({ rarity: "Transzendiert" }), 0);
+
+// Der Malus steckt in der Zusammenfassung, nicht im Bonus
+const rundumschlag = [{ bonusType: "targets", bonus: 12, awMalus: 3, costType: "ap", costValue: 5 }];
+check("Zielbonus bleibt voll", summarizeMods(rundumschlag).bonus.targets, 12);
+check("AW-Malus summiert", summarizeMods(rundumschlag).malus, 3);
+check("zwei Mods addieren den Malus",
+  summarizeMods([...rundumschlag, { bonusType: "targets", bonus: 4, awMalus: 5 }]).malus, 8);
+check("ohne Zielbonus kein Malus",
+  summarizeMods([{ bonusType: "aw", bonus: 6, awMalus: 0 }]).malus, 0);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

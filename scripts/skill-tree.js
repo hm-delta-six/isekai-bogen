@@ -248,7 +248,8 @@ export class SkillTreeApp extends Application {
 
     const bonus = skillBonus({ level, rarity: skill.floor, category });
     if (category === "modifikation") {
-      lines.push(`Bonus auf den Angriff <b>${bonus}</b>, höchstens ${rank} zusätzliche Ziele`);
+      lines.push(`Bonus auf den Angriff <b>${bonus}</b>` +
+        `; beim Bonustyp Anzahl Gegner <b>${bonus}</b> zusätzliche Ziele für −${6 - rank} AW`);
     } else if (category === "passiv") {
       lines.push(`Passiver Wert <b>${bonus}</b>`);
     } else if (category === "aktiv") {
