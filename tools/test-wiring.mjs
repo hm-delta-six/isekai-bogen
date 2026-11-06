@@ -82,12 +82,26 @@ if (html.includes('name="system.weapons.{{index}}.dieBonus"')) {
   console.log("FAIL weapons.dieBonus hat kein Formularfeld");
 }
 
+// Felder aus dem Skill-Baum brauchen ein Formularfeld: _getSubmitData ersetzt
+// die ganze Liste, Werte ohne Feld im Formular waeren beim Speichern weg.
+for (const key of ["types", "replaces", "cond", "category"]) {
+  if (html.includes(`name="system.isekaiSkills.{{entry.index}}.${key}"`)) {
+    console.log(`ok   isekaiSkills.${key} hat ein Formularfeld`);
+  } else {
+    fails += 1;
+    console.log(`FAIL isekaiSkills.${key} hat kein Formularfeld`);
+  }
+}
+
 // Skill-Baum-Fenster: jeder Listener findet sein Element im Fenster-Template.
 const treeJs = readFileSync(join(root, "scripts/skill-tree.js"), "utf8");
 const treeHtml = readFileSync(join(root, "templates/skill-tree.html"), "utf8");
 const treeClasses = new Set();
-for (const match of treeHtml.matchAll(/class="([^"]+)"/g)) {
-  for (const cls of match[1].split(/\s+/)) treeClasses.add(cls);
+// Das Fenster-Template und die Dialoge, die skill-tree.js selbst als HTML baut.
+for (const source of [treeHtml, treeJs]) {
+  for (const match of source.matchAll(/class="([^"]+)"/g)) {
+    for (const cls of match[1].split(/\s+/)) treeClasses.add(cls);
+  }
 }
 const treeSelectors = [...new Set(
   [...treeJs.matchAll(/html\.find\("([^"]+)"\)/g)].flatMap(m => m[1].split(",").map(part => part.trim()))

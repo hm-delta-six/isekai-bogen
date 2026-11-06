@@ -1,14 +1,14 @@
 import { areaDescription, attackFromMacro, attackValue, damageBonus, dieBonus, executeAttack, weaponArea } from "./attack.js";
-import { SkillTreeApp, registerSkillTreeSettings } from "./skill-tree.js";
+import { SkillTreeApp, primeTreeLookup, registerSkillTreeSettings, treeLookup } from "./skill-tree.js";
 import { rollSkillCheck } from "./skill-check.js";
-import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageHooks } from "./damage.js";
+import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageHooks, useSkillLookup } from "./damage.js";
 import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
   SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, damageReduction,
-  machtfaktor, modBonus, rarityRank, skillBonus, skillCategory, toArray,
-  typeLabels, typeList, typeValue
+  machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
+  skillBonus, skillCategory, toArray, typeLabels, typeList, typeValue
 } from "./rules.js";
 
 class MeinHausregelSheet extends ActorSheet {
@@ -152,10 +152,12 @@ class MeinHausregelSheet extends ActorSheet {
     // GESAMTE DR JE SCHADENSART: Ruestung plus Resistenz-Skills.
     // Resistenzen traegt der Spielleiter als passive Skills ein; Typen und
     // stillgelegte Eltern kommen aus dem Skill-Baum mit.
-    const reduction = damageReduction({
-      armors: systemData.armors,
-      resistances: systemData.isekaiSkills.filter(skill => skill && typeList(skill.types).length)
+    const sources = resistanceSources({
+      resistances: systemData.resistances,
+      skills: systemData.isekaiSkills,
+      lookup: treeLookup()
     });
+    const reduction = damageReduction({ armors: systemData.armors, resistances: sources });
 
     context.resistanceFormula = RESISTANCE_FORMULA;
     context.drByType = Object.entries(DT).map(([key, label]) => ({
@@ -163,8 +165,26 @@ class MeinHausregelSheet extends ActorSheet {
       flat: reduction.flat[key],
       cond: reduction.conditional[key]
     }));
+    context.drSources = reduction.active.filter(entry => !entry.cond);
     context.drConditional = reduction.active.filter(entry => entry.cond);
-    context.drRetired = reduction.retired.length;
+    // Nur stillgelegte Skills nennen, die der Charakter wirklich hat.
+    const owned = new Set(sources.map(entry => String(entry.name || "").trim().toLowerCase()));
+    context.drRetiredNames = reduction.retiredLabels.filter(name => owned.has(name.toLowerCase()));
+    // Was der Skill selbst zur DR beitraegt, am Skill zeigen; die Felder aus
+    // dem Baum werden dabei in den Bogen uebernommen, damit sie nicht bei
+    // jedem Oeffnen neu nachgeschlagen werden muessen.
+    const retired = new Set(reduction.retired);
+    const sourceByName = new Map(sources.map(entry => [String(entry.name || "").trim().toLowerCase(), entry]));
+    systemData.isekaiSkills.forEach(skill => {
+      if (!skill) return;
+      const source = sourceByName.get(String(skill.name || "").trim().toLowerCase());
+      skill.types = typeValue(source?.types ?? skill.types);
+      skill.replaces = source?.replaces || skill.replaces || "";
+      skill.cond = source?.cond || skill.cond || "";
+      skill.retired = retired.has(String(skill.name || "").trim().toLowerCase());
+      skill.resistTypes = typeLabels(skill.types).join(", ");
+      skill.resistValue = skill.resistTypes ? resistanceDR(skill) : 0;
+    });
 
     // RESISTENZEN: Level kommt aus dem verknüpften Skill
     systemData.resistances.forEach(resistance => {
@@ -175,8 +195,8 @@ class MeinHausregelSheet extends ActorSheet {
         String(skill?.name || "").trim().toLowerCase() ===
         String(resistance.skillName || "").trim().toLowerCase());
       resistance.level = Number(linked?.level || 0);
-      resistance.rank = rarityRank(resistance.rarity);
-      resistance.reduction = resistance.level * resistance.rank;
+      resistance.factor = machtfaktor(resistance.rarity);
+      resistance.reduction = resistanceDR(resistance);
     });
 
     // AUSWAHLLISTE DER EIGENEN SKILLS FÜR DIE WAFFENTABELLE
@@ -466,6 +486,15 @@ Hooks.once('init', () => registerSkillTreeSettings());
 
 Hooks.once('ready', () => {
   registerDamageHooks();
+
+  // Schadensarten und Ersetzungen stehen im Skill-Baum; von Hand eingetragene
+  // Skills im Bogen bringen sie nicht mit und werden daraus nachgefuellt.
+  useSkillLookup(treeLookup);
+  primeTreeLookup().then(() => {
+    for (const app of Object.values(ui.windows)) {
+      if (app instanceof ActorSheet) app.render(false);
+    }
+  });
 
   // Einstiegspunkte für die Makroleiste
   game.isekaiBogen = {

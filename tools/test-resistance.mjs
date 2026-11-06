@@ -1,4 +1,4 @@
-import { damageReduction, resistanceDR, derivedStartLevel } from "../scripts/rules.js";
+import { damageReduction, enrichSkill, nameList, resistanceDR, resistanceSources, derivedStartLevel } from "../scripts/rules.js";
 let fails=0;
 const check=(n,g,w)=>{const ok=JSON.stringify(g)===JSON.stringify(w);
   if(!ok){fails++;console.log(`FAIL ${n}\n  erwartet ${JSON.stringify(w)}\n  bekommen ${JSON.stringify(g)}`);}
@@ -47,6 +47,65 @@ const magier = damageReduction({ resistances: [
 ]});
 check("bedingt nicht in der flachen DR", magier.flat.feuer, 0);
 check("bedingt getrennt gefuehrt", magier.conditional.feuer, 80);
+
+
+// --- Nachfuellen aus dem Skill-Baum -------------------------------------
+// Von Hand eingetragene Skills haben keine Schadensarten. Genau das war der
+// Grund, warum im Bogen ueberall 0 stand.
+const baum = new Map([
+  ["abhärtung",      { name:"Abhärtung", types:[], replaces:[], cond:"" }],
+  ["hiebresistenz",   { name:"Hiebresistenz", types:["hieb"], replaces:[], cond:"" }],
+  ["stichresistenz",  { name:"Stichresistenz", types:["stich"], replaces:[], cond:"" }],
+  ["wuchtresistenz",  { name:"Wuchtresistenz", types:["wucht"], replaces:[], cond:"" }],
+  ["dicke haut",      { name:"Dicke Haut", types:["hieb","stich","wucht"],
+                        replaces:["Hiebresistenz","Stichresistenz","Wuchtresistenz"], cond:"" }],
+  ["stahlhaut",       { name:"Stahlhaut", types:["hieb","stich","wucht"], replaces:[], cond:"" }]
+]);
+
+check("Schadensart kommt aus dem Baum", enrichSkill({ name:"Hiebresistenz", level:10 }, baum).types, "hieb");
+check("Ersetzungen kommen aus dem Baum",
+  enrichSkill({ name:"Dicke Haut", level:15 }, baum).replaces,
+  "Hiebresistenz,Stichresistenz,Wuchtresistenz");
+check("eigene Angabe hat Vorrang",
+  enrichSkill({ name:"Hiebresistenz", level:10, types:"feuer" }, baum).types, "feuer");
+check("unbekannter Name bleibt unberuehrt",
+  enrichSkill({ name:"Eigenbau", level:3, types:"" }, baum).types, "");
+check("Namensliste aus Zeichenkette", nameList("Hiebresistenz, Stichresistenz"),
+  ["Hiebresistenz","Stichresistenz"]);
+
+// Hookwolf, wie der Spielleiter ihn eingetragen hat: nur Name, Stufe, Level
+const handEingetragen = [
+  { name:"Abhärtung",      level:15, rarity:"Common",   category:"passiv" },
+  { name:"Hiebresistenz",  level:10, rarity:"Uncommon", category:"passiv" },
+  { name:"Stichresistenz", level:10, rarity:"Uncommon", category:"passiv" },
+  { name:"Wuchtresistenz", level:10, rarity:"Uncommon", category:"passiv" },
+  { name:"Dicke Haut",     level:15, rarity:"Rare",     category:"passiv" },
+  { name:"Stahlhaut",      level:10, rarity:"Epic",     category:"passiv" }
+];
+const ausBogen = damageReduction({
+  resistances: resistanceSources({ skills: handEingetragen, lookup: baum })
+});
+check("Bogen ohne eigene Typen: Hieb 140", ausBogen.flat.hieb, 140);
+check("Bogen ohne eigene Typen: Wucht 140", ausBogen.flat.wucht, 140);
+check("Bogen ohne eigene Typen: Feuer 0", ausBogen.flat.feuer, 0);
+
+// Ruestung zaehlt mit in dieselbe Summe
+const mitPanzer = damageReduction({
+  armors: [{ name:"Panzer", dr:6, durability:20, types:"hieb,wucht" }],
+  resistances: resistanceSources({ skills: handEingetragen, lookup: baum })
+});
+check("Ruestung plus Resistenz", mitPanzer.flat.hieb, 146);
+check("Ruestung deckt Stich nicht", mitPanzer.flat.stich, 140);
+
+// --- Resistenztabelle und Skill-Liste zaehlen nicht doppelt ------------
+const beideQuellen = resistanceSources({
+  resistances: [{ name:"Feuerschutz", rarity:"Rare", skillName:"Feuerresistenz", types:"feuer" }],
+  skills: [{ name:"Feuerresistenz", level:10, rarity:"Common", types:"feuer" }],
+  lookup: null
+});
+check("Tabelle vertritt den Skill", beideQuellen.map(e=>e.name), ["Feuerschutz"]);
+check("Level kommt aus dem verknuepften Skill", beideQuellen[0].level, 10);
+check("Tabelleneintrag: 10 x 4", damageReduction({ resistances: beideQuellen }).flat.feuer, 40);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails?1:0);

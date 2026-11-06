@@ -349,10 +349,20 @@
           <span class="badge" title="{{label}}">{{label}} <strong>{{flat}}</strong>{{#if cond}} <small>(+{{cond}} bedingt)</small>{{/if}}</span>
         {{/each}}
       </div>
+      {{#if drSources.length}}
+        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">
+          Resistenzen: {{#each drSources}}{{name}} {{value}}{{#unless @last}} · {{/unless}}{{/each}}
+        </div>
+      {{/if}}
       {{#if drConditional.length}}
         <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">
           Bedingt, zählt nur gegen die genannte Quelle:
-          {{#each drConditional}}{{name}} +{{value}} ({{cond}}){{/each}}
+          {{#each drConditional}}{{name}} +{{value}} ({{cond}}){{#unless @last}} · {{/unless}}{{/each}}
+        </div>
+      {{/if}}
+      {{#if drRetiredNames.length}}
+        <div style="font-size: 10px; color: #64748b; margin-bottom: 6px;">
+          Stillgelegt, zählt nicht mehr mit: {{#each drRetiredNames}}{{this}}{{#unless @last}} · {{/unless}}{{/each}}
         </div>
       {{/if}}
 
@@ -492,7 +502,7 @@
           </thead>
           <tbody>
             {{#each group.entries as |entry|}}
-              <tr>
+              <tr {{#if entry.skill.retired}}style="opacity:.45;" title="Stillgelegt: ein darauf aufbauender Skill ersetzt ihn"{{/if}}>
                 <td style="text-align: center;">
                   <a class="roll-skill btn-roll" data-index="{{entry.index}}" title="Skill-Probe würfeln (markierte Tokens = vergleichender Wurf)">
                     <i class="fas fa-dice-d20"></i>
@@ -515,9 +525,19 @@
                 <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.cap}}</td>
                 <td style="text-align: center; color: #38bdf8; font-weight: bold;"
                     title="{{group.formula}}">{{entry.skill.bonus}}</td>
-                <td><input type="text" style="width:100%;" name="system.isekaiSkills.{{entry.index}}.effect" value="{{entry.skill.effect}}"/></td>
+                <td>
+                  <input type="text" style="width:100%;" name="system.isekaiSkills.{{entry.index}}.effect" value="{{entry.skill.effect}}"/>
+                  {{#if entry.skill.resistTypes}}
+                    <div style="font-size:10px; color:#94a3b8;">
+                      Resistenz {{entry.skill.resistValue}} gegen {{entry.skill.resistTypes}}{{#if entry.skill.cond}} (nur {{entry.skill.cond}}){{/if}}
+                    </div>
+                  {{/if}}
+                </td>
                 <td>
                   <input type="hidden" name="system.isekaiSkills.{{entry.index}}.category" value="{{entry.skill.category}}"/>
+                  <input type="hidden" name="system.isekaiSkills.{{entry.index}}.types" value="{{entry.skill.types}}"/>
+                  <input type="hidden" name="system.isekaiSkills.{{entry.index}}.replaces" value="{{entry.skill.replaces}}"/>
+                  <input type="hidden" name="system.isekaiSkills.{{entry.index}}.cond" value="{{entry.skill.cond}}"/>
                   <a class="delete-skill btn-del" data-index="{{entry.index}}"><i class="fas fa-trash"></i></a>
                 </td>
               </tr>
@@ -667,8 +687,8 @@
           </div>
           <div class="entry-values">
             <div><span class="stat">Reduktion</span><span class="statval">{{resistance.reduction}}</span></div>
-            <div><span class="stat">Level × Stufe</span>
-              <span class="statval" style="font-size:11px;">{{resistance.level}} × {{resistance.rank}}</span></div>
+            <div><span class="stat">Level × Machtfaktor</span>
+              <span class="statval" style="font-size:11px;">{{resistance.level}} × {{resistance.factor}}</span></div>
           </div>
         </div>
       {{/each}}

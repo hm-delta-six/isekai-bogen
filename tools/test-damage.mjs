@@ -1,5 +1,4 @@
 import { resolveDamage, armorState, resistanceAgainst } from "../scripts/damage.js";
-import { resistanceCapFactor } from "../scripts/rules.js";
 
 let fails = 0;
 const check = (name, got, want) => {
@@ -21,12 +20,12 @@ const a = actor({ armors: [
 check("DR gegen Wucht ohne defektes Teil", armorState(a, "wucht").totalDR, 8);
 check("DR gegen Feuer: kein Teil deckt es ab", armorState(a, "feuer").totalDR, 0);
 
-const r1 = resolveDamage(a, 20, { types: ["wucht"], rarity: "Common" });
+const r1 = resolveDamage(a, 20, { types: ["wucht"] });
 check("HP-Verlust nach DR", r1.hpLoss, 12);
 check("HP danach", r1.hpAfter, 88);
 check("Verschleiss am Teil mit hoechster DR", r1.wear, [{ index: 1, wear: 12, from: 20, to: 8 }]);
 
-const r2 = resolveDamage(a, 20, { types: ["feuer"], rarity: "Common" });
+const r2 = resolveDamage(a, 20, { types: ["feuer"] });
 check("ungedeckter Typ: volle 20 Schaden", r2.hpLoss, 20);
 check("ungedeckter Typ: kein Verschleiss an Hieb-Ruestung", r2.wear, []);
 
@@ -56,42 +55,59 @@ const r4 = resolveDamage(c, 15, { types: ["wucht"], rarity: "Common" });
 check("verteilt: HP-Verlust", r4.hpLoss, 7);
 check("verteilt: Aufteilung", r4.wear.map(w => w.wear), [4, 3]);
 
-// --- Deckeltabelle aus Kapitel 9.3 ---
-check("2 Stufen hoeher = 100%", resistanceCapFactor("Rare", "Common"), 1);
-check("1 Stufe hoeher = 75%",   resistanceCapFactor("Uncommon", "Common"), 0.75);
-check("gleiche Stufe = 50%",    resistanceCapFactor("Common", "Common"), 0.5);
-check("1 Stufe niedriger = 25%", resistanceCapFactor("Common", "Uncommon"), 0.25);
-check("2 Stufen niedriger = 0%", resistanceCapFactor("Common", "Rare"), 0);
-
-// --- Beispieltabelle des Wikis nachgerechnet: 60 Schaden, Common-Angriff ---
+// --- Resistenz: Skill-Level x Machtfaktor, ohne Deckel ---
 const mitResistenz = (rarity, level) => actor({
   resistances: [{ name: "Feuerresistenz", rarity, skillName: "Feuerresistenz", types: ["feuer"] }],
   skills: [{ name: "Feuerresistenz", level }]
 });
 
 const durchkommend = (rarity, level) =>
-  resolveDamage(mitResistenz(rarity, level), 60, { types: ["feuer"], rarity: "Common" }).hpLoss;
+  resolveDamage(mitResistenz(rarity, level), 60, { types: ["feuer"] }).hpLoss;
 
-check("Wiki: Common Level 5 -> 55",    durchkommend("Common", 5), 55);
-check("Wiki: Common Level 20 -> 40",   durchkommend("Common", 20), 40);
-check("Wiki: Uncommon Level 10 -> 40", durchkommend("Uncommon", 10), 40);
-check("Wiki: Rare Level 15 -> 15",     durchkommend("Rare", 15), 15);
-check("Wiki: Epic Level 20 -> 0",      durchkommend("Epic", 20), 0);
+check("Common Level 5: 60 - 5", durchkommend("Common", 5), 55);
+check("Common Level 20: 60 - 20", durchkommend("Common", 20), 40);
+check("Uncommon Level 10: 60 - 20", durchkommend("Uncommon", 10), 40);
+check("Rare Level 15: 60 - 60", durchkommend("Rare", 15), 0);
+check("Epic Level 20: mehr als genug", durchkommend("Epic", 20), 0);
 
-// --- Allgemeine Resistenz: Level x (Stufe - 1), mindestens Level / 2 ---
-const allgemein = actor({
-  resistances: [{ name: "Panzerhaut", rarity: "Rare", skillName: "Panzerhaut", types: ["feuer", "kaelte", "elektrizitaet"] }],
-  skills: [{ name: "Panzerhaut", level: 10 }]
+// --- Mehrere Resistenzen addieren sich, allgemeine zaehlen voll ---
+const gestapelt = actor({
+  resistances: [],
+  skills: [
+    { name: "Abhaertung",    rarity: "Common",   level: 15, types: "hieb,stich,wucht" },
+    { name: "Hiebresistenz", rarity: "Uncommon", level: 10, types: "hieb" },
+    { name: "Stahlhaut",     rarity: "Epic",     level: 10, types: "hieb,stich,wucht" }
+  ]
 });
-const best = resistanceAgainst(allgemein, "feuer", 100, "Common");
-check("allgemein: als allgemein erkannt", best.general, true);
-check("allgemein: 10 x (3-1) = 20", best.raw, 20);
+check("Summe gegen Hieb: 15 + 20 + 80", resistanceAgainst(gestapelt, "hieb").value, 115);
+check("alle drei genannt", resistanceAgainst(gestapelt, "hieb").entries.length, 3);
+check("Feuer bleibt bei 0", resistanceAgainst(gestapelt, "feuer").value, 0);
 
-const spezial = actor({
-  resistances: [{ name: "Feuerhaut", rarity: "Rare", skillName: "Feuerhaut", types: ["feuer"] }],
-  skills: [{ name: "Feuerhaut", level: 10 }]
+// --- Stillgelegte Eltern zaehlen nicht mehr mit ---
+const ersetzt = actor({
+  skills: [
+    { name: "Hiebresistenz", rarity: "Uncommon", level: 10, types: "hieb" },
+    { name: "Dicke Haut",    rarity: "Rare",     level: 15, types: "hieb,stich,wucht",
+      replaces: "Hiebresistenz" }
+  ]
 });
-check("spezialisiert: 10 x 3 = 30", resistanceAgainst(spezial, "feuer", 100, "Common").raw, 30);
+check("nur Dicke Haut: 15 x 4", resistanceAgainst(ersetzt, "hieb").value, 60);
+
+// --- Von Hand eingetragene Skills holen ihre Schadensart aus dem Baum ---
+const ohneTypen = actor({
+  skills: [{ name: "Feuerresistenz", rarity: "Rare", level: 10 }]
+});
+check("ohne Nachschlagewerk: keine DR", resistanceAgainst(ohneTypen, "feuer").value, 0);
+const baum = new Map([["feuerresistenz", { name: "Feuerresistenz", types: ["feuer"], replaces: [], cond: "" }]]);
+check("mit Nachschlagewerk: 10 x 4", resistanceAgainst(ohneTypen, "feuer", baum).value, 40);
+check("Schaden nutzt das Nachschlagewerk",
+  resolveDamage(ohneTypen, 60, { types: ["feuer"], lookup: baum }).hpLoss, 20);
+
+// --- Bedingte Resistenz zaehlt nicht gegen jeden Angriff ---
+const bedingt = actor({
+  skills: [{ name: "Arkane Resistenz", rarity: "Epic", level: 10, types: "feuer", cond: "magie" }]
+});
+check("bedingt: nicht automatisch", resistanceAgainst(bedingt, "feuer").value, 0);
 
 // --- Reihenfolge: erst Ruestung, dann Resistenz ---
 const beides = actor({
@@ -99,7 +115,7 @@ const beides = actor({
   resistances: [{ name: "Feuerresistenz", rarity: "Common", skillName: "Feuerresistenz", types: ["feuer"] }],
   skills: [{ name: "Feuerresistenz", level: 5 }]
 });
-const r5 = resolveDamage(beides, 60, { types: ["feuer"], rarity: "Common" });
+const r5 = resolveDamage(beides, 60, { types: ["feuer"] });
 check("Ruestung zuerst: 60 - 10 DR", r5.afterArmor, 50);
 check("dann Resistenz: 5 x 1 = 5", r5.resisted, 5);
 check("Ergebnis 45", r5.hpLoss, 45);

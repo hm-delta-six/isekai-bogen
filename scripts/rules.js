@@ -50,20 +50,15 @@ export const typeList = (value) => {
 
 export const typeValue = (value) => typeList(value).join(",");
 
-export const typeLabels = (value) => typeList(value).map(key => DAMAGE_TYPES[key]);
-
 /**
- * Deckel aus Kapitel 9.3: wie viel des eingehenden Schadens eine Resistenz
- * höchstens schlucken kann, abhängig vom Stufenabstand zum Angriff.
+ * Wie typeList, aber fuer freie Namen (stillgelegte Eltern). Auch hier ist die
+ * Speicherform eine kommagetrennte Zeichenkette, damit das Feld im Formular
+ * stehen kann.
  */
-export function resistanceCapFactor(resistanceRarity, attackRarity) {
-  const difference = rarityRank(resistanceRarity) - rarityRank(attackRarity);
-  if (difference >= 2) return 1;
-  if (difference === 1) return 0.75;
-  if (difference === 0) return 0.5;
-  if (difference === -1) return 0.25;
-  return 0;
-}
+export const nameList = (value) => (typeof value === "string" ? value.split(",") : toArray(value))
+  .map(entry => String(entry).trim()).filter(Boolean);
+
+export const typeLabels = (value) => typeList(value).map(key => DAMAGE_TYPES[key]);
 
 // Angriffsbereich einer Waffe
 export const AREA_MODES = {
@@ -241,8 +236,13 @@ export function damageReduction({ armors = [], resistances = [] } = {}) {
   }
 
   const retired = new Set();
+  const retiredLabels = [];
   for (const skill of toArray(resistances)) {
-    for (const name of toArray(skill?.replaces)) retired.add(String(name).trim().toLowerCase());
+    for (const name of nameList(skill?.replaces)) {
+      if (retired.has(name.toLowerCase())) continue;
+      retired.add(name.toLowerCase());
+      retiredLabels.push(name);
+    }
   }
 
   const active = [];
@@ -260,5 +260,62 @@ export function damageReduction({ armors = [], resistances = [] } = {}) {
     active.push({ name: skill.name, value, cond: skill.cond || "", types });
   }
 
-  return { flat, conditional, active, retired: [...retired] };
+  return { flat, conditional, active, retired: [...retired], retiredLabels };
+}
+
+/**
+ * Fuellt Schadensarten, Ersetzungen und Bedingung aus dem Skill-Baum nach.
+ *
+ * Von Hand eingetragene Skills haben diese Felder nicht — nur Skills, die
+ * ueber den Baum hinzugefuegt wurden, bringen sie mit. Ohne das Nachfuellen
+ * waere die DR eines alten Bogens null.
+ */
+export function enrichSkill(skill, lookup = null) {
+  if (!skill) return skill;
+  const found = lookup?.get?.(String(skill.name || "").trim().toLowerCase());
+  if (!found) return skill;
+
+  return {
+    ...skill,
+    types: typeValue(skill.types) || typeValue(found.types),
+    replaces: nameList(skill.replaces).length
+      ? nameList(skill.replaces).join(",")
+      : nameList(found.replaces).join(","),
+    cond: skill.cond || found.cond || ""
+  };
+}
+
+/**
+ * Alle Resistenzquellen eines Charakters in einer Liste: die eigene
+ * Resistenztabelle und die Skills selbst. Ein Eintrag der Tabelle, der auf
+ * einen Skill verweist, vertritt diesen Skill — sonst zaehlte er doppelt.
+ */
+export function resistanceSources({ resistances = [], skills = [], lookup = null } = {}) {
+  const key = (value) => String(value || "").trim().toLowerCase();
+  const list = [];
+  const seen = new Set();
+
+  const add = (entry) => {
+    if (!key(entry?.name) || seen.has(key(entry.name))) return;
+    seen.add(key(entry.name));
+    list.push(entry);
+  };
+
+  for (const resistance of toArray(resistances)) {
+    if (!resistance) continue;
+    const linked = key(resistance.skillName);
+    const found = linked
+      ? toArray(skills).find(skill => key(skill?.name) === linked)
+      : null;
+    const level = linked ? Number(found?.level || 0) : Number(resistance.level || 0);
+    add(enrichSkill({ ...resistance, level }, lookup));
+    if (linked) seen.add(linked);
+  }
+
+  for (const skill of toArray(skills)) {
+    if (!skill) continue;
+    add(enrichSkill(skill, lookup));
+  }
+
+  return list;
 }

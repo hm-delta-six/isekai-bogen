@@ -1,5 +1,5 @@
 import {
-  DAMAGE_TYPES, rarityRank, resistanceCapFactor, toArray, typeLabels, typeList
+  DAMAGE_TYPES, damageReduction, resistanceSources, toArray, typeLabels, typeList
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
@@ -11,6 +11,14 @@ export const ARMOR_WEAR_CHOICES = {
 };
 
 export const isIntact = (armor) => Number(armor?.durability || 0) > 0;
+
+/**
+ * Schadensarten und Ersetzungen stehen im Skill-Baum. Den liefert die
+ * Oberflaeche nach, damit dieses Modul ohne Foundry testbar bleibt.
+ */
+let lookupSource = null;
+export const useSkillLookup = (getter) => { lookupSource = getter; };
+const skillLookup = () => (typeof lookupSource === "function" ? lookupSource() : null);
 
 /**
  * HP, MP und AP liegen unter system.isekai. system.resources gehoert pf1 und
@@ -26,20 +34,6 @@ function armorCovers(armor, type) {
   const types = typeList(armor?.types);
   if (!types.length) return true;
   return !type || types.includes(type);
-}
-
-// Elementare Resistenzen sind Skills: das Level kommt aus der Skill-Liste.
-function resistanceLevel(actor, resistance) {
-  const wanted = String(resistance?.skillName || "").trim().toLowerCase();
-  if (!wanted) return Number(resistance?.level || 0);
-
-  const found = toArray(actor?.system?.isekaiSkills)
-    .find(skill => String(skill?.name || "").trim().toLowerCase() === wanted);
-  return Number(found?.level || 0);
-}
-
-function resistanceCovers(resistance, type) {
-  return type ? typeList(resistance?.types).includes(type) : false;
 }
 
 /**
@@ -64,47 +58,29 @@ export function armorSummary(actor) {
 }
 
 /**
- * Kapitel 9.3: Reduktion = Skill-Level × Raritätsstufe, gedeckelt auf einen
- * Anteil des eingehenden Schadens, der vom Stufenabstand zum Angriff abhängt.
- * Eine Resistenz, die mehrere Typen abdeckt, gilt als allgemein und rechnet
- * mit Skill-Level × (Rarität − 1), mindestens Skill-Level / 2.
+ * Resistenz gegen einen Schadenstyp: Summe aus allen passenden Resistenzen,
+ * jede mit Skill-Level × Machtfaktor der Raritätsstufe. Kein Deckel und kein
+ * Unterschied zwischen allgemeinen und spezialisierten Resistenzen — es gibt
+ * genau diese eine Formel, und mehrere Resistenzen addieren sich.
  *
- * Bei mehreren passenden Resistenzen zählt die stärkste, sie summieren sich
- * nicht — das Wiki kennt kein Stapeln.
+ * Bedingte Resistenzen (nur gegen Magie, nur gegen Gift) zählen hier nicht:
+ * ein Angriff bringt im Modul keine Quelle mit. Sie stehen im Bogen.
  */
-export function resistanceAgainst(actor, type, incoming, attackRarity) {
-  const candidates = toArray(actor?.system?.resistances)
-    .filter(resistance => resistance && resistanceCovers(resistance, type));
+export function resistanceAgainst(actor, type, lookup = skillLookup()) {
+  if (!type) return { value: 0, entries: [] };
 
-  let best = null;
+  const reduction = damageReduction({
+    resistances: resistanceSources({
+      resistances: actor?.system?.resistances,
+      skills: actor?.system?.isekaiSkills,
+      lookup
+    })
+  });
 
-  for (const resistance of candidates) {
-    const rank = rarityRank(resistance.rarity);
-    const level = resistanceLevel(actor, resistance);
-    const general = typeList(resistance.types).length > 1;
-
-    const raw = general
-      ? Math.max(level * (rank - 1), level / 2)
-      : level * rank;
-
-    const cap = resistanceCapFactor(resistance.rarity, attackRarity) * incoming;
-    const reduction = Math.floor(Math.min(raw, cap));
-
-    if (!best || reduction > best.reduction) {
-      best = {
-        name: resistance.name || "Resistenz",
-        rarity: resistance.rarity || "Common",
-        level,
-        rank,
-        general,
-        raw: Math.floor(raw),
-        cap: Math.floor(cap),
-        reduction
-      };
-    }
-  }
-
-  return best;
+  return {
+    value: reduction.flat[type] || 0,
+    entries: reduction.active.filter(entry => !entry.cond && entry.types.includes(type))
+  };
 }
 
 // Verteilt den Verschleiß nach der im Bogen gewählten Regel.
@@ -134,17 +110,15 @@ function wearArmor(actor, list, pieces, wearAmount) {
 }
 
 // Ein einzelner Schadenstyp durchgerechnet: Rüstung, dann Resistenz.
-function resolveForType(targetActor, damage, type, attackRarity) {
+function resolveForType(targetActor, damage, type, lookup) {
   const { list, pieces, totalDR } = armorState(targetActor, type);
   const absorbed = Math.min(damage, totalDR);
   const afterArmor = damage - absorbed;
 
-  const resistance = type
-    ? resistanceAgainst(targetActor, type, afterArmor, attackRarity)
-    : null;
+  const resistance = type ? resistanceAgainst(targetActor, type, lookup) : null;
 
-  const resisted = resistance?.reduction || 0;
-  const hpLoss = Math.max(0, afterArmor - resisted);
+  const resisted = Math.min(afterArmor, resistance?.value || 0);
+  const hpLoss = afterArmor - resisted;
 
   return { list, pieces, type, totalDR, absorbed, afterArmor, resistance, resisted, hpLoss };
 }
@@ -156,13 +130,13 @@ function resolveForType(targetActor, damage, type, attackRarity) {
  * es zählt der Typ, bei dem am Ende der meiste Schaden ankommt.
  */
 export function resolveDamage(targetActor, rawDamage, options = {}) {
-  const { types = [], rarity = "Common" } = options;
+  const { types = [], lookup = skillLookup() } = options;
   const damage = Math.max(0, Number(rawDamage || 0));
   const candidates = typeList(types);
 
   const attempts = candidates.length
-    ? candidates.map(type => resolveForType(targetActor, damage, type, rarity))
-    : [resolveForType(targetActor, damage, null, rarity)];
+    ? candidates.map(type => resolveForType(targetActor, damage, type, lookup))
+    : [resolveForType(targetActor, damage, null, lookup)];
 
   const chosen = attempts.reduce((best, attempt) => attempt.hpLoss > best.hpLoss ? attempt : best);
 
@@ -307,13 +281,15 @@ export function describeDamage(targetName, resolved) {
     (resolved.resisted ? ` − ${resolved.resisted} Resistenz` : "") +
     ` · HP: ${resolved.hpBefore} → ${resolved.hpAfter}</span></p>`;
 
-  if (resolved.resistance) {
-    const r = resolved.resistance;
+  if (resolved.resistance?.entries?.length) {
+    const parts = resolved.resistance.entries
+      .map(entry => `${entry.name} ${entry.value}`)
+      .join(" + ");
     text +=
       `<p style="margin:2px 0 0 0; font-size:11px;">` +
-      `Resistenz <strong>${r.name}</strong> (${r.rarity}${r.general ? ", allgemein" : ""}): ` +
-      `Level ${r.level} × Stufe ${r.rank}${r.general ? " − 1" : ""} = ${r.raw}, ` +
-      `Deckel ${r.cap} → <strong>${r.reduction}</strong> absorbiert</p>`;
+      `Resistenz: ${parts} = <strong>${resolved.resistance.value}</strong>` +
+      (resolved.resisted < resolved.resistance.value ? ` (${resolved.resisted} genutzt)` : "") +
+      `</p>`;
   }
 
   if (resolved.wear.length) {

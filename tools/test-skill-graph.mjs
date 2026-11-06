@@ -130,6 +130,34 @@ check("Besonderheiten: Kurzbuchstaben und deutsche Namen",
   parseMilestones("R: eins\nepisch - zwei\nmüll\nTranszendiert: drei"), { R: "eins", E: "zwei", T: "drei" });
 check("Besonderheiten zurück in Text", formatMilestones({ R: "eins", T: "drei" }, base.rn), "Rare: eins\nTranszendiert: drei");
 
+
+// --- Wizard-Pruefungen: Stilllegen und Schadensarten ---
+const panzer = { name: "Panzerhaut", domain: "resistenz", type: "P", attr: "CON", level: 2,
+                 parents: ["res_abhaert"], kern: "Test." };
+
+check("Passiver Skill mit Schadensarten ist gueltig",
+  validateCustom(tree, { ...panzer, types: ["hieb"], replaces: ["res_abhaert"] }).errors, []);
+
+check("Stilllegen nur von eigenen Eltern",
+  validateCustom(tree, { ...panzer, replaces: ["res_hieb"] }).errors.length, 1);
+
+check("Schadensarten nur bei passiven Skills",
+  validateCustom(tree, { ...panzer, type: "A", types: ["hieb"] }).errors.includes(
+    "Schadensarten gibt es nur bei passiven Skills."), true);
+
+check("Bedingung ohne Schadensart warnt",
+  validateCustom(tree, { ...panzer, cond: "magie" }).warnings.includes(
+    "Eine Bedingung ohne Schadensart bleibt wirkungslos."), true);
+
+const gebaut = makeCustomSkill({ ...panzer, types: ["hieb", "wucht"], replaces: ["res_abhaert"], cond: "magie" }, "x_panzer");
+check("Datensatz traegt Schadensarten", gebaut.types, ["hieb", "wucht"]);
+check("Datensatz traegt Stilllegung", gebaut.replaces, ["res_abhaert"]);
+check("Datensatz traegt Bedingung", gebaut.cond, "magie");
+
+const aktiv = makeCustomSkill({ ...panzer, type: "A", types: ["hieb"], cond: "magie" }, "x_aktiv");
+check("Aktiver Skill bekommt keine Schadensarten", aktiv.types, []);
+check("Aktiver Skill bekommt keine Bedingung", aktiv.cond, "");
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

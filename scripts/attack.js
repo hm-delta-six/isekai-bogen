@@ -470,9 +470,10 @@ async function resolveAttack(actor, used, mode, mods = []) {
 
     if (!check.token) continue;
 
+    // Die Raritaet des Angriffs steckt schon im Schadenswurf; die Resistenz
+    // des Ziels haengt nicht mehr daran.
     const resolved = resolveDamage(check.token.actor, damageRoll.total, {
-      types: used.damageTypes,
-      rarity: used.rarity
+      types: used.damageTypes
     });
     content += describeDamage(name, resolved);
 

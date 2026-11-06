@@ -2,7 +2,7 @@ import {
   ATTRIBUTES, LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_LABELS, ancestors, buildTree, descendants, effectLines,
   formatMilestones, makeCustomSkill, sheetEntry, unlockStatus, validateCustom
 } from "./skill-graph.js";
-import { toArray } from "./rules.js";
+import { DAMAGE_TYPES, RESISTANCE_FORMULA, toArray } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
 const DATA_URL = `modules/${MODULE_ID}/data/skill-baum.json`;
@@ -31,6 +31,28 @@ async function loadBase() {
 
 const customSkills = () => toArray(game.settings.get(MODULE_ID, SETTING)).filter(Boolean);
 
+/**
+ * Nachschlagewerk Name -> Skill, einmal aufgebaut und bei Aenderungen an den
+ * eigenen Skills erneuert. Der Bogen rendert synchron und kann den Baum nicht
+ * selbst laden; er braucht aus ihm Schadensarten und Ersetzungen.
+ */
+let lookup = new Map();
+export const treeLookup = () => lookup;
+
+export async function primeTreeLookup() {
+  try {
+    const tree = buildTree(await loadBase(), customSkills());
+    // Im Baum stehen in `replaces` die Ids der Eltern, im Bogen die Namen.
+    lookup = new Map(Object.values(tree.skills).map(skill => [norm(skill.name), {
+      ...skill,
+      replaces: toArray(skill.replaces).map(id => tree.skills[id]?.name || id)
+    }]));
+  } catch (error) {
+    console.error(`${MODULE_ID} | Skill-Baum konnte nicht geladen werden`, error);
+  }
+  return lookup;
+}
+
 export function registerSkillTreeSettings() {
   // Eigene Skills gehören der Welt: der Spielleiter pflegt sie, alle sehen sie.
   game.settings.register(MODULE_ID, SETTING, {
@@ -38,7 +60,7 @@ export function registerSkillTreeSettings() {
     config: false,
     type: Array,
     default: [],
-    onChange: () => SkillTreeApp.refresh()
+    onChange: () => { primeTreeLookup().then(() => SkillTreeApp.refresh()); }
   });
 }
 
@@ -256,7 +278,7 @@ export class SkillTreeApp extends Application {
 
     // Startlevel ist der Durchschnitt der Elternlevel, die der Charakter hat.
     const parentLevels = status.parents.filter(parent => parent.has).map(parent => parent.level);
-    const entry = sheetEntry(skill, parentLevels);
+    const entry = sheetEntry(skill, parentLevels, this.tree);
 
     list.push(entry);
     await actor.update({ "system.isekaiSkills": list });
@@ -320,6 +342,34 @@ export class SkillTreeApp extends Application {
           <textarea name="kern" rows="4" style="width:100%;">${esc(value.kern)}</textarea></label>
         <label style="grid-column:1 / 3;">Neu pro Rarität (optional, eine Zeile je Rarität, z. B. „Rare: …“)
           <textarea name="ms" rows="3" style="width:100%;">${esc(value.ms)}</textarea></label>
+
+        <div class="st-passive" style="grid-column:1 / 3; ${value.type === "P" ? "" : "display:none;"}">
+          <div style="font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">
+            Resistenz &mdash; nur für passive Skills
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; margin-bottom:6px;">
+            ${Object.entries(DAMAGE_TYPES).map(([key, label]) => `
+              <label style="display:flex; gap:5px; align-items:center; margin:0; font-size:12px;">
+                <input type="checkbox" name="dtype" value="${key}" style="width:auto; margin:0;"
+                  ${(value.types || []).includes(key) ? "checked" : ""}/> ${label}
+              </label>`).join("")}
+          </div>
+          <label>Wirkt nur gegen
+            <select name="cond">
+              <option value="" ${value.cond ? "" : "selected"}>jede Quelle</option>
+              <option value="magie" ${value.cond === "magie" ? "selected" : ""}>Magie</option>
+              <option value="gift" ${value.cond === "gift" ? "selected" : ""}>Gift und Krankheit</option>
+            </select>
+          </label>
+          <div style="font-size:11px; color:#94a3b8; margin-top:4px;">
+            Schadensreduktion = ${esc(RESISTANCE_FORMULA)}. Ohne Schadensart zählt der Skill nicht zur DR.
+          </div>
+        </div>
+
+        <label style="grid-column:1 / 3;">Legt diese Elternskills still
+          <span style="color:#64748b; font-size:11px;">&mdash; nur eigene Eltern, der Wert zählt dann nicht mehr mit</span>
+          <div class="st-replaces" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;"></div>
+        </label>
       </form>`;
 
     const collect = (html) => ({
@@ -331,7 +381,10 @@ export class SkillTreeApp extends Application {
       res: html.find('[name="res"]').val(),
       parents: html.find('input[name="parent"]:checked').map((_, el) => el.value).get(),
       kern: html.find('[name="kern"]').val(),
-      ms: html.find('[name="ms"]').val()
+      ms: html.find('[name="ms"]').val(),
+      types: html.find('input[name="dtype"]:checked').map((_, el) => el.value).get(),
+      replaces: html.find('input[name="retire"]:checked').map((_, el) => el.value).get(),
+      cond: html.find('[name="cond"]').val() || ""
     });
 
     new Dialog({
@@ -348,12 +401,40 @@ export class SkillTreeApp extends Application {
             row.style.opacity = allowed ? "1" : "0.35";
           });
         };
-        html.find('[name="level"]').on("change", applyLevel);
+        // Stilllegen ist nur fuer die gewaehlten Eltern moeglich, die Liste
+        // folgt deshalb der Elternauswahl.
+        const applyReplaces = () => {
+          const chosen = html.find('input[name="parent"]:checked').get();
+          const keep = new Set(html.find('input[name="retire"]:checked').map((_, el) => el.value).get());
+          const box = html.find(".st-replaces");
+          if (!chosen.length) {
+            box.html('<span style="color:#64748b; font-size:11px;">Erst Elternskills wählen.</span>');
+            return;
+          }
+          box.html(chosen.map(el => {
+            const parent = tree.skills[el.value];
+            const checked = keep.has(el.value) || (value.replaces || []).includes(el.value);
+            return `<label style="display:flex; gap:5px; align-items:center; margin:0; font-size:12px;">
+              <input type="checkbox" name="retire" value="${esc(el.value)}" style="width:auto; margin:0;"
+                ${checked ? "checked" : ""}/> ${esc(parent?.name || el.value)}</label>`;
+          }).join(""));
+        };
+
+        // Resistenzfelder nur bei passiven Skills zeigen.
+        const applyType = () => {
+          html.find(".st-passive").toggle(html.find('[name="type"]').val() === "P");
+        };
+
+        html.find('[name="type"]').on("change", applyType);
+        html.find('input[name="parent"]').on("change", applyReplaces);
+        html.find('[name="level"]').on("change", () => { applyLevel(); applyReplaces(); });
         html.find(".par-filter").on("input", ev => {
           const query = norm(ev.currentTarget.value);
           html.find(".par").each((_, row) => { row.style.display = !query || row.dataset.name.includes(query) ? "flex" : "none"; });
         });
         applyLevel();
+        applyReplaces();
+        applyType();
       },
       buttons: {
         save: {

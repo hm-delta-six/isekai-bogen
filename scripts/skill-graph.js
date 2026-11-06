@@ -208,6 +208,26 @@ export function validateCustom(tree, input, selfId = null) {
     }
   }
 
+  // Stilllegen darf ein Skill nur seine eigenen Eltern. Sonst verschwaende
+  // ein Eintrag Werte an beliebiger Stelle im Baum.
+  for (const id of [...new Set(input?.replaces || [])]) {
+    const target = tree.skills[id];
+    if (!target) { errors.push("Ein stillzulegender Skill existiert nicht mehr."); continue; }
+    if (!parents.includes(id)) {
+      errors.push(`„${target.name}“ kann nicht stillgelegt werden: der Skill ist kein Elternteil.`);
+    }
+  }
+
+  // Nur passive Skills tragen Schadensarten; bei allen anderen haette das
+  // Feld keine Wirkung und wuerde Erwartungen wecken.
+  const types = [...new Set(input?.types || [])];
+  if (types.length && input?.type !== "P") {
+    errors.push("Schadensarten gibt es nur bei passiven Skills.");
+  }
+  if (input?.cond && !types.length) {
+    warnings.push("Eine Bedingung ohne Schadensart bleibt wirkungslos.");
+  }
+
   return { errors, warnings };
 }
 
@@ -224,6 +244,10 @@ export function makeCustomSkill(input, id) {
     res: input.res === "AP" || input.res === "MP" ? input.res : "",
     level: Number(input.level),
     kern: String(input.kern || "").trim(),
+    // Nur passive Skills reduzieren Schaden; der Rest bleibt leer.
+    types: input.type === "P" ? [...new Set(input.types || [])] : [],
+    replaces: [...new Set(input.replaces || [])],
+    cond: input.type === "P" ? String(input.cond || "").trim() : "",
     ms
   };
 }
@@ -293,7 +317,12 @@ export function shortEffect(skill) {
  * kennen. Das Startlevel ist der abgerundete Durchschnitt der Elternlevel
  * des Charakters; ohne Eltern beginnt der Skill bei 1.
  */
-export function sheetEntry(skill, parentLevels = []) {
+export function sheetEntry(skill, parentLevels = [], tree = null) {
+  // Im Baum stehen in `replaces` die Ids der Eltern. Der Bogen kennt nur
+  // Namen, deshalb werden sie hier aufgeloest.
+  const replaces = toArray(skill.replaces)
+    .map(id => tree?.skills?.[id]?.name || id);
+
   return {
     name: skill.name,
     rarity: skill.floor,
@@ -301,7 +330,7 @@ export function sheetEntry(skill, parentLevels = []) {
     attribute: skill.attr,
     category: TYPE_CATEGORY[skill.type] || "fertigkeit",
     types: toArray(skill.types).join(","),
-    replaces: toArray(skill.replaces).join(","),
+    replaces: replaces.join(","),
     cond: skill.cond || "",
     effect: shortEffect(skill)
   };
