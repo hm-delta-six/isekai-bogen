@@ -148,6 +148,34 @@ export const COST_TYPES = { hp: "HP", mp: "MP", ap: "AP" };
  * die flache DR, weil ein Angriff im Modul keine Quelle mitbringt.
  */
 export const COND_LABELS = { magie: "Magie" };
+
+/**
+ * Skill eines Bogens nach Namen. Gross- und Kleinschreibung spielt keine
+ * Rolle, damit eine Verknuepfung durch Tippen nicht zerbricht.
+ */
+export function skillByName(skills, name) {
+  const wanted = String(name || "").trim().toLowerCase();
+  if (!wanted) return null;
+  return toArray(skills).find(skill =>
+    String(skill?.name || "").trim().toLowerCase() === wanted) || null;
+}
+
+/**
+ * Der Abwehr-Skill hinter dem Verteidigungswert. Wie bei der Waffe kommen
+ * Level und Machtfaktor dazu, und das Attribut ist das des Skills: Ausweichen
+ * rechnet mit DEX, Parade mit STR. Ohne Verknuepfung bleibt es bei DEX.
+ */
+export function defenceSkill(skills, name, fallbackAttribute = "DEX") {
+  const found = skillByName(skills, name);
+  return {
+    name: found?.name || (name ? String(name).trim() : null),
+    level: found ? Math.max(0, Number(found.level || 0)) : 0,
+    factor: found ? machtfaktor(found.rarity) : 0,
+    rarity: found?.rarity || null,
+    attribute: found?.attribute || fallbackAttribute,
+    missing: Boolean(String(name || "").trim()) && !found
+  };
+}
 export const condLabel = (cond) => COND_LABELS[cond] || "";
 
 // Rechenregel des Skill-Bonus je Kategorie, für die Hilfe im Bogen.

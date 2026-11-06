@@ -91,7 +91,7 @@ check("Einzelangriff hat keine Form", templateShape("single", 5, 1.5, 100), null
 
 
 // --- Skill-Kategorien und Modifikations-Skills ---
-const { skillCategory, modBonus, summarizeMods, targetMalus, SKILL_CATEGORIES } = await import("../scripts/rules.js");
+const { skillCategory, modBonus, summarizeMods, targetMalus, defenceSkill, SKILL_CATEGORIES } = await import("../scripts/rules.js");
 
 check("vier Kategorien", Object.keys(SKILL_CATEGORIES), ["fertigkeit", "aktiv", "modifikation", "passiv"]);
 check("ohne Angabe: Fertigkeit", skillCategory({ name: "Alt" }), "fertigkeit");
@@ -188,6 +188,33 @@ check("zwei Mods addieren den Malus",
   summarizeMods([...rundumschlag, { bonusType: "targets", bonus: 4, awMalus: 5 }]).malus, 8);
 check("ohne Zielbonus kein Malus",
   summarizeMods([{ bonusType: "aw", bonus: 6, awMalus: 0 }]).malus, 0);
+
+
+// --- Abwehr-Skill hinter dem Verteidigungswert ----------------------------
+// Ausweichen rechnet mit DEX, Parade mit STR — so steht es in den Baumdaten.
+const bogenSkills = [
+  { name: "Ausweichen", level: 8, rarity: "Rare",   attribute: "DEX", category: "aktiv" },
+  { name: "Parade",     level: 5, rarity: "Common", attribute: "STR", category: "aktiv" }
+];
+check("Ausweichen: Level", defenceSkill(bogenSkills, "Ausweichen").level, 8);
+check("Ausweichen: Machtfaktor Rare", defenceSkill(bogenSkills, "Ausweichen").factor, 4);
+check("Ausweichen: DEX", defenceSkill(bogenSkills, "Ausweichen").attribute, "DEX");
+check("Parade: STR", defenceSkill(bogenSkills, "Parade").attribute, "STR");
+check("Gross- und Kleinschreibung egal", defenceSkill(bogenSkills, "ausweichen").level, 8);
+check("ohne Verknuepfung: DEX und 0", 
+  [defenceSkill(bogenSkills, "").attribute, defenceSkill(bogenSkills, "").level], ["DEX", 0]);
+check("unbekannter Skill wird gemeldet", defenceSkill(bogenSkills, "Tippfehler").missing, true);
+check("unbekannter Skill zaehlt nicht", defenceSkill(bogenSkills, "Tippfehler").level, 0);
+
+// Der Wert im Bogen, wie custom-sheet ihn rechnet
+const vw = (name, attrs, extra = 0, malus = 0) => {
+  const skill = defenceSkill(bogenSkills, name);
+  return 10 + extra + skill.level + skill.factor + (attrs[skill.attribute] || 0) - malus;
+};
+check("Ausweichen 8 (Rare) mit DEX 12: 10+8+4+12", vw("Ausweichen", { DEX: 12, STR: 10 }), 34);
+check("Parade 5 (Common) mit STR 10: 10+5+1+10", vw("Parade", { DEX: 12, STR: 10 }), 26);
+check("Ruestungsmalus geht ab", vw("Ausweichen", { DEX: 12 }, 0, 3), 31);
+check("ohne Skill bleibt der alte Wert", vw("", { DEX: 12 }, 4), 26);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

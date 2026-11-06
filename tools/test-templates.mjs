@@ -54,9 +54,11 @@ const sheetContext = {
       equipment: [{ name: "Seil" }], titles: [{ name: "Held", type: "STR", bonus: 2 }], skills: []
     }
   },
-  derived: { initTotal: 3, awTotal: 20, vwTotal: 18 },
+  derived: { initTotal: 3, awTotal: 20, vwTotal: 18, defenceAttr: 12 },
+  defence: { name: "Ausweichen", level: 8, factor: 4, rarity: "Rare", attribute: "DEX", missing: false },
+  defenceSkillChoices: { "": "kein Abwehr-Skill", Ausweichen: "Ausweichen (8, DEX)" },
   awHelp: "Grundwert 10 + AW-Skill 5 + STR 12 (10 + 2 aus Titeln) + Boni 0 = 27.",
-  vwHelp: "Grundwert 10 + VW-Skill 4 + DEX 10 + Boni 0 - Ruestungsmalus 3 = 21.",
+  vwHelp: "Grundwert 10 + Extra 0 + Skill-Level 8 + Machtfaktor 4 + DEX 12 - Ruestungsmalus 3 = 31.",
   initHelp: "DEX 10 + Boni 0 = 10.",
   effectiveAbilities: { STR: 10, DEX: 10, CON: 14, INT: 8, WIS: 8, CHA: 8 },
   rarityChoices: { Common: "Common", Rare: "Rare" },
@@ -74,6 +76,8 @@ const sheetContext = {
   __erwartet: [
     "Grundwert 10 + AW-Skill 5",          // Hilfe am AW
     "Ruestungsmalus 3",                   // Hilfe am VW
+    'name="system.boni.vwSkillName"',     // Auswahl des Abwehr-Skills
+    "Lvl 8 + MF 4",                       // verknuepfter Abwehr-Skill
     "Hieb <strong>146</strong>",          // DR je Schadensart
     "Resistenz 60 gegen Hieb, Stich, Wucht", // Resistenz am Skill
     "Hiebresistenz"                       // stillgelegt genannt

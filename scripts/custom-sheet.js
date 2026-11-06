@@ -6,7 +6,7 @@ import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
-  SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, condLabel, damageReduction,
+  SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, condLabel, damageReduction, defenceSkill,
   machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
   skillBonus, skillCategory, toArray, typeLabels, typeList, typeValue
 } from "./rules.js";
@@ -103,9 +103,16 @@ class MeinHausregelSheet extends ActorSheet {
     const dexTitle = getTitleBonus("DEX");
     const armorMalus = Number(boni.armormalus || 0);
 
+    // Der Verteidigungswert haengt an einem Abwehr-Skill, so wie der AW an dem
+    // Skill der Waffe: Level und Machtfaktor zaehlen, und das Attribut ist das
+    // des Skills. Ausweichen rechnet mit DEX, Parade mit STR.
+    const defence = defenceSkill(systemData.isekaiSkills, boni.vwSkillName);
+    const defenceAttr = context.effectiveAbilities[defence.attribute] ?? dexEff;
+
     const initTotal = dexEff + Number(boni.init || 0);
     const awTotal = 10 + awSkillLvl + strEff + Number(boni.aw || 0);
-    const vwTotal = 10 + vwSkillLvl + dexEff + Number(boni.vw || 0) - armorMalus;
+    const vwTotal = 10 + vwSkillLvl + defence.level + defence.factor +
+      defenceAttr + Number(boni.vw || 0) - armorMalus;
 
     // Rechenweg fuer die Hilfe-Symbole, mit den Zahlen dieses Charakters.
     const titleNote = (value, base, bonus) =>
@@ -119,12 +126,24 @@ class MeinHausregelSheet extends ActorSheet {
       `Ab gehen Flaechenmalus und Zielmalus. ` +
       `Steht ein anderes Attribut am Waffenskill, zaehlt dieses statt STR.`;
 
+    const defenceNote = defence.missing
+      ? `Der Abwehr-Skill "${defence.name}" steht nicht im Bogen und zählt deshalb nicht. `
+      : defence.name
+        ? `Abwehr-Skill ${defence.name}: Level ${defence.level} + Machtfaktor ${defence.factor} ` +
+          `(${defence.rarity}), Attribut ${defence.attribute}. `
+        : `Kein Abwehr-Skill verknüpft — wähle einen, damit Level und Machtfaktor zählen. `;
+
     context.vwHelp =
-      `Grundwert 10 + VW-Skill ${vwSkillLvl} + DEX ${titleNote(dexEff, dex, dexTitle)}` +
+      `Grundwert 10 + Extra ${vwSkillLvl} + Skill-Level ${defence.level} ` +
+      `+ Machtfaktor ${defence.factor} + ${defence.attribute} ` +
+      `${titleNote(defenceAttr, Number(systemData.abilities?.[defence.attribute]?.value || 0), getTitleBonus(defence.attribute))}` +
       ` + Boni ${Number(boni.vw || 0)} − Rüstungsmalus ${armorMalus} = ${vwTotal}. ` +
+      defenceNote +
       `Ein Angreifer vergleicht seinen AW mit diesem Wert; die Trefferchance ist ` +
       `50 × AW ÷ VW, begrenzt auf 5 bis 95 Prozent. ` +
       `Der Wert wird in den Charakterdaten mitgeführt, damit Angriffe ihn finden.`;
+
+    context.defence = defence;
 
     context.initHelp =
       `DEX ${titleNote(dexEff, dex, dexTitle)} + Boni ${Number(boni.init || 0)} = ${initTotal}.`;
@@ -233,6 +252,13 @@ class MeinHausregelSheet extends ActorSheet {
     });
 
     // AUSWAHLLISTE DER EIGENEN SKILLS FÜR DIE WAFFENTABELLE
+    // Abwehr-Skills zur Auswahl fuer den Verteidigungswert.
+    context.defenceSkillChoices = systemData.isekaiSkills.reduce((choices, skill) => {
+      const name = String(skill?.name || "").trim();
+      if (name) choices[name] = `${name} (${Number(skill.level || 0)}, ${skill.attribute || "DEX"})`;
+      return choices;
+    }, { "": "— kein Abwehr-Skill —" });
+
     context.weaponSkillChoices = systemData.isekaiSkills.reduce((choices, skill) => {
       const name = String(skill?.name || "").trim();
       if (name) choices[name] = `${name} (${Number(skill.level || 0)})`;
@@ -326,7 +352,10 @@ class MeinHausregelSheet extends ActorSheet {
 
     context.pool = { hp: hpValue, mp: mpValue, ap: apValue };
 
-    context.derived = { hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget, drSummary };
+    context.derived = {
+      hpMax, mpMax, apMax, initTotal, awTotal, vwTotal, dex, str, nextXpTarget, drSummary,
+      defenceAttr
+    };
     return context;
   }
 
