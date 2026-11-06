@@ -158,6 +158,25 @@ const aktiv = makeCustomSkill({ ...panzer, type: "A", types: ["hieb"], cond: "ma
 check("Aktiver Skill bekommt keine Schadensarten", aktiv.types, []);
 check("Aktiver Skill bekommt keine Bedingung", aktiv.cond, "");
 
+
+// --- Resistenzangaben muessen aus den Daten in den Baum durchkommen -------
+// Fehlte in shape(), womit die Schadensreduktion im Bogen auf 0 blieb.
+const byName = (name) => Object.values(S).find(skill => skill.name === name);
+check("Hiebresistenz traegt die Schadensart", byName("Hiebresistenz").types, ["hieb"]);
+check("Dicke Haut traegt drei Schadensarten",
+  byName("Dicke Haut").types, ["hieb", "stich", "wucht"]);
+check("Dicke Haut legt die Eltern still",
+  byName("Dicke Haut").replaces.map(id => S[id].name),
+  ["Hiebresistenz", "Stichresistenz", "Wuchtresistenz"]);
+check("Arkane Resistenz ist bedingt", byName("Arkane Resistenz").cond, "magie");
+check("Ein Waffenskill hat keine Schadensart", byName("Axtkampf").types, []);
+
+// Und von dort in den Bogeneintrag, mit Namen statt Ids
+const dickeHaut = sheetEntry(byName("Dicke Haut"), [10, 10, 10], tree);
+check("Bogeneintrag traegt die Schadensarten", dickeHaut.types, "hieb,stich,wucht");
+check("Bogeneintrag nennt die Eltern beim Namen",
+  dickeHaut.replaces, "Hiebresistenz,Stichresistenz,Wuchtresistenz");
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

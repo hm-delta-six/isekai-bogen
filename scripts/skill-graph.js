@@ -4,7 +4,7 @@
 // speichert der Spielleiter als Weltdaten; buildTree() setzt beides zu einem
 // Baum zusammen, in dem Kinder, Art und Einstiegsrarität berechnet sind.
 
-import { derivedStartLevel, toArray } from "./rules.js";
+import { derivedStartLevel, nameList, toArray, typeList } from "./rules.js";
 
 export const MAX_LEVEL = 7;
 
@@ -82,6 +82,12 @@ const shape = (skill, base) => ({
   level: skill.level,
   kern: skill.kern || "",
   ms: { ...(skill.ms || {}) },
+  // Resistenzangaben. Fehlten hier, womit sie aus den Baumdaten nie in den
+  // Baum und damit auch nie in den Bogen gelangt sind — die Schadens-
+  // reduktion blieb deshalb auf 0.
+  types: typeList(skill.types),
+  replaces: nameList(skill.replaces),
+  cond: skill.cond || "",
   custom: !base,
   children: []
 });

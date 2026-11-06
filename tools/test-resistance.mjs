@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { buildTree } from "../scripts/skill-graph.js";
 import { damageReduction, enrichSkill, nameList, resistanceDR, resistanceSources, derivedStartLevel } from "../scripts/rules.js";
 let fails=0;
 const check=(n,g,w)=>{const ok=JSON.stringify(g)===JSON.stringify(w);
@@ -106,6 +110,34 @@ const beideQuellen = resistanceSources({
 check("Tabelle vertritt den Skill", beideQuellen.map(e=>e.name), ["Feuerschutz"]);
 check("Level kommt aus dem verknuepften Skill", beideQuellen[0].level, 10);
 check("Tabelleneintrag: 10 x 4", damageReduction({ resistances: beideQuellen }).flat.feuer, 40);
+
+
+// --- Durchstich: echte Baumdaten, Bogen wie der Spielleiter ihn fuehrt ----
+// Deckt die ganze Kette ab: data/skill-baum.json -> buildTree -> Nachschlage-
+// werk -> resistanceSources -> damageReduction. Genau hier war die Luecke.
+const base = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "data/skill-baum.json"), "utf8"));
+const echterBaum = buildTree(base, []);
+const echtesLookup = new Map(Object.values(echterBaum.skills).map(s => [
+  String(s.name).trim().toLowerCase(),
+  { ...s, replaces: s.replaces.map(id => echterBaum.skills[id]?.name || id) }
+]));
+
+const hookwolfBogen = damageReduction({
+  armors: [],
+  resistances: resistanceSources({ skills: handEingetragen, lookup: echtesLookup })
+});
+check("echte Daten: Hookwolf Hieb 140", hookwolfBogen.flat.hieb, 140);
+check("echte Daten: Hookwolf Stich 140", hookwolfBogen.flat.stich, 140);
+check("echte Daten: Hookwolf Wucht 140", hookwolfBogen.flat.wucht, 140);
+check("echte Daten: Hookwolf Feuer 0", hookwolfBogen.flat.feuer, 0);
+check("echte Daten: Eltern stillgelegt", hookwolfBogen.retiredLabels.sort(),
+  ["Hiebresistenz", "Stichresistenz", "Wuchtresistenz"]);
+
+// Jeder Resistenz-Skill der Daten muss im Baum eine Schadensart behalten
+const resistOhneTyp = Object.values(echterBaum.skills)
+  .filter(s => s.arch === "resist" && base.skills[s.id]?.types?.length && !s.types.length)
+  .map(s => s.name);
+check("keine Schadensart verliert sich im Baum", resistOhneTyp, []);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails?1:0);

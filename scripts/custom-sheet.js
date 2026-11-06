@@ -95,9 +95,39 @@ class MeinHausregelSheet extends ActorSheet {
     const awSkillLvl = Number(boni.awSkill || 0);
     const vwSkillLvl = Number(boni.vwSkill || 0);
 
-    const initTotal = dex + Number(boni.init || 0);
-    const awTotal = 10 + awSkillLvl + str + Number(boni.aw || 0);
-    const vwTotal = 10 + vwSkillLvl + dex + Number(boni.vw || 0) - Number(boni.armormalus || 0);
+    // STR und DEX mit Titel-Boni: der Angriffswurf rechnet ebenso, sonst
+    // stimmt der Wert im Bogen nicht mit dem Wurf ueberein.
+    const strEff = context.effectiveAbilities.STR;
+    const dexEff = context.effectiveAbilities.DEX;
+    const strTitle = getTitleBonus("STR");
+    const dexTitle = getTitleBonus("DEX");
+    const armorMalus = Number(boni.armormalus || 0);
+
+    const initTotal = dexEff + Number(boni.init || 0);
+    const awTotal = 10 + awSkillLvl + strEff + Number(boni.aw || 0);
+    const vwTotal = 10 + vwSkillLvl + dexEff + Number(boni.vw || 0) - armorMalus;
+
+    // Rechenweg fuer die Hilfe-Symbole, mit den Zahlen dieses Charakters.
+    const titleNote = (value, base, bonus) =>
+      bonus ? `${value} (${base} + ${bonus} aus Titeln)` : `${value}`;
+
+    context.awHelp =
+      `Grundwert 10 + AW-Skill ${awSkillLvl} + STR ${titleNote(strEff, str, strTitle)}` +
+      ` + Boni ${Number(boni.aw || 0)} = ${awTotal}. ` +
+      `Beim Angriff mit einer Waffe kommen dazu: Level und Machtfaktor des Waffenskills, ` +
+      `der Waffenbonus und die Boni der gewaehlten Modifikationen. ` +
+      `Ab gehen Flaechenmalus und Zielmalus. ` +
+      `Steht ein anderes Attribut am Waffenskill, zaehlt dieses statt STR.`;
+
+    context.vwHelp =
+      `Grundwert 10 + VW-Skill ${vwSkillLvl} + DEX ${titleNote(dexEff, dex, dexTitle)}` +
+      ` + Boni ${Number(boni.vw || 0)} − Rüstungsmalus ${armorMalus} = ${vwTotal}. ` +
+      `Ein Angreifer vergleicht seinen AW mit diesem Wert; die Trefferchance ist ` +
+      `50 × AW ÷ VW, begrenzt auf 5 bis 95 Prozent. ` +
+      `Der Wert wird in den Charakterdaten mitgeführt, damit Angriffe ihn finden.`;
+
+    context.initHelp =
+      `DEX ${titleNote(dexEff, dex, dexTitle)} + Boni ${Number(boni.init || 0)} = ${initTotal}.`;
 
     // PATHFINDER 1 EP TABELLE (Normal Progression)
     const pf1XpTable = [0, 1000, 3000, 7500, 14000, 23000, 35000, 53000, 77000, 115000, 160000, 235000, 330000, 475000, 665000, 955000, 1350000, 1900000, 2700000, 3850000, 5350000];

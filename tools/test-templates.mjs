@@ -55,6 +55,9 @@ const sheetContext = {
     }
   },
   derived: { initTotal: 3, awTotal: 20, vwTotal: 18 },
+  awHelp: "Grundwert 10 + AW-Skill 5 + STR 12 (10 + 2 aus Titeln) + Boni 0 = 27.",
+  vwHelp: "Grundwert 10 + VW-Skill 4 + DEX 10 + Boni 0 - Ruestungsmalus 3 = 21.",
+  initHelp: "DEX 10 + Boni 0 = 10.",
   effectiveAbilities: { STR: 10, DEX: 10, CON: 14, INT: 8, WIS: 8, CHA: 8 },
   rarityChoices: { Common: "Common", Rare: "Rare" },
   attributeChoices: { STR: "STR", CON: "CON" },
@@ -68,6 +71,13 @@ const sheetContext = {
   drSources: [{ name: "Dicke Haut", value: 60, cond: "", types: ["hieb"] }],
   drConditional: [{ name: "Arkane Resistenz", value: 80, cond: "magie" }],
   drRetiredNames: ["Hiebresistenz"],
+  __erwartet: [
+    "Grundwert 10 + AW-Skill 5",          // Hilfe am AW
+    "Ruestungsmalus 3",                   // Hilfe am VW
+    "Hieb <strong>146</strong>",          // DR je Schadensart
+    "Resistenz 60 gegen Hieb, Stich, Wucht", // Resistenz am Skill
+    "Hiebresistenz"                       // stillgelegt genannt
+  ],
   skillGroups: [{
     key: "passiv", label: "Passive Skills", hint: "Immer aktiv", formula: "Level x Stufe / 2",
     usesAttribute: false, entries: [{ index: 0, skill }]
@@ -94,6 +104,10 @@ for (const [name, context] of [["sheet.html", sheetContext], ["skill-tree.html",
   try {
     const html = templates[name](context);
     if (!html.includes("<")) throw new Error("leeres Ergebnis");
+    // Ein Platzhalter, der nie gefuellt wird, faellt sonst nicht auf.
+    for (const marker of (context.__erwartet || [])) {
+      if (!html.includes(marker)) throw new Error(`"${marker}" fehlt im Ergebnis`);
+    }
     console.log(`ok   ${name} rendert (${html.length} Zeichen)`);
   } catch (error) {
     fails += 1;

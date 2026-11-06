@@ -333,9 +333,9 @@
       <!-- KAMPFWERTE -->
       <div class="section-header"><span>Kampfwerte</span></div>
       <div class="header-row" style="justify-content: space-between; font-size: 12px;">
-        <div><strong>Ini:</strong> <strong style="color:#38bdf8;">{{derived.initTotal}}</strong> <small style="color:#94a3b8;">(DEX {{effectiveAbilities.DEX}} + Boni: <input type="number" class="num-short" name="system.boni.init" value="{{actor.system.boni.init}}"/>)</small></div>
-        <div><strong>AW:</strong> <strong style="color:#38bdf8;">{{derived.awTotal}}</strong> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.awSkill" value="{{actor.system.boni.awSkill}}"/> + STR {{effectiveAbilities.STR}} + Boni: <input type="number" class="num-short" name="system.boni.aw" value="{{actor.system.boni.aw}}"/>)</small></div>
-        <div><strong>VW:</strong> <strong style="color:#38bdf8;">{{derived.vwTotal}}</strong> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/> + DEX {{effectiveAbilities.DEX}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small></div>
+        <div><strong>Ini:</strong> <strong style="color:#38bdf8;">{{derived.initTotal}}</strong><span class="help" title="{{initHelp}}">?</span> <small style="color:#94a3b8;">(DEX {{effectiveAbilities.DEX}} + Boni: <input type="number" class="num-short" name="system.boni.init" value="{{actor.system.boni.init}}"/>)</small></div>
+        <div><strong>AW:</strong> <strong style="color:#38bdf8;">{{derived.awTotal}}</strong><span class="help" title="{{awHelp}}">?</span> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.awSkill" value="{{actor.system.boni.awSkill}}"/> + STR {{effectiveAbilities.STR}} + Boni: <input type="number" class="num-short" name="system.boni.aw" value="{{actor.system.boni.aw}}"/>)</small></div>
+        <div><strong>VW:</strong> <strong style="color:#38bdf8;">{{derived.vwTotal}}</strong><span class="help" title="{{vwHelp}}">?</span> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/> + DEX {{effectiveAbilities.DEX}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small></div>
       </div>
 
       <!-- SCHADENSREDUKTION JE SCHADENSART -->
