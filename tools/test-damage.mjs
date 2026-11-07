@@ -146,9 +146,9 @@ check("Gross-/Kleinschreibung egal", weaponSkill(held, { skillName: "  morgenste
 check("ohne Verknuepfung: STR", weaponSkill(held, {}).attribute, "STR");
 check("unbekannter Skill wird gemeldet", weaponSkill(held, { skillName: "Bogen" }).missing, true);
 
-// STR 6+2=8, halber AW-Skill ceil(5/2)=3, Skill 4, Bonus 3 => 18
-// Morgenstern hat keine Raritaet, faellt also auf Common: Machtfaktor 1.
-check("Schadensbonus mit Skill", damageBonus(held, { skillName: "Morgenstern", bonus: 3 }), 19);
+// STR 6+2=8, halber AW-Skill ceil(5/2)=3, Skill 4 x Stufe 1, Bonus 3 => 18
+// Morgenstern hat keine Raritaet, faellt also auf Common: Stufe 1.
+check("Schadensbonus mit Skill", damageBonus(held, { skillName: "Morgenstern", bonus: 3 }), 18);
 check("Schadensbonus ohne Skill", damageBonus(held, { bonus: 3 }), 14);
 
 // --- Schadensbonus pro Wuerfel: (Wuerfel + Bonus) x Machtfaktor ---
@@ -228,11 +228,20 @@ check("AW Legendary: 8 x 5", attackValue(kaempferMit("Legendary"), klinge), 63);
 check("ohne verknuepften Skill nur der Grundwert",
   attackValue(kaempferMit("Rare"), { bonus: 0 }), 23);
 
-// Schaden = STR 8 + halber AW-Skill 3 + Level 8 + Machtfaktor
-check("Schaden Common", damageBonus(kaempferMit("Common"), klinge), 20);
-check("Schaden Epic: Machtfaktor 8", damageBonus(kaempferMit("Epic"), klinge), 27);
-check("ohne verknuepften Skill kein Machtfaktor",
+// Schaden = STR 8 + halber AW-Skill 3 + Level 8 x Raritaetsstufe
+// Derselbe Beitrag des Skills wie beim AW.
+check("Schaden Common: 8 x 1", damageBonus(kaempferMit("Common"), klinge), 19);
+check("Schaden Rare: 8 x 3", damageBonus(kaempferMit("Rare"), klinge), 35);
+check("Schaden Epic: 8 x 4", damageBonus(kaempferMit("Epic"), klinge), 43);
+check("ohne verknuepften Skill nur Attribut und halber AW-Skill",
   damageBonus(kaempferMit("Rare"), { bonus: 0 }), 11);
+
+// AW und Schaden bekommen vom Skill denselben Beitrag
+const skillAnteil = (rarity) =>
+  attackValue(kaempferMit(rarity), klinge) - attackValue(kaempferMit(rarity), { bonus: 0 });
+check("Skill-Anteil am AW bei Rare: 8 x 3", skillAnteil("Rare"), 24);
+check("Skill-Anteil am Schaden gleich",
+  damageBonus(kaempferMit("Rare"), klinge) - damageBonus(kaempferMit("Rare"), { bonus: 0 }), 24);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

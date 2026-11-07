@@ -3,7 +3,7 @@ import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
 import {
   COST_TYPES, MOD_BONUS_TYPES, abilityValue, areaSetting, attackTotal, defenceTotal, enrichSkill,
-  machtfaktor, modBonus, summarizeMods, targetMalus, toArray, typeBonus, typeLabels
+  machtfaktor, modBonus, rarityRank, summarizeMods, targetMalus, toArray, typeBonus, typeLabels
 } from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
@@ -54,13 +54,15 @@ export function attackValue(actor, weapon) {
 }
 
 // Schaden = Würfel × Machtfaktor(Waffe) + Attribut + halber AW-Skill
-//           + Waffen-Skill + Machtfaktor(Skill) + Bonus
-// Das Attribut ist das des verknüpften Skills, ohne Verknüpfung STR.
+//           + Skill-Level × Raritätsstufe(Skill) + Bonus
+//
+// Derselbe Beitrag des Angriffsskills wie beim AW. Das Attribut ist das des
+// verknüpften Skills, ohne Verknüpfung STR.
 export function damageBonus(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
   return effectiveAttribute(actor, skill.attribute) +
     Math.ceil(Number(actor?.system?.boni?.awSkill || 0) / 2) +
-    skill.level + skill.factor +
+    skill.level * rarityRank(skill.rarity) +
     Number(weapon?.bonus || 0);
 }
 

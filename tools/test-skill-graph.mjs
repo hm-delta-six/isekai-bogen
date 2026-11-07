@@ -181,8 +181,9 @@ check("Bogeneintrag nennt die Eltern beim Namen",
 // --- Steigerungen kommen aus den Daten in den Baum ------------------------
 check("Ausweichen steigert den Verteidigungswert",
   byName("Ausweichen").boosts, [{ t: "vw" }]);
-check("Vorausahnung steigert zwei Werte halbiert",
-  byName("Vorausahnung").boosts, [{ t: "vw", f: "half" }, { t: "init", f: "half" }]);
+check("Vorausahnung steigert VW und Initiative halbiert",
+  byName("Vorausahnung").boosts.filter(boost => !boost.s),
+  [{ t: "vw", f: "half" }, { t: "init", f: "half" }]);
 check("Turmschild nur in einer Lage",
   byName("Turmschild").boosts[0].s, "gegen Angriffe von vorn");
 check("Ruestungstragen senkt den Malus um ein Fuenftel",
@@ -230,6 +231,26 @@ check("und der Baum liest sie wieder",
   buildTree(base, [eigenerModus]).skills.x_mod.bonusMode, "factor");
 check("Unsinn wird nicht gespeichert",
   makeCustomSkill({ ...panzer, bonusMode: "quatsch" }, "x_mod2").bm, "");
+
+
+// --- Steigerungen auf Proben ---------------------------------------------
+// Alle mit Lage: sie gelten gegen etwas Bestimmtes, und was gerade gewuerfelt
+// wird, weiss der Bogen nicht.
+const probenBoosts = Object.values(S)
+  .filter(skill => skill.boosts.some(boost => boost.t === "check"));
+check("14 Skills steigern Proben", probenBoosts.length, 14);
+check("und alle nur in einer Lage",
+  probenBoosts.every(skill => skill.boosts.filter(b => b.t === "check").every(b => b.s)), true);
+check("Willensstaerke gegen Beeinflussung",
+  byName("Willensstärke").boosts.find(b => b.t === "check").s, "Proben gegen Beeinflussung");
+check("Tierempathie rechnet mit dem Level",
+  byName("Tierempathie").boosts.find(b => b.t === "check").f, "level");
+check("Vorausahnung behaelt ihre anderen Steigerungen",
+  byName("Vorausahnung").boosts.map(b => b.t), ["vw", "init", "check"]);
+
+check("Diplomatie rechnet mit der Machtstufe", byName("Diplomatie").bonusMode, "factor");
+check("Handel ebenso", byName("Handel").bonusMode, "factor");
+check("ein anderer Fertigkeitsskill nicht", byName("Athletik").bonusMode, "");
 
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
