@@ -11,6 +11,8 @@ import {
   skillBonus, skillCategory, toArray, typeLabels, typeList, typeValue
 } from "./rules.js";
 
+const MODULE_ID = "isekai-bogen";
+
 class MeinHausregelSheet extends ActorSheet {
 
   static get defaultOptions() {
@@ -56,7 +58,13 @@ class MeinHausregelSheet extends ActorSheet {
     const int = getAttr("INT"), wis = getAttr("WIS"), cha = getAttr("CHA");
 
     // SICHERSTELLEN, DASS ALLE LISTEN (inkl. Titel) EXISTIEREN UND RICHTIG UMGESETZT WERDEN
-    const listen = ['skills', 'equipment', 'weapons', 'titles', 'isekaiSkills', 'armors', 'resistances'];
+    //
+    // Nur eigene Listen! system.skills gehoert pf1 und ist dort ein Objekt mit
+    // festen Schluesseln. Es stand hier mit in der Liste und wurde bei jedem
+    // Zeichnen zu einem Array gemacht — danach findet pf1 in
+    // _setSourceDetails seine Schluessel nicht mehr und die Datenaufbereitung
+    // des ganzen Charakters bricht ab.
+    const listen = ['equipment', 'weapons', 'titles', 'isekaiSkills', 'armors', 'resistances'];
     listen.forEach(key => {
       if (!systemData[key]) {
         systemData[key] = [];
@@ -360,6 +368,17 @@ class MeinHausregelSheet extends ActorSheet {
   }
 
   /**
+   * Nach dem Speichern neu zeichnen: Angriffswert, Schaden, Schadens-
+   * reduktion und die Hilfetexte entstehen erst in getData. Haelt Foundry
+   * eine Aenderung fuer unerheblich und zeichnet nicht neu, blieben sie auf
+   * dem alten Stand stehen.
+   */
+  async _updateObject(event, formData) {
+    await super._updateObject(event, formData);
+    this.render(false);
+  }
+
+  /**
    * Offene Eingaben sichern, bevor ein Listeneintrag neu geschrieben wird.
    *
    * _getSubmitData nimmt kein Formular, sondern zusaetzliche Daten und liest
@@ -376,15 +395,9 @@ class MeinHausregelSheet extends ActorSheet {
     super.activateListeners(html);
     if (!this.isEditable) return;
 
-    // EINGABEN BEIM VERLASSEN/ÄNDERN SPEICHERN
-    html.find('input, select, textarea').on('change', async (ev) => {
-      ev.preventDefault();
-      await this.actor.update(this._getSubmitData());
-      // Angriffswert, Schaden, Schadensreduktion und die Hilfetexte werden in
-      // getData gerechnet. Haelt Foundry die Aenderung fuer unerheblich und
-      // zeichnet nicht neu, blieben sie auf dem alten Stand stehen.
-      this.render(false);
-    });
+    // Das Speichern bei Aenderungen macht Foundry selbst: ActorSheet laeuft
+    // mit submitOnChange. Ein eigener change-Hoerer hat jede Aenderung ein
+    // zweites Mal geschrieben.
 
     // ANGREIFEN / WÜRFELN
     html.find('.roll-weapon').click(ev => {
@@ -502,6 +515,35 @@ class MeinHausregelSheet extends ActorSheet {
 }
 
 /**
+ * Repariert Charaktere, bei denen eine fruehere Fassung dieses Bogens pf1s
+ * system.skills von einem Objekt in ein Array verwandelt hat.
+ *
+ * Solange es ein Array ist, bricht pf1 in _setSourceDetails ab
+ * ("Cannot read properties of undefined (reading 'push')") und bereitet die
+ * Daten des Charakters gar nicht mehr auf — abgeleitete Werte bleiben dann
+ * stehen, egal was man im Bogen aendert.
+ *
+ * Die Reihenfolge von Object.values entspricht der Schluesselreihenfolge, die
+ * Schluessel lassen sich also zurueckstecken. Passt die Anzahl nicht, wird
+ * das Feld entfernt; pf1 legt es aus seiner eigenen Vorlage neu an.
+ */
+export async function repairPf1Skills(actor) {
+  const skills = actor?.system?.skills;
+  if (!Array.isArray(skills)) return false;
+
+  const keys = Object.keys(CONFIG.PF1?.skills || {});
+  const update = keys.length === skills.length
+    ? { "system.skills": Object.fromEntries(keys.map((key, index) => [key, skills[index]])) }
+    : { "system.-=skills": null };
+
+  console.warn(`${MODULE_ID} | ${actor.name}: pf1s system.skills lag als Liste vor und wird ` +
+    (keys.length === skills.length ? "wieder zu einem Objekt gemacht." : "entfernt, damit pf1 es neu anlegt."));
+
+  await actor.update(update, { render: false });
+  return true;
+}
+
+/**
  * Kleines Auswahlfenster für die Schadenstypen. Die Typen sind ein Array im
  * Listeneintrag und lassen sich deshalb nicht über das normale Formular
  * speichern — der Eintrag wird hier direkt zurückgeschrieben.
@@ -555,8 +597,23 @@ Hooks.once('setup', () => registerTokenBars());
 
 Hooks.once('init', () => registerSkillTreeSettings());
 
-Hooks.once('ready', () => {
+Hooks.once('ready', async () => {
   registerDamageHooks();
+
+  // Charaktere einsammeln, die noch die zerstoerte Skill-Struktur tragen.
+  if (game.user.isGM) {
+    let repariert = 0;
+    for (const actor of game.actors) {
+      try {
+        if (await repairPf1Skills(actor)) repariert += 1;
+      } catch (error) {
+        console.error(`${MODULE_ID} | ${actor?.name}: Reparatur von system.skills fehlgeschlagen`, error);
+      }
+    }
+    if (repariert) {
+      ui.notifications.info(`ISEKAI-Bogen: pf1-Skills von ${repariert} Charakter(en) wiederhergestellt.`);
+    }
+  }
 
   // Schadensarten und Ersetzungen stehen im Skill-Baum; von Hand eingetragene
   // Skills im Bogen bringen sie nicht mit und werden daraus nachgefuellt.

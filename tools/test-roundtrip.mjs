@@ -106,7 +106,13 @@ const actor = {
     abilities: { STR: { value: 10 }, DEX: { value: 14 }, CON: { value: 12 }, INT: { value: 8 }, WIS: { value: 8 }, CHA: { value: 8 } },
     boni: { awSkill: 0, vwSkill: 0, aw: 0, vw: 0, init: 0, armormalus: 0, vwSkillName: "" },
     details: { race: { level: 1, rarity: "Common" }, class: { level: 1, rarity: "Common" } },
-    isekai: {}, titles: [], skills: [], equipment: [], resistances: [],
+    isekai: {}, titles: [], equipment: [], resistances: [],
+    // pf1 fuehrt system.skills als Objekt mit festen Schluesseln.
+    skills: {
+      acr: { rank: 3, cs: true, rt: false, mod: 0 },
+      apr: { rank: 0, cs: false, rt: true, mod: 0 },
+      blf: { rank: 5, cs: true, rt: false, mod: 0 }
+    },
     armors: [{ name: "Weste", dr: 4, durability: 10, types: "stich", wear: "" }],
     isekaiSkills: [
       { name: "Fernkampf", level: 5, rarity: "Common", attribute: "DEX", category: "aktiv", effect: "schiessen" },
@@ -200,6 +206,18 @@ check("Verteidigungswert folgt: Level 8 plus Machtfaktor 4",
 // Hiebresistenz 10 auf Uncommon: Machtfaktor 2, also 20
 check("DR gegen Hieb aus dem Skill", runde.context.drByType.find(entry => entry.label === "Hieb").flat, 20);
 check("DR gegen Stich aus der Weste", runde.context.drByType.find(entry => entry.label === "Stich").flat, 4);
+
+
+// --- pf1s eigene Strukturen bleiben unberuehrt ----------------------------
+// system.skills gehoert pf1 und ist dort ein Objekt. Wurde es zu einem Array,
+// brach pf1s Datenaufbereitung ab ("Cannot read properties of undefined
+// (reading 'push')") und abgeleitete Werte blieben stehen.
+const pf1Skills = runde.context.actor.system.skills;
+check("system.skills bleibt ein Objekt", Array.isArray(pf1Skills), false);
+check("die Schluessel von pf1 bleiben", Object.keys(pf1Skills), ["acr", "apr", "blf"]);
+check("die Raenge bleiben", pf1Skills.acr.rank, 3);
+check("der Bogen legt dort kein Feld an",
+  Object.keys(pf1Skills).every(key => typeof pf1Skills[key] === "object"), true);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);
