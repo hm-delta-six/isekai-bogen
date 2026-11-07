@@ -339,13 +339,13 @@
           <small style="color:#94a3b8;">(10 + Extra: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/>
           + {{defence.attribute}} {{derived.defenceAttr}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small>
           <div style="margin-top:2px;">
-            <small style="color:#94a3b8;">Abwehr-Skill:</small>
+            <small style="color:#94a3b8;" title="Nur das Attribut: Ausweichen traegt DEX, Parade STR. Das Skill-Level rechnet der Bogen selbst ein.">Attribut vom Skill:</small>
             <select name="system.boni.vwSkillName" style="width:auto; max-width:190px; font-size:11px;">
               {{selectOptions defenceSkillChoices selected=actor.system.boni.vwSkillName}}
             </select>
             {{#if defence.name}}
               <small style="color:#94a3b8;">
-                {{#if defence.missing}}steht nicht im Bogen{{else}}Lvl {{defence.level}} + MF {{defence.factor}}{{/if}}
+                {{#if defence.missing}}steht nicht im Bogen{{else}}{{defence.attribute}}{{/if}}
               </small>
             {{/if}}
           </div>
@@ -545,6 +545,9 @@
                     <div style="font-size:10px; color:#94a3b8;">
                       Resistenz {{entry.skill.resistValue}} gegen {{entry.skill.resistTypes}}{{#if entry.skill.condLabel}} (nur {{entry.skill.condLabel}}){{/if}}
                     </div>
+                  {{/if}}
+                  {{#if entry.skill.boostText}}
+                    <div style="font-size:10px; color:#94a3b8;">Steigert {{entry.skill.boostText}}</div>
                   {{/if}}
                 </td>
                 <td>

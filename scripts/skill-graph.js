@@ -4,7 +4,7 @@
 // speichert der Spielleiter als Weltdaten; buildTree() setzt beides zu einem
 // Baum zusammen, in dem Kinder, Art und Einstiegsrarität berechnet sind.
 
-import { derivedStartLevel, nameList, toArray, typeList } from "./rules.js";
+import { BOOST_FORMULAS, BOOST_TARGETS, derivedStartLevel, nameList, toArray, typeList } from "./rules.js";
 
 export const MAX_LEVEL = 7;
 
@@ -88,6 +88,10 @@ const shape = (skill, base) => ({
   types: typeList(skill.types),
   replaces: nameList(skill.replaces),
   cond: skill.cond || "",
+  // Welche Werte der Skill steigert. Steht nur im Baum, nicht im Bogen: der
+  // Bogen schlaegt es beim Namen nach, damit es nicht in jedem Charakter
+  // mitgepflegt werden muss.
+  boosts: toArray(skill.boosts).filter(entry => entry && entry.t).map(entry => ({ ...entry })),
   custom: !base,
   children: []
 });
@@ -254,6 +258,16 @@ export function makeCustomSkill(input, id) {
     types: input.type === "P" ? [...new Set(input.types || [])] : [],
     replaces: [...new Set(input.replaces || [])],
     cond: input.type === "P" ? String(input.cond || "").trim() : "",
+    // Welche Werte der Skill steigert. Ohne eigene Rechenregel gilt
+    // Skill-Level x Raritaetsstufe.
+    boosts: toArray(input.boosts)
+      .filter(entry => entry?.t in BOOST_TARGETS)
+      .map(entry => {
+        const boost = { t: entry.t };
+        if (entry.f in BOOST_FORMULAS && entry.f !== "standard") boost.f = entry.f;
+        if (String(entry.s || "").trim()) boost.s = String(entry.s).trim();
+        return boost;
+      }),
     ms
   };
 }

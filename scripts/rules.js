@@ -330,7 +330,8 @@ export function enrichSkill(skill, lookup = null) {
     replaces: nameList(skill.replaces).length
       ? nameList(skill.replaces).join(",")
       : nameList(found.replaces).join(","),
-    cond: skill.cond || found.cond || ""
+    cond: skill.cond || found.cond || "",
+    boosts: toArray(skill.boosts).length ? skill.boosts : toArray(found.boosts)
   };
 }
 
@@ -385,3 +386,99 @@ export const ARCH_FORMULAS = {
   wissen:   "",
   handwerk: ""
 };
+
+/**
+ * Werte, die ein Skill steigern kann. Der Bogen rechnet sie von selbst ein —
+ * niemand muss ein Skill-Level von Hand in ein Bonusfeld eintragen.
+ */
+export const BOOST_TARGETS = {
+  aw:         "Angriffswert",
+  vw:         "Verteidigungswert",
+  init:       "Initiative",
+  hp:         "HP",
+  mp:         "MP",
+  ap:         "AP",
+  armormalus: "Rüstungsmalus",
+  speed:      "Geschwindigkeit",
+  range:      "Reichweite"
+};
+
+// Diese Ziele senken einen Malus, statt einen Wert zu heben.
+export const BOOST_LOWERS = new Set(["armormalus"]);
+
+/**
+ * Rechenregeln einer Steigerung. Ohne Angabe gilt `standard`:
+ * Skill-Level × Raritätsstufe.
+ */
+export const BOOST_FORMULAS = {
+  standard: "Skill-Level × Raritätsstufe",
+  half:     "Skill-Level × Raritätsstufe ÷ 2 (abgerundet)",
+  factor:   "Skill-Level × Machtfaktor",
+  level:    "Skill-Level",
+  fifth:    "Skill-Level ÷ 5 (abgerundet)"
+};
+
+/**
+ * Die Grundregel, einmal formuliert: ohne eigene Angabe steigert ein Skill um
+ * Skill-Level × Raritätsstufe.
+ */
+export const BOOST_DEFAULT_NOTE =
+  `Ohne eigene Rechenregel steigert ein Skill um ${BOOST_FORMULAS.standard}.`;
+
+export function boostAmount(skill, formula = "standard") {
+  const level = Math.max(0, Number(skill?.level || 0));
+  const rank = rarityRank(skill?.rarity);
+
+  switch (formula) {
+    case "half":   return Math.floor(level * rank / 2);
+    case "factor": return level * machtfaktor(skill?.rarity);
+    case "level":  return level;
+    case "fifth":  return Math.floor(level / 5);
+    default:       return level * rank;
+  }
+}
+
+/**
+ * Steigerungen eines Skills aus dem Baum. Ein Eintrag ist
+ * { t: Ziel, f: Rechenregel (optional), s: Bedingung (optional) }.
+ *
+ * Mit Bedingung wird die Steigerung im Bogen genannt, aber nicht
+ * mitgerechnet: sie gilt nur in einer bestimmten Lage (in Bewegung, gegen
+ * Angriffe von vorn), und die kennt der Bogen nicht.
+ */
+export function skillBoosts(skill) {
+  return toArray(skill?.boosts)
+    .filter(entry => entry && entry.t in BOOST_TARGETS)
+    .map(entry => ({
+      target: entry.t,
+      formula: entry.f in BOOST_FORMULAS ? entry.f : "standard",
+      situation: entry.s || "",
+      amount: boostAmount(skill, entry.f),
+      lowers: BOOST_LOWERS.has(entry.t)
+    }));
+}
+
+/**
+ * Summe aller Steigerungen einer Skill-Liste, getrennt nach Ziel. `sources`
+ * nennt, woher ein Wert kommt, damit der Bogen es zeigen kann; `situational`
+ * sammelt, was nur in einer bestimmten Lage gilt.
+ */
+export function boostTotals(skills) {
+  const totals = {};
+  const sources = {};
+  const situational = [];
+  for (const key of Object.keys(BOOST_TARGETS)) { totals[key] = 0; sources[key] = []; }
+
+  for (const skill of toArray(skills)) {
+    if (!skill) continue;
+    for (const boost of skillBoosts(skill)) {
+      const entry = { name: skill.name, ...boost };
+      if (boost.situation) { situational.push(entry); continue; }
+      if (!boost.amount) continue;
+      totals[boost.target] += boost.amount;
+      sources[boost.target].push(entry);
+    }
+  }
+
+  return { totals, sources, situational };
+}

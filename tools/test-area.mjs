@@ -91,7 +91,8 @@ check("Einzelangriff hat keine Form", templateShape("single", 5, 1.5, 100), null
 
 
 // --- Skill-Kategorien und Modifikations-Skills ---
-const { skillCategory, modBonus, summarizeMods, targetMalus, defenceSkill, SKILL_CATEGORIES } = await import("../scripts/rules.js");
+const { skillCategory, modBonus, summarizeMods, targetMalus, defenceSkill, boostAmount, boostTotals,
+  skillBoosts, BOOST_TARGETS, BOOST_FORMULAS, SKILL_CATEGORIES } = await import("../scripts/rules.js");
 
 check("vier Kategorien", Object.keys(SKILL_CATEGORIES), ["fertigkeit", "aktiv", "modifikation", "passiv"]);
 check("ohne Angabe: Fertigkeit", skillCategory({ name: "Alt" }), "fertigkeit");
@@ -215,6 +216,40 @@ check("Ausweichen 8 (Rare) mit DEX 12: 10+8+4+12", vw("Ausweichen", { DEX: 12, S
 check("Parade 5 (Common) mit STR 10: 10+5+1+10", vw("Parade", { DEX: 12, STR: 10 }), 26);
 check("Ruestungsmalus geht ab", vw("Ausweichen", { DEX: 12 }, 0, 3), 31);
 check("ohne Skill bleibt der alte Wert", vw("", { DEX: 12 }, 4), 26);
+
+
+// --- Steigerungen: welchen Wert ein Skill hebt ----------------------------
+// Grundregel ohne eigene Angabe: Skill-Level x Raritaetsstufe.
+const ausweichen = { name: "Ausweichen", level: 8, rarity: "Rare", boosts: [{ t: "vw" }] };
+check("Standard: 8 x 3", boostAmount(ausweichen), 24);
+check("halbiert: 8 x 3 / 2", boostAmount(ausweichen, "half"), 12);
+check("Machtfaktor: 8 x 4", boostAmount(ausweichen, "factor"), 32);
+check("nur das Level", boostAmount(ausweichen, "level"), 8);
+check("Fuenftel, abgerundet", boostAmount({ level: 12, rarity: "Common" }, "fifth"), 2);
+check("unbekannte Regel faellt auf Standard", boostAmount(ausweichen, "quatsch"), 24);
+check("Level 0 steigert nichts", boostAmount({ level: 0, rarity: "Epic" }), 0);
+
+check("ein Ziel wird gelesen", skillBoosts(ausweichen).map(b => b.target), ["vw"]);
+check("unbekanntes Ziel fliegt raus",
+  skillBoosts({ level: 5, rarity: "Rare", boosts: [{ t: "quatsch" }] }), []);
+check("Ruestungsmalus senkt",
+  skillBoosts({ level: 10, rarity: "Common", boosts: [{ t: "armormalus", f: "fifth" }] })[0].lowers, true);
+
+const vorausahnung = { name: "Vorausahnung", level: 10, rarity: "Rare",
+  boosts: [{ t: "vw", f: "half" }, { t: "init", f: "half" }] };
+const turmschild = { name: "Turmschild", level: 4, rarity: "Common",
+  boosts: [{ t: "vw", s: "gegen Angriffe von vorn" }] };
+const summe = boostTotals([ausweichen, vorausahnung, turmschild]);
+check("VW summiert: 24 + 15", summe.totals.vw, 39);
+check("Initiative: 15", summe.totals.init, 15);
+check("Quellen werden genannt", summe.sources.vw.map(e => e.name), ["Ausweichen", "Vorausahnung"]);
+check("situative Steigerung nicht in der Summe",
+  summe.sources.vw.some(e => e.name === "Turmschild"), false);
+check("sie wird aber gefuehrt", summe.situational.map(e => e.name), ["Turmschild"]);
+check("ohne Skills bleibt alles 0", boostTotals([]).totals.vw, 0);
+check("zu jedem Ziel eine Beschriftung",
+  Object.keys(BOOST_TARGETS).every(key => Boolean(BOOST_TARGETS[key])), true);
+check("Standard-Rechenregel ist benannt", Boolean(BOOST_FORMULAS.standard), true);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

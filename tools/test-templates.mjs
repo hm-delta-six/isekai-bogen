@@ -40,7 +40,8 @@ const skill = {
   name: "Dicke Haut", rarity: "Rare", level: 15, attribute: "CON", category: "passiv",
   cap: 60, bonus: 22, effect: "Mindert Hiebschaden", types: "hieb,stich,wucht",
   replaces: "Hiebresistenz", cond: "", retired: false,
-  resistTypes: "Hieb, Stich, Wucht", resistValue: 60
+  resistTypes: "Hieb, Stich, Wucht", resistValue: 60,
+  boostText: "+24 Verteidigungswert"
 };
 const sheetContext = {
   actor: {
@@ -58,7 +59,7 @@ const sheetContext = {
   defence: { name: "Ausweichen", level: 8, factor: 4, rarity: "Rare", attribute: "DEX", missing: false },
   defenceSkillChoices: { "": "kein Abwehr-Skill", Ausweichen: "Ausweichen (8, DEX)" },
   awHelp: "Grundwert 10 + AW-Skill 5 + STR 12 (10 + 2 aus Titeln) + Boni 0 = 27.",
-  vwHelp: "Grundwert 10 + Extra 0 + Skill-Level 8 + Machtfaktor 4 + DEX 12 - Ruestungsmalus 3 = 31.",
+  vwHelp: "Grundwert 10 + Extra 0 + DEX 12 + Boni 0 + Skills 24 - Ruestungsmalus 3 = 43.",
   initHelp: "DEX 10 + Boni 0 = 10.",
   effectiveAbilities: { STR: 10, DEX: 10, CON: 14, INT: 8, WIS: 8, CHA: 8 },
   rarityChoices: { Common: "Common", Rare: "Rare" },
@@ -77,7 +78,7 @@ const sheetContext = {
     "Grundwert 10 + AW-Skill 5",          // Hilfe am AW
     "Ruestungsmalus 3",                   // Hilfe am VW
     'name="system.boni.vwSkillName"',     // Auswahl des Abwehr-Skills
-    "Lvl 8 + MF 4",                       // verknuepfter Abwehr-Skill
+    "Steigert +24 Verteidigungswert",     // Steigerung am Skill
     "Hieb <strong>146</strong>",          // DR je Schadensart
     "Resistenz 60 gegen Hieb, Stich, Wucht", // Resistenz am Skill
     "Hiebresistenz"                       // stillgelegt genannt

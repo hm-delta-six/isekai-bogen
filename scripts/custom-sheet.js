@@ -6,7 +6,8 @@ import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
-  SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, condLabel, damageReduction, defenceSkill,
+  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, boostTotals,
+  condLabel, damageReduction, defenceSkill, enrichSkill, skillBoosts,
   machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
   skillBonus, skillCategory, toArray, typeLabels, typeList, typeValue
 } from "./rules.js";
@@ -73,6 +74,13 @@ class MeinHausregelSheet extends ActorSheet {
       }
     });
 
+    // STEIGERUNGEN AUS DEN SKILLS
+    // Welche Werte ein Skill hebt, steht im Skill-Baum. Der Bogen schlaegt es
+    // beim Namen nach, damit niemand ein Skill-Level in ein Bonusfeld tippen
+    // muss. Ohne eigene Angabe steigert ein Skill um Level x Raritaetsstufe.
+    const enrichedSkills = systemData.isekaiSkills.map(skill => enrichSkill(skill, treeLookup()));
+    const boosts = boostTotals(enrichedSkills);
+
     // TITEL-BONI BERECHNEN
     const getTitleBonus = (type) => systemData.titles.reduce((acc, t) => t?.type === type ? acc + Number(t.bonus || 0) : acc, 0);
 
@@ -95,9 +103,9 @@ class MeinHausregelSheet extends ActorSheet {
     const boni = systemData.boni || {};
 
     // FORMELN FÜR MAXIMALWERTE (inkl. Titel-Boni)
-    const hpMax = (con * 5) + raceBonus + classBonus + Number(boni.hp || 0) + getTitleBonus("HP");
-    const mpMax = (int * 5) + classBonus + Number(boni.mp || 0) + getTitleBonus("MP");
-    const apMax = (con * 5) + raceBonus + classBonus + Number(boni.ap || 0) + getTitleBonus("AP");
+    const hpMax = (con * 5) + raceBonus + classBonus + Number(boni.hp || 0) + getTitleBonus("HP") + boosts.totals.hp;
+    const mpMax = (int * 5) + classBonus + Number(boni.mp || 0) + getTitleBonus("MP") + boosts.totals.mp;
+    const apMax = (con * 5) + raceBonus + classBonus + Number(boni.ap || 0) + getTitleBonus("AP") + boosts.totals.ap;
 
     // KAMPFWERTE
     const awSkillLvl = Number(boni.awSkill || 0);
@@ -109,44 +117,64 @@ class MeinHausregelSheet extends ActorSheet {
     const dexEff = context.effectiveAbilities.DEX;
     const strTitle = getTitleBonus("STR");
     const dexTitle = getTitleBonus("DEX");
-    const armorMalus = Number(boni.armormalus || 0);
+    // Skills wie Ruestungstragen senken den Ruestungsmalus.
+    const armorMalusRaw = Number(boni.armormalus || 0);
+    const armorMalus = Math.max(0, armorMalusRaw - boosts.totals.armormalus);
 
-    // Der Verteidigungswert haengt an einem Abwehr-Skill, so wie der AW an dem
-    // Skill der Waffe: Level und Machtfaktor zaehlen, und das Attribut ist das
-    // des Skills. Ausweichen rechnet mit DEX, Parade mit STR.
+    // Das Skill-Level steckt in den Steigerungen; der verknuepfte Abwehr-Skill
+    // sagt nur noch, welches Attribut den Verteidigungswert traegt —
+    // Ausweichen rechnet mit DEX, Parade mit STR.
     const defence = defenceSkill(systemData.isekaiSkills, boni.vwSkillName);
     const defenceAttr = context.effectiveAbilities[defence.attribute] ?? dexEff;
 
-    const initTotal = dexEff + Number(boni.init || 0);
-    const awTotal = 10 + awSkillLvl + strEff + Number(boni.aw || 0);
-    const vwTotal = 10 + vwSkillLvl + defence.level + defence.factor +
-      defenceAttr + Number(boni.vw || 0) - armorMalus;
+    const initTotal = dexEff + Number(boni.init || 0) + boosts.totals.init;
+    const awTotal = 10 + awSkillLvl + strEff + Number(boni.aw || 0) + boosts.totals.aw;
+    const vwTotal = 10 + vwSkillLvl + defenceAttr + Number(boni.vw || 0) -
+      armorMalus + boosts.totals.vw;
 
     // Rechenweg fuer die Hilfe-Symbole, mit den Zahlen dieses Charakters.
     const titleNote = (value, base, bonus) =>
       bonus ? `${value} (${base} + ${bonus} aus Titeln)` : `${value}`;
 
+    // Woher eine Steigerung kommt, gehoert in die Hilfe.
+    const boostNote = (target) => {
+      const quellen = boosts.sources[target];
+      if (!quellen.length) return "";
+      return `Aus Skills: ${quellen.map(e => `${e.name} ${e.amount}`).join(" + ")}` +
+        ` = ${boosts.totals[target]}. `;
+    };
+    const situationNote = (target) => {
+      const lagen = boosts.situational.filter(entry => entry.target === target);
+      if (!lagen.length) return "";
+      return `Nicht mitgerechnet, weil es von der Lage abhaengt: ` +
+        `${lagen.map(e => `${e.name} (${e.situation})`).join(", ")}. `;
+    };
+
     context.awHelp =
       `Grundwert 10 + AW-Skill ${awSkillLvl} + STR ${titleNote(strEff, str, strTitle)}` +
-      ` + Boni ${Number(boni.aw || 0)} = ${awTotal}. ` +
+      ` + Boni ${Number(boni.aw || 0)} + Skills ${boosts.totals.aw} = ${awTotal}. ` +
+      boostNote("aw") + situationNote("aw") +
       `Beim Angriff mit einer Waffe kommen dazu: Level und Machtfaktor des Waffenskills, ` +
       `der Waffenbonus und die Boni der gewaehlten Modifikationen. ` +
       `Ab gehen Flaechenmalus und Zielmalus. ` +
       `Steht ein anderes Attribut am Waffenskill, zaehlt dieses statt STR.`;
 
     const defenceNote = defence.missing
-      ? `Der Abwehr-Skill "${defence.name}" steht nicht im Bogen und zählt deshalb nicht. `
+      ? `Der Skill "${defence.name}" steht nicht im Bogen; der Verteidigungswert rechnet mit DEX. `
       : defence.name
-        ? `Abwehr-Skill ${defence.name}: Level ${defence.level} + Machtfaktor ${defence.factor} ` +
-          `(${defence.rarity}), Attribut ${defence.attribute}. `
-        : `Kein Abwehr-Skill verknüpft — wähle einen, damit Level und Machtfaktor zählen. `;
+        ? `Das Attribut kommt von ${defence.name}: ${defence.attribute}. `
+        : `Ohne gewählten Abwehr-Skill trägt DEX den Verteidigungswert. `;
+
+    const malusNote = boosts.totals.armormalus
+      ? `Rüstungsmalus ${armorMalusRaw} − ${boosts.totals.armormalus} aus Skills = ${armorMalus}. `
+      : "";
 
     context.vwHelp =
-      `Grundwert 10 + Extra ${vwSkillLvl} + Skill-Level ${defence.level} ` +
-      `+ Machtfaktor ${defence.factor} + ${defence.attribute} ` +
+      `Grundwert 10 + Extra ${vwSkillLvl} + ${defence.attribute} ` +
       `${titleNote(defenceAttr, Number(systemData.abilities?.[defence.attribute]?.value || 0), getTitleBonus(defence.attribute))}` +
-      ` + Boni ${Number(boni.vw || 0)} − Rüstungsmalus ${armorMalus} = ${vwTotal}. ` +
-      defenceNote +
+      ` + Boni ${Number(boni.vw || 0)} + Skills ${boosts.totals.vw}` +
+      ` − Rüstungsmalus ${armorMalus} = ${vwTotal}. ` +
+      boostNote("vw") + situationNote("vw") + malusNote + defenceNote +
       `Ein Angreifer vergleicht seinen AW mit diesem Wert; die Trefferchance ist ` +
       `50 × AW ÷ VW, begrenzt auf 5 bis 95 Prozent. ` +
       `Der Wert wird in den Charakterdaten mitgeführt, damit Angriffe ihn finden.`;
@@ -154,7 +182,11 @@ class MeinHausregelSheet extends ActorSheet {
     context.defence = defence;
 
     context.initHelp =
-      `DEX ${titleNote(dexEff, dex, dexTitle)} + Boni ${Number(boni.init || 0)} = ${initTotal}.`;
+      `DEX ${titleNote(dexEff, dex, dexTitle)} + Boni ${Number(boni.init || 0)}` +
+      ` + Skills ${boosts.totals.init} = ${initTotal}. ` + boostNote("init") + situationNote("init");
+
+    context.boostTargets = BOOST_TARGETS;
+    context.boostSituational = boosts.situational;
 
     // PATHFINDER 1 EP TABELLE (Normal Progression)
     const pf1XpTable = [0, 1000, 3000, 7500, 14000, 23000, 35000, 53000, 77000, 115000, 160000, 235000, 330000, 475000, 665000, 955000, 1350000, 1900000, 2700000, 3850000, 5350000];
@@ -211,7 +243,7 @@ class MeinHausregelSheet extends ActorSheet {
     // stillgelegte Eltern kommen aus dem Skill-Baum mit.
     const sources = resistanceSources({
       resistances: systemData.resistances,
-      skills: systemData.isekaiSkills,
+      skills: enrichedSkills,
       lookup: treeLookup()
     });
     const reduction = damageReduction({ armors: systemData.armors, resistances: sources });
@@ -234,6 +266,9 @@ class MeinHausregelSheet extends ActorSheet {
     // jedem Oeffnen neu nachgeschlagen werden muessen.
     const retired = new Set(reduction.retired);
     const sourceByName = new Map(sources.map(entry => [String(entry.name || "").trim().toLowerCase(), entry]));
+    const enrichedByName = new Map(enrichedSkills
+      .filter(Boolean)
+      .map(entry => [String(entry.name || "").trim().toLowerCase(), entry]));
     systemData.isekaiSkills.forEach(skill => {
       if (!skill) return;
       const source = sourceByName.get(String(skill.name || "").trim().toLowerCase());
@@ -244,6 +279,13 @@ class MeinHausregelSheet extends ActorSheet {
       skill.resistTypes = typeLabels(skill.types).join(", ");
       skill.resistValue = skill.resistTypes ? resistanceDR(skill) : 0;
       skill.condLabel = condLabel(skill.cond);
+
+      // Was der Skill steigert, am Skill selbst zeigen.
+      const enriched = enrichedByName.get(String(skill.name || "").trim().toLowerCase());
+      skill.boostText = skillBoosts(enriched || skill)
+        .map(boost => `${boost.lowers ? "−" : "+"}${boost.amount} ${BOOST_TARGETS[boost.target]}` +
+          (boost.situation ? ` (nur ${boost.situation})` : ""))
+        .join(" · ");
     });
 
     // RESISTENZEN: Level kommt aus dem verknüpften Skill

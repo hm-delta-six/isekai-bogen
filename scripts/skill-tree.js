@@ -3,8 +3,8 @@ import {
   descendants, effectLines, formatMilestones, makeCustomSkill, sheetEntry, unlockStatus, validateCustom
 } from "./skill-graph.js";
 import {
-  ARCH_FORMULAS, COND_LABELS, DAMAGE_TYPES, RESISTANCE_FORMULA, condLabel, machtfaktor, rarityRank,
-  resistanceDR, skillBonus, toArray, typeLabels
+  ARCH_FORMULAS, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES, RESISTANCE_FORMULA,
+  condLabel, machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts, toArray, typeLabels
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
@@ -262,6 +262,15 @@ export class SkillTreeApp extends Application {
       lines.push(`Schadenswürfel und Schadensbonus × ${factor}`);
     }
 
+    // Was der Skill im Bogen von selbst hebt.
+    for (const boost of skillBoosts({ ...skill, level, rarity: skill.floor })) {
+      const vorzeichen = boost.lowers ? "−" : "+";
+      lines.push(`<b>${vorzeichen}${boost.amount}</b> ${BOOST_TARGETS[boost.target]}` +
+        (boost.situation
+          ? ` — nur ${boost.situation}, der Bogen rechnet es nicht ein`
+          : " — rechnet der Bogen von selbst ein"));
+    }
+
     return { head, lines, sample: !status.owned };
   }
 
@@ -412,6 +421,36 @@ export class SkillTreeApp extends Application {
           </div>
         </div>
 
+        <div style="grid-column:1 / 3; border-top:1px solid #334155; padding-top:6px;">
+          <div style="font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">
+            Steigert einen Wert
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+            <label style="margin:0;">Wert
+              <select name="boostTarget" style="width:auto; min-width:140px;">
+                <option value="" ${value.boosts?.[0]?.t ? "" : "selected"}>&mdash; keiner &mdash;</option>
+                ${Object.entries(BOOST_TARGETS).map(([key, label]) =>
+                  `<option value="${key}" ${value.boosts?.[0]?.t === key ? "selected" : ""}>${label}</option>`).join("")}
+              </select>
+            </label>
+            <label style="margin:0;">Rechenregel
+              <select name="boostFormula" style="width:auto; min-width:180px;">
+                ${Object.entries(BOOST_FORMULAS).map(([key, label]) =>
+                  `<option value="${key}" ${(value.boosts?.[0]?.f || "standard") === key ? "selected" : ""}>${esc(label)}</option>`).join("")}
+              </select>
+            </label>
+            <label style="margin:0; flex:1 1 200px; min-width:0;">Nur in dieser Lage (optional)
+              <input type="text" name="boostSituation" placeholder="z. B. gegen Angriffe von vorn"
+                value="${esc(value.boosts?.[0]?.s || "")}"/>
+            </label>
+          </div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:4px;">
+            ${esc(BOOST_DEFAULT_NOTE)}
+            Ohne Angabe einer Lage rechnet der Bogen die Steigerung von selbst ein;
+            mit Angabe wird sie nur genannt, weil der Bogen die Lage nicht kennt.
+          </div>
+        </div>
+
         <label style="grid-column:1 / 3;">Legt diese Elternskills still
           <span style="color:#64748b; font-size:11px;">&mdash; nur eigene Eltern, der Wert zählt dann nicht mehr mit</span>
           <div class="st-replaces" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;"></div>
@@ -430,7 +469,14 @@ export class SkillTreeApp extends Application {
       ms: html.find('[name="ms"]').val(),
       types: html.find('input[name="dtype"]:checked').map((_, el) => el.value).get(),
       replaces: html.find('input[name="retire"]:checked').map((_, el) => el.value).get(),
-      cond: html.find('[name="cond"]').val() || ""
+      cond: html.find('[name="cond"]').val() || "",
+      boosts: html.find('[name="boostTarget"]').val()
+        ? [{
+          t: html.find('[name="boostTarget"]').val(),
+          f: html.find('[name="boostFormula"]').val(),
+          s: html.find('[name="boostSituation"]').val()
+        }]
+        : []
     });
 
     new Dialog({

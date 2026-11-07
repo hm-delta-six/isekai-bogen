@@ -118,6 +118,7 @@ const actor = {
       { name: "Fernkampf", level: 5, rarity: "Common", attribute: "DEX", category: "aktiv", effect: "schiessen" },
       { name: "Pistole", level: 6, rarity: "Rare", attribute: "DEX", category: "aktiv", effect: "zielen" },
       { name: "Ausweichen", level: 8, rarity: "Rare", attribute: "DEX", category: "aktiv", effect: "" },
+      { name: "Parade", level: 0, rarity: "Common", attribute: "STR", category: "aktiv", effect: "" },
       { name: "Hiebresistenz", level: 10, rarity: "Uncommon", attribute: "CON", category: "passiv", effect: "", types: "hieb" }
     ],
     weapons: [{
@@ -127,6 +128,16 @@ const actor = {
   },
   update(data) { mergeDeep(this, expandObject(data)); return Promise.resolve(this); }
 };
+
+// Den Skill-Baum laden, wie der Bogen es in Foundry tut: primeTreeLookup
+// holt die Datei ueber fetch. Das Nachschlagewerk liefert die Schadensarten
+// und die Steigerungen der Skills.
+globalThis.fetch = async (path) => ({
+  ok: true,
+  json: async () => JSON.parse(readFileSync(join(root, String(path).replace(/^modules\/isekai-bogen\//, "")), "utf8"))
+});
+const { primeTreeLookup } = await import("../scripts/skill-tree.js");
+await primeTreeLookup();
 
 const sheet = new Sheet(actor);
 
@@ -182,25 +193,41 @@ check("Schadensart bleibt", weapon.damageTypes, "stich");
 check("Beschreibung bleibt", weapon.description, "Dienstwaffe");
 
 const skills = runde.context.actor.system.isekaiSkills;
+const skillByName = (name) => skills.find(skill => skill.name === name);
 check("Skills behalten Namen", skills.map(skill => skill.name),
-  ["Fernkampf", "Pistole", "Ausweichen", "Hiebresistenz"]);
-check("Skills behalten Level", skills.map(skill => Number(skill.level)), [5, 6, 8, 10]);
+  ["Fernkampf", "Pistole", "Ausweichen", "Parade", "Hiebresistenz"]);
+check("Skills behalten Level", skills.map(skill => Number(skill.level)), [5, 6, 8, 0, 10]);
 check("Skills behalten die Raritaet", skills.map(skill => skill.rarity),
-  ["Common", "Rare", "Rare", "Uncommon"]);
-check("Skills behalten die Wirkung", skills[0].effect, "schiessen");
-check("Schadensart des Resistenz-Skills bleibt", skills[3].types, "hieb");
+  ["Common", "Rare", "Rare", "Common", "Uncommon"]);
+check("Skills behalten die Wirkung", skillByName("Fernkampf").effect, "schiessen");
+check("Schadensart des Resistenz-Skills bleibt", skillByName("Hiebresistenz").types, "hieb");
 check("Ruestung bleibt erhalten", runde.context.actor.system.armors[0].name, "Weste");
 
-// --- 4. Abwehr-Skill verknuepfen ---
+// --- 4. Steigerungen aus den Skills ---
+// Ausweichen 8 auf Rare steigert den Verteidigungswert um Level x Stufe,
+// also 8 x 3 = 24, ohne dass jemand etwas eintragen muss.
+check("Verteidigungswert enthaelt die Steigerung: 10 + DEX 14 + 24",
+  runde.context.derived.vwTotal, 48);
+check("die Hilfe nennt die Quelle",
+  runde.context.vwHelp.includes("Ausweichen 24"), true);
+const ausweichen = runde.context.actor.system.isekaiSkills.find(skill => skill.name === "Ausweichen");
+check("der Skill zeigt, was er steigert", ausweichen.boostText, "+24 Verteidigungswert");
+
+// Der verknuepfte Skill bestimmt nur noch das Attribut: Parade traegt STR 10
+// statt DEX 14, ihre eigene Steigerung ist auf Level 0 gleich null.
 const vwVorher = runde.context.derived.vwTotal;
 const daten2 = formular(runde.html);
 check("die Auswahlliste des Abwehr-Skills steht im Formular",
   "system.boni.vwSkillName" in daten2, true);
-daten2["system.boni.vwSkillName"] = "Ausweichen";
+daten2["system.boni.vwSkillName"] = "Parade";
 await actor.update(daten2);
 runde = zeichnen();
-check("Verteidigungswert folgt: Level 8 plus Machtfaktor 4",
-  runde.context.derived.vwTotal - vwVorher, 12);
+check("Attribut wechselt zu STR, also 4 weniger",
+  runde.context.derived.vwTotal - vwVorher, -4);
+
+// Was nur in einer bestimmten Lage gilt, wird genannt, nicht gerechnet
+check("situative Steigerungen bleiben aussen vor",
+  runde.context.boostSituational.map(entry => entry.name).includes("Turmschild"), false);
 
 // --- 5. Schadensreduktion ueberlebt das Speichern ---
 // Hiebresistenz 10 auf Uncommon: Machtfaktor 2, also 20

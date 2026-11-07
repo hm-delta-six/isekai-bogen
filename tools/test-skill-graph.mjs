@@ -177,6 +177,27 @@ check("Bogeneintrag traegt die Schadensarten", dickeHaut.types, "hieb,stich,wuch
 check("Bogeneintrag nennt die Eltern beim Namen",
   dickeHaut.replaces, "Hiebresistenz,Stichresistenz,Wuchtresistenz");
 
+
+// --- Steigerungen kommen aus den Daten in den Baum ------------------------
+check("Ausweichen steigert den Verteidigungswert",
+  byName("Ausweichen").boosts, [{ t: "vw" }]);
+check("Vorausahnung steigert zwei Werte halbiert",
+  byName("Vorausahnung").boosts, [{ t: "vw", f: "half" }, { t: "init", f: "half" }]);
+check("Turmschild nur in einer Lage",
+  byName("Turmschild").boosts[0].s, "gegen Angriffe von vorn");
+check("Ruestungstragen senkt den Malus um ein Fuenftel",
+  byName("Rüstungstragen").boosts, [{ t: "armormalus", f: "fifth" }]);
+check("ein Wissensskill steigert nichts", byName("Naturkunde").boosts, []);
+
+const mitBoost = makeCustomSkill(
+  { ...panzer, boosts: [{ t: "vw", f: "half", s: "" }] }, "x_boost");
+check("eigener Skill traegt die Steigerung", mitBoost.boosts, [{ t: "vw", f: "half" }]);
+const standardBoost = makeCustomSkill(
+  { ...panzer, boosts: [{ t: "init", f: "standard" }] }, "x_boost2");
+check("die Standardregel wird nicht mitgeschrieben", standardBoost.boosts, [{ t: "init" }]);
+const unbekannt = makeCustomSkill({ ...panzer, boosts: [{ t: "quatsch" }] }, "x_boost3");
+check("unbekanntes Ziel fliegt raus", unbekannt.boosts, []);
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);
