@@ -50,6 +50,11 @@ class MeinHausregelSheet extends ActorSheet {
       "AW": "AW", "VW": "VW", "INIT": "Initiative"
     };
 
+    // Ausruestung kann wie ein Titel einen Wert heben. Die Felder dafuer
+    // fehlten im Formular, der Angriffswurf las sie aber — ein eingetragener
+    // Bonus verschwand damit beim naechsten Speichern.
+    context.equipmentTypeChoices = { "": "—" , ...context.titleTypeChoices };
+
     context.armorWearChoices = ARMOR_WEAR_CHOICES;
 
     context.diceChoices = {
@@ -130,10 +135,9 @@ class MeinHausregelSheet extends ActorSheet {
     const armorMalusRaw = Number(boni.armormalus || 0);
     const armorMalus = Math.max(0, armorMalusRaw - boosts.totals.armormalus);
 
-    // Das Skill-Level steckt in den Steigerungen; der verknuepfte Abwehr-Skill
-    // sagt nur noch, welches Attribut den Verteidigungswert traegt —
-    // Ausweichen rechnet mit DEX, Parade mit STR.
-    const defence = defenceSkill(systemData.isekaiSkills, boni.vwSkillName);
+    // Das Attribut des Verteidigungswerts kommt vom staerksten Abwehr-Skill:
+    // Ausweichen traegt DEX, Parade STR. Nichts auszuwaehlen.
+    const defence = defenceSkill(enrichedSkills);
     const defenceAttr = context.effectiveAbilities[defence.attribute] ?? dexEff;
 
     // Dieselben Funktionen, die der Angriffswurf benutzt.
@@ -170,11 +174,9 @@ class MeinHausregelSheet extends ActorSheet {
       `Ab gehen Flaechenmalus und Zielmalus. ` +
       `Steht ein anderes Attribut am Waffenskill, zaehlt dieses statt STR.`;
 
-    const defenceNote = defence.missing
-      ? `Der Skill "${defence.name}" steht nicht im Bogen; der Verteidigungswert rechnet mit DEX. `
-      : defence.name
-        ? `Das Attribut kommt von ${defence.name}: ${defence.attribute}. `
-        : `Ohne gewählten Abwehr-Skill trägt DEX den Verteidigungswert. `;
+    const defenceNote = defence.name
+      ? `Das Attribut kommt von ${defence.name}, dem stärksten Abwehr-Skill: ${defence.attribute}. `
+      : `Ohne Abwehr-Skill trägt DEX den Verteidigungswert. `;
 
     const malusNote = boosts.totals.armormalus
       ? `Rüstungsmalus ${armorMalusRaw} − ${boosts.totals.armormalus} aus Skills = ${armorMalus}. `
@@ -321,13 +323,6 @@ class MeinHausregelSheet extends ActorSheet {
     });
 
     // AUSWAHLLISTE DER EIGENEN SKILLS FÜR DIE WAFFENTABELLE
-    // Abwehr-Skills zur Auswahl fuer den Verteidigungswert.
-    context.defenceSkillChoices = systemData.isekaiSkills.reduce((choices, skill) => {
-      const name = String(skill?.name || "").trim();
-      if (name) choices[name] = `${name} (${Number(skill.level || 0)}, ${skill.attribute || "DEX"})`;
-      return choices;
-    }, { "": "— kein Abwehr-Skill —" });
-
     context.weaponSkillChoices = systemData.isekaiSkills.reduce((choices, skill) => {
       const name = String(skill?.name || "").trim();
       if (name) choices[name] = `${name} (${Number(skill.level || 0)})`;
@@ -542,7 +537,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-skill').click(ev => handleArrayAction(ev, 'isekaiSkills', 'delete'));
 
     // AUSRÜSTUNG
-    html.find('.add-equipment').click(ev => handleArrayAction(ev, 'equipment', 'add', { name: "", rarity: "Common", quantity: 1, effect: "" }));
+    html.find('.add-equipment').click(ev => handleArrayAction(ev, 'equipment', 'add', { name: "", rarity: "Common", quantity: 1, type: "", bonus: 0, effect: "" }));
     html.find('.delete-equipment').click(ev => handleArrayAction(ev, 'equipment', 'delete'));
 
     // WAFFEN

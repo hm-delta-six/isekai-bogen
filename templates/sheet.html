@@ -336,19 +336,15 @@
         <div><strong>Ini:</strong> <strong style="color:#38bdf8;">{{derived.initTotal}}</strong><span class="help" title="{{initHelp}}">?</span> <small style="color:#94a3b8;">(DEX {{effectiveAbilities.DEX}} + Boni: <input type="number" class="num-short" name="system.boni.init" value="{{actor.system.boni.init}}"/>)</small></div>
         <div><strong>AW:</strong> <strong style="color:#38bdf8;">{{derived.awTotal}}</strong><span class="help" title="{{awHelp}}">?</span> <small style="color:#94a3b8;">(10 + Skill: <input type="number" class="num-short" name="system.boni.awSkill" value="{{actor.system.boni.awSkill}}"/> + STR {{effectiveAbilities.STR}} + Boni: <input type="number" class="num-short" name="system.boni.aw" value="{{actor.system.boni.aw}}"/>)</small></div>
         <div><strong>VW:</strong> <strong style="color:#38bdf8;">{{derived.vwTotal}}</strong><span class="help" title="{{vwHelp}}">?</span>
-          <small style="color:#94a3b8;">(10 + Extra: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}"/>
-          + {{defence.attribute}} {{derived.defenceAttr}} - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small>
-          <div style="margin-top:2px;">
-            <small style="color:#94a3b8;" title="Nur das Attribut: Ausweichen traegt DEX, Parade STR. Das Skill-Level rechnet der Bogen selbst ein.">Attribut vom Skill:</small>
-            <select name="system.boni.vwSkillName" style="width:auto; max-width:190px; font-size:11px;">
-              {{selectOptions defenceSkillChoices selected=actor.system.boni.vwSkillName}}
-            </select>
-            {{#if defence.name}}
-              <small style="color:#94a3b8;">
-                {{#if defence.missing}}steht nicht im Bogen{{else}}{{defence.attribute}}{{/if}}
-              </small>
-            {{/if}}
-          </div>
+          <small style="color:#94a3b8;">(10 + {{defence.attribute}} {{derived.defenceAttr}}
+          + Boni: <input type="number" class="num-short" name="system.boni.vw" value="{{actor.system.boni.vw}}"/>
+          + Extra: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}" title="Altes Feld fuer ein von Hand eingetragenes Skill-Level. Die Skills rechnet der Bogen jetzt selbst ein — dieses Feld kann auf 0."/>
+          - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small>
+          {{#if defence.name}}
+            <div style="margin-top:2px;">
+              <small style="color:#94a3b8;">Abwehr: {{defence.name}} (+{{defence.amount}}), Attribut {{defence.attribute}}</small>
+            </div>
+          {{/if}}
         </div>
       </div>
 
@@ -580,6 +576,10 @@
             <th>Gegenstand</th>
             <th style="width: 100px;">Rarität</th>
             <th style="width: 45px;">Anz.</th>
+            <th style="width: 85px;">Hebt
+              <span class="help" title="Welchen Wert der Gegenstand hebt, solange du ihn trägst. Zählt in Bogen, Angriff und Skill-Probe gleichermaßen.">?</span>
+            </th>
+            <th style="width: 45px;">Bonus</th>
             <th>Wirkung / Werte</th>
             <th style="width: 20px;"></th>
           </tr>
@@ -594,6 +594,12 @@
                 </select>
               </td>
               <td><input type="number" class="num-short" name="system.equipment.{{index}}.quantity" value="{{item.quantity}}"/></td>
+              <td>
+                <select style="width:100%;" name="system.equipment.{{index}}.type">
+                  {{selectOptions ../equipmentTypeChoices selected=item.type}}
+                </select>
+              </td>
+              <td><input type="number" class="num-short" name="system.equipment.{{index}}.bonus" value="{{item.bonus}}"/></td>
               <td><input type="text" style="width:100%;" name="system.equipment.{{index}}.effect" value="{{item.effect}}"/></td>
               <td><a class="delete-equipment btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a></td>
             </tr>

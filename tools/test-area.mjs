@@ -208,28 +208,23 @@ check("ohne Zielbonus kein Malus",
 // --- Abwehr-Skill hinter dem Verteidigungswert ----------------------------
 // Ausweichen rechnet mit DEX, Parade mit STR — so steht es in den Baumdaten.
 const bogenSkills = [
-  { name: "Ausweichen", level: 8, rarity: "Rare",   attribute: "DEX", category: "aktiv" },
-  { name: "Parade",     level: 5, rarity: "Common", attribute: "STR", category: "aktiv" }
+  { name: "Ausweichen", level: 8, rarity: "Rare",   attribute: "DEX", category: "aktiv",
+    boosts: [{ t: "vw" }] },
+  { name: "Parade",     level: 5, rarity: "Common", attribute: "STR", category: "aktiv",
+    boosts: [{ t: "vw" }] }
 ];
-check("Ausweichen: Level", defenceSkill(bogenSkills, "Ausweichen").level, 8);
-check("Ausweichen: Machtfaktor Rare", defenceSkill(bogenSkills, "Ausweichen").factor, 4);
-check("Ausweichen: DEX", defenceSkill(bogenSkills, "Ausweichen").attribute, "DEX");
-check("Parade: STR", defenceSkill(bogenSkills, "Parade").attribute, "STR");
-check("Gross- und Kleinschreibung egal", defenceSkill(bogenSkills, "ausweichen").level, 8);
-check("ohne Verknuepfung: DEX und 0", 
-  [defenceSkill(bogenSkills, "").attribute, defenceSkill(bogenSkills, "").level], ["DEX", 0]);
-check("unbekannter Skill wird gemeldet", defenceSkill(bogenSkills, "Tippfehler").missing, true);
-check("unbekannter Skill zaehlt nicht", defenceSkill(bogenSkills, "Tippfehler").level, 0);
-
-// Der Wert im Bogen, wie custom-sheet ihn rechnet
-const vw = (name, attrs, extra = 0, malus = 0) => {
-  const skill = defenceSkill(bogenSkills, name);
-  return 10 + extra + skill.level + skill.factor + (attrs[skill.attribute] || 0) - malus;
-};
-check("Ausweichen 8 (Rare) mit DEX 12: 10+8+4+12", vw("Ausweichen", { DEX: 12, STR: 10 }), 34);
-check("Parade 5 (Common) mit STR 10: 10+5+1+10", vw("Parade", { DEX: 12, STR: 10 }), 26);
-check("Ruestungsmalus geht ab", vw("Ausweichen", { DEX: 12 }, 0, 3), 31);
-check("ohne Skill bleibt der alte Wert", vw("", { DEX: 12 }, 4), 26);
+// Der staerkste Abwehr-Skill traegt das Attribut, nichts auszuwaehlen.
+check("Ausweichen 8 Rare traegt DEX", defenceSkill(bogenSkills).attribute, "DEX");
+check("und sein Beitrag ist 8 x 3", defenceSkill(bogenSkills).amount, 24);
+check("es ist Ausweichen, nicht Parade", defenceSkill(bogenSkills).name, "Ausweichen");
+check("nur Parade: STR", defenceSkill([bogenSkills[1]]).attribute, "STR");
+check("ohne Abwehr-Skill: DEX", defenceSkill([]).attribute, "DEX");
+check("und dann ohne Beitrag", defenceSkill([]).amount, 0);
+check("ein Skill ohne Steigerung zaehlt nicht",
+  defenceSkill([{ name: "Kochkunst", level: 20, rarity: "Epic", attribute: "INT" }]).name, null);
+check("eine Steigerung mit Lage traegt das Attribut nicht",
+  defenceSkill([{ name: "Turmschild", level: 9, rarity: "Epic", attribute: "STR",
+    boosts: [{ t: "vw", s: "von vorn" }] }]).attribute, "DEX");
 
 
 // --- Steigerungen: welchen Wert ein Skill hebt ----------------------------

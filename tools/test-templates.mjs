@@ -52,19 +52,21 @@ const sheetContext = {
       weapons: [{ name: "Klinge", dice: "1d8", rarity: "Rare", types: "hieb", mods: [{ skillName: "Rundumschlag" }] }],
       armors: [{ name: "Panzer", dr: 6, durability: 20, types: "hieb" }],
       resistances: [{ name: "Feuerschutz", rarity: "Rare", skillName: "Feuerresistenz", types: "feuer" }],
-      equipment: [{ name: "Seil" }], titles: [{ name: "Held", type: "STR", bonus: 2 }], skills: []
+      equipment: [{ name: "Amulett", type: "VW", bonus: 2, quantity: 1, effect: "" }],
+      titles: [{ name: "Held", type: "STR", bonus: 2 }], skills: []
     }
   },
   derived: { initTotal: 3, awTotal: 20, vwTotal: 18, defenceAttr: 12 },
-  defence: { name: "Ausweichen", level: 8, factor: 4, rarity: "Rare", attribute: "DEX", missing: false },
-  defenceSkillChoices: { "": "kein Abwehr-Skill", Ausweichen: "Ausweichen (8, DEX)" },
+  defence: { name: "Ausweichen", amount: 24, attribute: "DEX" },
+
   awHelp: "Grundwert 10 + AW-Skill 5 + STR 12 (10 + 2 aus Titeln) + Boni 0 = 27.",
   vwHelp: "Grundwert 10 + Extra 0 + DEX 12 + Boni 0 + Skills 24 - Ruestungsmalus 3 = 43.",
   initHelp: "DEX 10 + Boni 0 = 10.",
   effectiveAbilities: { STR: 10, DEX: 10, CON: 14, INT: 8, WIS: 8, CHA: 8 },
   rarityChoices: { Common: "Common", Rare: "Rare" },
   attributeChoices: { STR: "STR", CON: "CON" },
-  titleTypeChoices: { STR: "STR" }, diceChoices: { "1d8": "W8" },
+  titleTypeChoices: { STR: "STR" }, equipmentTypeChoices: { "": "-", STR: "STR", VW: "VW" },
+  diceChoices: { "1d8": "W8" },
   damageTypes: { hieb: "Hieb", feuer: "Feuer" }, areaModes: { single: "Einzelangriff" },
   skillCategories: { passiv: "Passive Skills", resistenz: "Resistenzen" },
   modBonusTypes: { targets: "Anzahl Gegner" },
@@ -78,8 +80,10 @@ const sheetContext = {
   __erwartet: [
     "Grundwert 10 + AW-Skill 5",          // Hilfe am AW
     "Ruestungsmalus 3",                   // Hilfe am VW
-    'name="system.boni.vwSkillName"',     // Auswahl des Abwehr-Skills
     "Steigert +24 Verteidigungswert",     // Steigerung am Skill
+    "Abwehr: Ausweichen (+24), Attribut DEX",
+    'name="system.equipment.0.type"',     // Ausruestung kann einen Wert heben
+    'name="system.equipment.0.bonus"',
     "Resistenzen",                        // eigene Tabelle fuer Resistenzen
     "Resistenzen aus anderen Quellen",    // die alte Tabelle, umbenannt
     "Hieb <strong>146</strong>",          // DR je Schadensart

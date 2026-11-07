@@ -173,19 +173,32 @@ export function skillByName(skills, name) {
 }
 
 /**
- * Der Abwehr-Skill hinter dem Verteidigungswert. Wie bei der Waffe kommen
- * Level und Machtfaktor dazu, und das Attribut ist das des Skills: Ausweichen
- * rechnet mit DEX, Parade mit STR. Ohne Verknuepfung bleibt es bei DEX.
+ * Welches Attribut den Verteidigungswert traegt: das des Abwehr-Skills, der am
+ * meisten dazu beitraegt. Ausweichen rechnet mit DEX, Parade mit STR. Wer
+ * beides hat, verteidigt mit seinem starkeren Skill.
+ *
+ * Fruehere Fassungen liessen das im Bogen auswaehlen. Das war nicht noetig:
+ * die Skills sagen selbst, welches Attribut sie fuehren.
  */
-export function defenceSkill(skills, name, fallbackAttribute = "DEX") {
-  const found = skillByName(skills, name);
+export function defenceSkill(skills, fallbackAttribute = "DEX") {
+  let beste = null;
+
+  for (const skill of toArray(skills)) {
+    if (!skill) continue;
+    for (const boost of skillBoosts(skill)) {
+      // Nur was wirklich zaehlt: eine Steigerung mit Lage traegt den Wert
+      // nicht, also auch nicht das Attribut.
+      if (boost.target !== "vw" || boost.situation) continue;
+      if (!beste || boost.amount > beste.amount) {
+        beste = { name: skill.name, amount: boost.amount, attribute: skill.attribute || fallbackAttribute };
+      }
+    }
+  }
+
   return {
-    name: found?.name || (name ? String(name).trim() : null),
-    level: found ? Math.max(0, Number(found.level || 0)) : 0,
-    factor: found ? machtfaktor(found.rarity) : 0,
-    rarity: found?.rarity || null,
-    attribute: found?.attribute || fallbackAttribute,
-    missing: Boolean(String(name || "").trim()) && !found
+    name: beste?.name || null,
+    amount: beste?.amount || 0,
+    attribute: beste?.attribute || fallbackAttribute
   };
 }
 export const condLabel = (cond) => COND_LABELS[cond] || "";
@@ -577,7 +590,7 @@ export function attackTotal(system, skills, weapon = null, skill = null) {
 export function defenceTotal(system, skills) {
   const boni = system?.boni || {};
   const boosts = boostTotals(skills);
-  const defence = defenceSkill(skills, boni.vwSkillName);
+  const defence = defenceSkill(skills);
   const malus = Math.max(0, Number(boni.armormalus || 0) - boosts.totals.armormalus);
 
   return 10 +

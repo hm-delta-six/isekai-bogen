@@ -104,7 +104,7 @@ const actor = {
   isOwner: true,
   system: {
     abilities: { STR: { value: 10 }, DEX: { value: 14 }, CON: { value: 12 }, INT: { value: 8 }, WIS: { value: 8 }, CHA: { value: 8 } },
-    boni: { awSkill: 0, vwSkill: 0, aw: 0, vw: 0, init: 0, armormalus: 0, vwSkillName: "" },
+    boni: { awSkill: 0, vwSkill: 0, aw: 0, vw: 0, init: 0, armormalus: 0 },
     details: { race: { level: 1, rarity: "Common" }, class: { level: 1, rarity: "Common" } },
     isekai: {}, titles: [], equipment: [], resistances: [],
     // pf1 fuehrt system.skills als Objekt mit festen Schluesseln.
@@ -216,17 +216,11 @@ check("die Hilfe nennt die Quelle",
 const ausweichen = runde.context.actor.system.isekaiSkills.find(skill => skill.name === "Ausweichen");
 check("der Skill zeigt, was er steigert", ausweichen.boostText, "+24 Verteidigungswert");
 
-// Der verknuepfte Skill bestimmt nur noch das Attribut: Parade traegt STR 10
-// statt DEX 14, ihre eigene Steigerung ist auf Level 0 gleich null.
-const vwVorher = runde.context.derived.vwTotal;
-const daten2 = formular(runde.html);
-check("die Auswahlliste des Abwehr-Skills steht im Formular",
-  "system.boni.vwSkillName" in daten2, true);
-daten2["system.boni.vwSkillName"] = "Parade";
-await actor.update(daten2);
-runde = zeichnen();
-check("Attribut wechselt zu STR, also 4 weniger",
-  runde.context.derived.vwTotal - vwVorher, -4);
+// Das Attribut kommt vom staerksten Abwehr-Skill, nichts auszuwaehlen.
+check("Ausweichen 24 traegt das Attribut", runde.context.defence.name, "Ausweichen");
+check("also DEX", runde.context.defence.attribute, "DEX");
+check("es gibt keine Auswahlliste mehr im Formular",
+  "system.boni.vwSkillName" in formular(runde.html), false);
 
 // Was nur in einer bestimmten Lage gilt, wird genannt, nicht gerechnet
 check("situative Steigerungen bleiben aussen vor",
@@ -298,5 +292,16 @@ check("Ausruestung auf VW zaehlt im Bogen", runde.context.derived.vwTotal - vwOh
 check("und im Angriff gegen den Charakter",
   defenceTotal(actor.system, alleSkills), runde.context.derived.vwTotal);
 
+
+// Beide Bonusfelder des Verteidigungswerts sind erreichbar
+const vwFelder = formular(runde.html);
+check("das Bonusfeld des VW steht im Formular", "system.boni.vw" in vwFelder, true);
+check("das alte Extra-Feld ebenso", "system.boni.vwSkill" in vwFelder, true);
+const vwVorFeld = runde.context.derived.vwTotal;
+vwFelder["system.boni.vw"] = 3;
+await actor.update(vwFelder);
+runde = zeichnen();
+check("ein Bonus von 3 kommt an", runde.context.derived.vwTotal - vwVorFeld, 3);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);
