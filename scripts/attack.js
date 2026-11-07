@@ -1,21 +1,22 @@
-import { currentPool, describeDamage, payCosts, prepareDamage, resolveDamage } from "./damage.js";
+import { currentPool, describeDamage, payCosts, prepareDamage, resolveDamage, skillLookup } from "./damage.js";
 import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
-import { COST_TYPES, MOD_BONUS_TYPES, areaSetting, machtfaktor, modBonus, summarizeMods, targetMalus, toArray, typeLabels } from "./rules.js";
+import {
+  COST_TYPES, MOD_BONUS_TYPES, abilityValue, areaSetting, attackTotal, defenceTotal, enrichSkill,
+  machtfaktor, modBonus, summarizeMods, targetMalus, toArray, typeBonus, typeLabels
+} from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
 // Ausrüstung trägt derzeit keine type/bonus-Felder, wird aber mitgelesen,
 // damit spätere Felder ohne Codeänderung greifen.
-function bonusForType(actor, type) {
-  const sum = (list) => toArray(list)
-    .reduce((acc, entry) => (entry?.type === type ? acc + Number(entry.bonus || 0) : acc), 0);
-  return sum(actor?.system?.titles) + sum(actor?.system?.equipment);
+// Die Skills eines Charakters mit den Angaben aus dem Baum: Schadensarten,
+// Ersetzungen und die Werte, die sie steigern.
+function skillsOf(actor) {
+  return toArray(actor?.system?.isekaiSkills).map(skill => enrichSkill(skill, skillLookup()));
 }
 
-function effectiveAttribute(actor, key) {
-  const attr = String(key || "STR").toUpperCase();
-  return Number(actor?.system?.abilities?.[attr]?.value || 0) + bonusForType(actor, attr);
-}
+const bonusForType = (actor, type) => typeBonus(actor?.system, type);
+const effectiveAttribute = (actor, key) => abilityValue(actor?.system, key);
 
 function usableWeapons(actor) {
   return toArray(actor?.system?.weapons)
@@ -49,13 +50,7 @@ export function weaponSkill(actor, weapon) {
 }
 
 export function attackValue(actor, weapon) {
-  const skill = weaponSkill(actor, weapon);
-  return 10 +
-    Number(actor.system?.boni?.awSkill || 0) +
-    skill.level + skill.factor +
-    effectiveAttribute(actor, skill.attribute) +
-    Number(actor.system?.boni?.aw || 0) + bonusForType(actor, "AW") +
-    Number(weapon.bonus || 0);
+  return attackTotal(actor?.system, skillsOf(actor), weapon, weaponSkill(actor, weapon));
 }
 
 // Schaden = Würfel × Machtfaktor(Waffe) + Attribut + halber AW-Skill
@@ -103,9 +98,13 @@ function attackBreakdown(actor, weapon) {
 // Der Bogen schreibt den fertigen VW nach system.isekai.vw.value.
 // boni.vw ist nur der Zuschlag und taugt nicht als Gesamtwert; der Fallback
 // liest Boegen, die noch unter system.attributes liegen.
+/**
+ * Verteidigungswert des Ziels, mit derselben Rechnung wie im Bogen. Vorher
+ * wurde der Wert gelesen, den nur der Bogen schreibt — bei einem Charakter,
+ * dessen Bogen noch nie offen war, galt stillschweigend 10.
+ */
 function defenceValue(targetActor) {
-  const stored = targetActor?.system?.isekai?.vw?.value ?? targetActor?.system?.attributes?.vw?.value;
-  return (Number(stored || 0) || 10) + bonusForType(targetActor, "VW");
+  return defenceTotal(targetActor?.system, skillsOf(targetActor));
 }
 
 const hitChanceFor = (aw, vw) => Math.max(5, Math.min(95, Math.round(50 * (aw / vw))));

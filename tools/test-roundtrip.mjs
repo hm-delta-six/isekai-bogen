@@ -260,5 +260,42 @@ check("der Bonus ist die Schadensreduktion: 10 x 2",
 check("die Tabelle wird beim Speichern mitgeschrieben",
   skillByName("Hiebresistenz").category, "resistenz");
 
+
+// --- Bogen und Angriffswurf rechnen gleich -------------------------------
+// Vorher gab es zwei Formeln: der Bogen zaehlte die Steigerungen aus Skills
+// und nur die Titel, der Angriff Titel und Ausruestung, aber keine
+// Steigerungen. Und der Angriff las den Verteidigungswert aus einem Feld, das
+// nur der Bogen schreibt — ohne geoeffneten Bogen galt stillschweigend 10.
+const { attackValue } = await import("../scripts/attack.js");
+const { defenceTotal, enrichSkill } = await import("../scripts/rules.js");
+const { useSkillLookup } = await import("../scripts/damage.js");
+const { treeLookup } = await import("../scripts/skill-tree.js");
+useSkillLookup(treeLookup);
+
+const alleSkills = runde.context.actor.system.isekaiSkills
+  .map(skill => enrichSkill(skill, treeLookup()));
+
+check("Verteidigungswert: Bogen und Angriff stimmen ueberein",
+  defenceTotal(actor.system, alleSkills), runde.context.derived.vwTotal);
+check("Angriffswert der Waffe: Bogen und Wurf stimmen ueberein",
+  attackValue(actor, runde.weapon) - runde.weapon.areaMalus, runde.weapon.calculatedAW);
+
+// Ein Titel auf AW muss in beiden Rechnungen ankommen
+const awOhneTitel = runde.context.derived.awTotal;
+actor.system.titles = [{ name: "Duellant", type: "AW", bonus: 3 }];
+runde = zeichnen();
+check("Titel auf AW hebt den Grundwert um 3",
+  runde.context.derived.awTotal - awOhneTitel, 3);
+check("und auch den Wurf mit der Waffe",
+  attackValue(actor, runde.weapon) - runde.weapon.areaMalus, runde.weapon.calculatedAW);
+
+// Ausruestung mit Typ und Bonus zaehlt ebenso in beiden
+actor.system.equipment = [{ name: "Amulett", type: "VW", bonus: 2 }];
+const vwOhne = runde.context.derived.vwTotal;
+runde = zeichnen();
+check("Ausruestung auf VW zaehlt im Bogen", runde.context.derived.vwTotal - vwOhne, 2);
+check("und im Angriff gegen den Charakter",
+  defenceTotal(actor.system, alleSkills), runde.context.derived.vwTotal);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

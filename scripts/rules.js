@@ -491,3 +491,69 @@ export function boostTotals(skills) {
 
   return { totals, sources, situational };
 }
+
+/**
+ * Flache Boni eines Typs. Titel und Ausruestung koennen beide einen Typ und
+ * einen Bonus tragen; beides wird hier gezaehlt, damit Bogen und Angriffswurf
+ * dieselbe Summe sehen. Vorher las der Bogen nur die Titel und der
+ * Angriffswurf beides.
+ */
+export function typeBonus(system, type) {
+  const sum = (list) => toArray(list)
+    .reduce((acc, entry) => (entry?.type === type ? acc + Number(entry.bonus || 0) : acc), 0);
+  return sum(system?.titles) + sum(system?.equipment);
+}
+
+// Attributswert samt flacher Boni auf dieses Attribut.
+export const abilityValue = (system, key) => {
+  const attribute = String(key || "STR").toUpperCase();
+  return Number(system?.abilities?.[attribute]?.value || 0) + typeBonus(system, attribute);
+};
+
+/**
+ * Angriffswert. Ohne Waffe ist es der Grundwert des Bogens, mit Waffe der
+ * Wert des Angriffs: dann kommen Level und Machtfaktor des Waffenskills, das
+ * Attribut dieses Skills und der Waffenbonus hinzu.
+ *
+ * Eine Funktion fuer beide Faelle, damit der Wert im Bogen und der Wert im
+ * Wurf nicht auseinanderlaufen koennen.
+ */
+export function attackTotal(system, skills, weapon = null, skill = null) {
+  const boni = system?.boni || {};
+  const used = weapon ? (skill || { level: 0, factor: 0, attribute: "STR" }) : null;
+  const attribute = used ? used.attribute || "STR" : "STR";
+
+  return 10 +
+    Number(boni.awSkill || 0) +
+    (used ? Number(used.level || 0) + Number(used.factor || 0) : 0) +
+    abilityValue(system, attribute) +
+    Number(boni.aw || 0) + typeBonus(system, "AW") +
+    boostTotals(skills).totals.aw +
+    (weapon ? Number(weapon.bonus || 0) : 0);
+}
+
+/**
+ * Verteidigungswert. Dieselbe Rechnung fuer den Bogen und fuer den Angriff
+ * gegen diesen Charakter — vorher las der Angriff einen Wert, den nur der
+ * Bogen schreibt, und fiel ohne ihn auf 10 zurueck.
+ */
+export function defenceTotal(system, skills) {
+  const boni = system?.boni || {};
+  const boosts = boostTotals(skills);
+  const defence = defenceSkill(skills, boni.vwSkillName);
+  const malus = Math.max(0, Number(boni.armormalus || 0) - boosts.totals.armormalus);
+
+  return 10 +
+    Number(boni.vwSkill || 0) +
+    abilityValue(system, defence.attribute) +
+    Number(boni.vw || 0) + typeBonus(system, "VW") -
+    malus +
+    boosts.totals.vw;
+}
+
+// Initiative.
+export function initiativeTotal(system, skills) {
+  const boni = system?.boni || {};
+  return abilityValue(system, "DEX") + Number(boni.init || 0) +
+    typeBonus(system, "INIT") + boostTotals(skills).totals.init;
+}

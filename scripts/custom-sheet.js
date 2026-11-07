@@ -6,8 +6,9 @@ import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
-  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, boostTotals,
-  condLabel, damageReduction, defenceSkill, enrichSkill, skillBoosts,
+  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, abilityValue,
+  attackTotal, boostTotals, condLabel, damageReduction, defenceSkill, defenceTotal, enrichSkill,
+  initiativeTotal, skillBoosts, typeBonus,
   machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
   skillBonus, skillCategory, toArray, typeLabels, typeList, typeValue
 } from "./rules.js";
@@ -45,7 +46,8 @@ class MeinHausregelSheet extends ActorSheet {
     context.titleTypeChoices = {
       "STR": "STR", "DEX": "DEX", "CON": "CON",
       "WIS": "WIS", "INT": "INT", "CHA": "CHA",
-      "HP": "HP", "MP": "MP", "AP": "AP"
+      "HP": "HP", "MP": "MP", "AP": "AP",
+      "AW": "AW", "VW": "VW", "INIT": "Initiative"
     };
 
     context.armorWearChoices = ARMOR_WEAR_CHOICES;
@@ -85,7 +87,8 @@ class MeinHausregelSheet extends ActorSheet {
     const boosts = boostTotals(enrichedSkills);
 
     // TITEL-BONI BERECHNEN
-    const getTitleBonus = (type) => systemData.titles.reduce((acc, t) => t?.type === type ? acc + Number(t.bonus || 0) : acc, 0);
+    // Dieselbe Summe wie im Angriffswurf: Titel und Ausruestung.
+    const getTitleBonus = (type) => typeBonus(systemData, type);
 
     context.effectiveAbilities = {
       STR: str + getTitleBonus("STR"),
@@ -130,10 +133,10 @@ class MeinHausregelSheet extends ActorSheet {
     const defence = defenceSkill(systemData.isekaiSkills, boni.vwSkillName);
     const defenceAttr = context.effectiveAbilities[defence.attribute] ?? dexEff;
 
-    const initTotal = dexEff + Number(boni.init || 0) + boosts.totals.init;
-    const awTotal = 10 + awSkillLvl + strEff + Number(boni.aw || 0) + boosts.totals.aw;
-    const vwTotal = 10 + vwSkillLvl + defenceAttr + Number(boni.vw || 0) -
-      armorMalus + boosts.totals.vw;
+    // Dieselben Funktionen, die der Angriffswurf benutzt.
+    const initTotal = initiativeTotal(systemData, enrichedSkills);
+    const awTotal = attackTotal(systemData, enrichedSkills);
+    const vwTotal = defenceTotal(systemData, enrichedSkills);
 
     // Rechenweg fuer die Hilfe-Symbole, mit den Zahlen dieses Charakters.
     const titleNote = (value, base, bonus) =>
@@ -155,7 +158,9 @@ class MeinHausregelSheet extends ActorSheet {
 
     context.awHelp =
       `Grundwert 10 + AW-Skill ${awSkillLvl} + STR ${titleNote(strEff, str, strTitle)}` +
-      ` + Boni ${Number(boni.aw || 0)} + Skills ${boosts.totals.aw} = ${awTotal}. ` +
+      ` + Boni ${Number(boni.aw || 0)}` +
+      `${getTitleBonus("AW") ? ` + Titel/Ausrüstung ${getTitleBonus("AW")}` : ""}` +
+      ` + Skills ${boosts.totals.aw} = ${awTotal}. ` +
       boostNote("aw") + situationNote("aw") +
       `Beim Angriff mit einer Waffe kommen dazu: Level und Machtfaktor des Waffenskills, ` +
       `der Waffenbonus und die Boni der gewaehlten Modifikationen. ` +
@@ -175,7 +180,9 @@ class MeinHausregelSheet extends ActorSheet {
     context.vwHelp =
       `Grundwert 10 + Extra ${vwSkillLvl} + ${defence.attribute} ` +
       `${titleNote(defenceAttr, Number(systemData.abilities?.[defence.attribute]?.value || 0), getTitleBonus(defence.attribute))}` +
-      ` + Boni ${Number(boni.vw || 0)} + Skills ${boosts.totals.vw}` +
+      ` + Boni ${Number(boni.vw || 0)}` +
+      `${getTitleBonus("VW") ? ` + Titel/Ausrüstung ${getTitleBonus("VW")}` : ""}` +
+      ` + Skills ${boosts.totals.vw}` +
       ` − Rüstungsmalus ${armorMalus} = ${vwTotal}. ` +
       boostNote("vw") + situationNote("vw") + malusNote + defenceNote +
       `Ein Angreifer vergleicht seinen AW mit diesem Wert; die Trefferchance ist ` +
@@ -204,6 +211,9 @@ class MeinHausregelSheet extends ActorSheet {
       const attrVal = getAttr(skill.attribute || "STR");
       const skillRarityR = rarityRank(skill.rarity);
       skill.cap = (attrVal * 3) + (skillRarityR * 5);
+      // Der Deckel wird angezeigt, aber nicht erzwungen: ein Level darueber
+      // waere sonst stillschweigend wirksam.
+      skill.overCap = Number(skill.level || 0) > skill.cap;
       // Die Tabelle kommt aus dem Baum, sonst bliebe eine Resistenz bei den
       // passiven Skills stehen, wo sie vor der eigenen Tabelle eingetragen war.
       skill.category = skillCategory(enrichedByName.get(String(skill.name || "").trim().toLowerCase()) || skill);

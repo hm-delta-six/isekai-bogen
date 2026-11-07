@@ -536,7 +536,8 @@
                     </select>
                   </td>
                 {{/if}}
-                <td style="text-align: center; color: #38bdf8; font-weight: bold;">{{entry.skill.cap}}</td>
+                <td style="text-align: center; font-weight: bold;{{#if entry.skill.overCap}} color:#f87171;{{else}} color:#38bdf8;{{/if}}"
+                    {{#if entry.skill.overCap}}title="Das Level liegt über dem Deckel aus Attribut × 3 + Raritätsstufe × 5. Der Bogen rechnet trotzdem mit dem eingetragenen Level."{{/if}}>{{entry.skill.cap}}</td>
                 <td style="text-align: center; color: #38bdf8; font-weight: bold;"
                     title="{{group.formula}}">{{entry.skill.bonus}}</td>
                 <td>
@@ -603,7 +604,8 @@
         <a class="add-armor" title="Rüstung hinzufügen">+ HINZUFÜGEN</a>
       </div>
       <div style="font-size: 10px; color: #94a3b8; margin-bottom: 5px;">
-        DR je Schadensart: {{derived.drSummary}}
+        DR nur aus Rüstung, je Schadensart: {{derived.drSummary}}
+        <span class="help" title="Die Schadensreduktion in den Kampfwerten zählt zusätzlich die Resistenz-Skills. Hier steht allein, was die Rüstung hält.">?</span>
       </div>
       <div style="font-size: 11px; margin-bottom: 6px;">
         Abnutzung bei Treffern:

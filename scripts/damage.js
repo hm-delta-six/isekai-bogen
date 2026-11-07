@@ -18,7 +18,7 @@ export const isIntact = (armor) => Number(armor?.durability || 0) > 0;
  */
 let lookupSource = null;
 export const useSkillLookup = (getter) => { lookupSource = getter; };
-const skillLookup = () => (typeof lookupSource === "function" ? lookupSource() : null);
+export const skillLookup = () => (typeof lookupSource === "function" ? lookupSource() : null);
 
 /**
  * HP, MP und AP liegen unter system.isekai. system.resources gehoert pf1 und
