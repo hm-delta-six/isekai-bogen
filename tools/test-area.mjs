@@ -10,30 +10,30 @@ const check = (name, got, want) => {
 
 // --- Maximale Groesse: Machtstufe der Waffe x Skill-Level ---
 // Machtstufe = 2 hoch Raritaetsstufe. Rare = Stufe 3, also Machtstufe 8.
-check("Machtstufe Common", machtstufe("Common"), 2);
-check("Machtstufe Uncommon", machtstufe("Uncommon"), 4);
-check("Machtstufe Rare", machtstufe("Rare"), 8);
-check("Machtstufe Epic", machtstufe("Epic"), 16);
-check("Machtstufe Legendary", machtstufe("Legendary"), 32);
-check("Machtstufe Transzendiert", machtstufe("Transzendiert"), 64);
-check("Machtstufe ist das Doppelte des Machtfaktors",
+check("Machtstufe Common", machtstufe("Common"), 1);
+check("Machtstufe Uncommon", machtstufe("Uncommon"), 2);
+check("Machtstufe Rare", machtstufe("Rare"), 4);
+check("Machtstufe Epic", machtstufe("Epic"), 8);
+check("Machtstufe Legendary", machtstufe("Legendary"), 16);
+check("Machtstufe Transzendiert", machtstufe("Transzendiert"), 32);
+check("Machtstufe und Machtfaktor sind dieselbe Reihe",
   ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Transzendiert"]
-    .every(r => machtstufe(r) === 2 * machtfaktor(r)), true);
+    .every(r => machtstufe(r) === machtfaktor(r)), true);
 
 check("Einzelangriff hat keine Groesse", areaMaximum("single", "Rare", 4), null);
 check("Markierte Gegner = Skill-Level", areaMaximum("marked", "Rare", 4), 4);
-check("Kegel = 8 x 4", areaMaximum("cone", "Rare", 4), 32);
-check("Kreis = 8 x 4 / 2 Durchmesser", areaMaximum("circle", "Rare", 4), 16);
-check("Linie = 8 x 4 x 2", areaMaximum("line", "Rare", 4), 64);
-check("Kreis rundet ab: 2 x 3 / 2", areaMaximum("circle", "Common", 3), 3);
+check("Kegel = 4 x 4", areaMaximum("cone", "Rare", 4), 16);
+check("Kreis = 4 x 4 / 2 Durchmesser", areaMaximum("circle", "Rare", 4), 8);
+check("Linie = 4 x 4 x 2", areaMaximum("line", "Rare", 4), 32);
+check("Kreis rundet ab: 1 x 3 / 2", areaMaximum("circle", "Common", 3), 1);
 check("ohne Skill mindestens 1", areaMaximum("cone", "Common", 0), 1);
 
 // --- Verkleinern: -1 AW pro Kaestchen weniger ---
-check("leeres Feld = volle Groesse", areaSetting("cone", "Rare", 4, ""), { mode: "cone", max: 32, size: 32, malus: 0 });
-check("null = volle Groesse", areaSetting("cone", "Rare", 4, null).size, 32);
-check("verkleinert auf 9: Malus 23", areaSetting("cone", "Rare", 4, 9), { mode: "cone", max: 32, size: 9, malus: 23 });
-check("groesser als erlaubt wird gekappt", areaSetting("cone", "Rare", 4, 50), { mode: "cone", max: 32, size: 32, malus: 0 });
-check("Unsinn = volle Groesse", areaSetting("line", "Rare", 4, "abc").size, 64);
+check("leeres Feld = volle Groesse", areaSetting("cone", "Rare", 4, ""), { mode: "cone", max: 16, size: 16, malus: 0 });
+check("null = volle Groesse", areaSetting("cone", "Rare", 4, null).size, 16);
+check("verkleinert auf 9: Malus 7", areaSetting("cone", "Rare", 4, 9), { mode: "cone", max: 16, size: 9, malus: 7 });
+check("groesser als erlaubt wird gekappt", areaSetting("cone", "Rare", 4, 50), { mode: "cone", max: 16, size: 16, malus: 0 });
+check("Unsinn = volle Groesse", areaSetting("line", "Rare", 4, "abc").size, 32);
 check("weniger Ziele kosten nichts", areaSetting("marked", "Rare", 4, 2), { mode: "marked", max: 4, size: 2, malus: 0 });
 check("unbekannter Modus wird Einzelangriff", areaSetting("quatsch", "Rare", 4, 3).mode, "single");
 
@@ -133,7 +133,7 @@ check("unbekannter Bonustyp wird ignoriert", summarizeMods([{ bonusType: "quatsc
 
 
 // --- Bonusformeln je Skill-Kategorie ---
-const { skillBonus, SKILL_USES_ATTRIBUTE, SKILL_BONUS_FORMULAS } = await import("../scripts/rules.js");
+const { skillBonus, BONUS_MODES, SKILL_USES_ATTRIBUTE, SKILL_BONUS_FORMULAS } = await import("../scripts/rules.js");
 
 // Rare = Stufe 3, Level 4, Attribut 7
 const rare4 = { rarity: "Rare", level: 4 };
@@ -264,6 +264,39 @@ check("ohne Skills bleibt alles 0", boostTotals([]).totals.vw, 0);
 check("zu jedem Ziel eine Beschriftung",
   Object.keys(BOOST_TARGETS).every(key => Boolean(BOOST_TARGETS[key])), true);
 check("Standard-Rechenregel ist benannt", Boolean(BOOST_FORMULAS.standard), true);
+
+
+// --- Rechenregel je Skill ------------------------------------------------
+// Ohne Angabe gilt die Regel der Kategorie; ein Skill kann abweichen.
+const fert = { level: 10, rarity: "Rare", category: "fertigkeit" };
+check("Fertigkeit: Level x Stufe + Attribut", skillBonus(fert, 5), 35);
+check("mit Machtstufe: Level x 4 + Attribut",
+  skillBonus({ ...fert, bonusMode: "factor" }, 5), 45);
+check("ohne Faktor: nur Level + Attribut",
+  skillBonus({ ...fert, bonusMode: "none" }, 5), 15);
+check("unbekannte Angabe faellt auf die Kategorie zurueck",
+  skillBonus({ ...fert, bonusMode: "quatsch" }, 5), 35);
+
+const passiv = { level: 10, rarity: "Rare", category: "passiv" };
+check("Passiv: Level x Stufe / 2", skillBonus(passiv), 15);
+check("Passiv mit Machtstufe: Level x 4 / 2",
+  skillBonus({ ...passiv, bonusMode: "factor" }, 0), 20);
+
+check("Aktiv rechnet von sich aus ohne Faktor",
+  skillBonus({ level: 10, rarity: "Transzendiert", category: "aktiv" }, 8), 14);
+check("Resistenz rechnet von sich aus mit der Machtstufe",
+  skillBonus({ level: 10, rarity: "Rare", category: "resistenz" }), 40);
+check("Resistenz kann auf die Stufe umgestellt werden",
+  skillBonus({ level: 10, rarity: "Rare", category: "resistenz", bonusMode: "rank" }), 30);
+check("zu jeder Rechenregel eine Beschriftung",
+  Object.keys(BONUS_MODES), ["rank", "factor", "none"]);
+
+// --- Steigerung auf Skill-Proben -----------------------------------------
+check("Skill-Proben sind ein Ziel", "check" in BOOST_TARGETS, true);
+const kundig = { name: "Gelehrsamkeit", level: 6, rarity: "Uncommon", boosts: [{ t: "check" }] };
+check("Steigerung auf Proben: 6 x 2", boostTotals([kundig]).totals.check, 12);
+check("und wird als Quelle genannt",
+  boostTotals([kundig]).sources.check.map(e => e.name), ["Gelehrsamkeit"]);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

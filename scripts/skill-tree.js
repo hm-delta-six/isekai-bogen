@@ -5,7 +5,7 @@ import {
 } from "./skill-graph.js";
 import { treeHtml } from "./tree-export.js";
 import {
-  ARCH_FORMULAS, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
+  ARCH_FORMULAS, BONUS_MODES, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
   RESISTANCE_FORMULA, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank, resistanceDR, skillBonus,
   skillBoosts, toArray, typeLabels
 } from "./rules.js";
@@ -225,6 +225,7 @@ export class SkillTreeApp extends Application {
         .map(link),
       children: skill.children.map(link),
       formula: ARCH_FORMULAS[skill.arch] || "",
+      bonusModeLabel: BONUS_MODES[skill.bonusMode] || "",
       payoff: this._payoff(skill, status),
       effects: effectLines(tree, skill.id)
     };
@@ -407,6 +408,13 @@ export class SkillTreeApp extends Application {
         <label>Typ<select name="type">${options(TYPE_LABELS, value.type)}</select></label>
         <label>Attribut<select name="attr">${options(attributes, value.attr)}</select></label>
         <label>Kosten<select name="res">${options(costs, value.res)}</select></label>
+        <label>Bonus vervielfacht mit
+          <select name="bonusMode">
+            <option value="" ${value.bonusMode ? "" : "selected"}>nach Kategorie</option>
+            ${Object.entries(BONUS_MODES).map(([key, label]) =>
+              `<option value="${key}" ${value.bonusMode === key ? "selected" : ""}>${esc(label)}</option>`).join("")}
+          </select>
+        </label>
         <label>Tabelle im Bogen
           <select name="cat">
             <option value="" ${value.cat ? "" : "selected"}>nach Typ</option>
@@ -494,6 +502,7 @@ export class SkillTreeApp extends Application {
       attr: html.find('[name="attr"]').val(),
       res: html.find('[name="res"]').val(),
       cat: html.find('[name="cat"]').val() || "",
+      bonusMode: html.find('[name="bonusMode"]').val() || "",
       parents: html.find('input[name="parent"]:checked').map((_, el) => el.value).get(),
       kern: html.find('[name="kern"]').val(),
       ms: html.find('[name="ms"]').val(),

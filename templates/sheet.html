@@ -550,6 +550,9 @@
                   {{#if entry.skill.boostText}}
                     <div style="font-size:10px; color:#94a3b8;">Steigert {{entry.skill.boostText}}</div>
                   {{/if}}
+                  {{#if entry.skill.bonusNote}}
+                    <div style="font-size:10px; color:#94a3b8;">Bonus vervielfacht mit {{entry.skill.bonusNote}}</div>
+                  {{/if}}
                 </td>
                 <td>
                   <input type="hidden" name="system.isekaiSkills.{{entry.index}}.category" value="{{entry.skill.category}}"/>

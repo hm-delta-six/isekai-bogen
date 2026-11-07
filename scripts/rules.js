@@ -35,14 +35,12 @@ export const rarityRank = (rarity) => RARITY_MAP[rarity] || 1;
 export const machtfaktor = (rarity) => MACHTFAKTOR_MAP[rarity] || 1;
 
 /**
- * Machtstufe einer Waffe: 2 hoch Raritätsstufe, also Common 2, Uncommon 4,
- * Rare 8, Epic 16, Legendary 32, Transzendiert 64.
- *
- * Nicht zu verwechseln mit dem Machtfaktor (1, 2, 4, 8, 16, 32), der auf
- * Schaden und Resistenzen wirkt. Die Machtstufe ist genau das Doppelte und
- * bestimmt die Ausdehnung eines Flächenangriffs.
+ * Machtstufe: 2 hoch (Raritätsstufe − 1), mindestens 1 — also 1, 2, 4, 8, 16,
+ * 32. Dieselbe Reihe wie der Machtfaktor; die Regeln nennen sie beim
+ * Flächenangriff Machtstufe und beim Schaden Machtfaktor. Ein Zahlenwerk
+ * unter zwei Namen, damit beide nicht auseinanderlaufen können.
  */
-export const machtstufe = (rarity) => 2 ** rarityRank(rarity);
+export const machtstufe = machtfaktor;
 
 export const toArray = (value) => {
   if (!value) return [];
@@ -216,17 +214,39 @@ export const SKILL_USES_ATTRIBUTE = {
  * Bonus eines Skills. Die Formel hängt an der Kategorie.
  * attributeValue ist der effektive Attributswert inklusive Titel-Boni.
  */
+/**
+ * Was das Skill-Level vervielfacht. Ohne Angabe gilt die Regel der Kategorie;
+ * ein Skill kann es im Baum abweichend festlegen.
+ */
+export const BONUS_MODES = {
+  rank:   "Raritätsstufe (1 bis 6)",
+  factor: "Machtstufe (1, 2, 4, 8, 16, 32)",
+  none:   "nichts, nur das Skill-Level"
+};
+
+export const bonusMultiplier = (skill, fallback) => {
+  switch (skill?.bonusMode in BONUS_MODES ? skill.bonusMode : fallback) {
+    case "factor": return machtfaktor(skill?.rarity);
+    case "none":   return 1;
+    default:       return rarityRank(skill?.rarity);
+  }
+};
+
 export function skillBonus(skill, attributeValue = 0) {
   const level = Math.max(0, Number(skill?.level || 0));
-  const rank = rarityRank(skill?.rarity);
   const attribute = Number(attributeValue || 0);
+  const category = skillCategory(skill);
 
-  switch (skillCategory(skill)) {
-    case "aktiv":        return level + Math.floor(attribute / 2);
-    case "modifikation": return level * rank;
-    case "passiv":       return Math.floor(level * rank / 2);
-    case "resistenz":    return level * machtfaktor(skill?.rarity);
-    default:             return level * rank + attribute;
+  // Die Kategorie sagt, was ohne eigene Angabe vervielfacht wird.
+  const standard = category === "resistenz" ? "factor" : category === "aktiv" ? "none" : "rank";
+  const faktor = bonusMultiplier(skill, standard);
+
+  switch (category) {
+    case "aktiv":        return level * faktor + Math.floor(attribute / 2);
+    case "modifikation": return level * faktor;
+    case "passiv":       return Math.floor(level * faktor / 2);
+    case "resistenz":    return level * faktor;
+    default:             return level * faktor + attribute;
   }
 }
 
@@ -350,6 +370,7 @@ export function enrichSkill(skill, lookup = null) {
       : nameList(found.replaces).join(","),
     cond: skill.cond || found.cond || "",
     boosts: toArray(skill.boosts).length ? skill.boosts : toArray(found.boosts),
+    bonusMode: skill.bonusMode || found.bonusMode || "",
     // Die Tabelle bestimmt der Baum. Im Bogen laesst sie sich nicht aendern,
     // und Resistenzen standen vor der eigenen Tabelle bei den passiven Skills.
     category: found.cat in SKILL_CATEGORIES ? found.cat : skill.category
@@ -421,7 +442,9 @@ export const BOOST_TARGETS = {
   ap:         "AP",
   armormalus: "Rüstungsmalus",
   speed:      "Geschwindigkeit",
-  range:      "Reichweite"
+  range:      "Reichweite",
+  // Zaehlt auf jede Skill-Probe dieses Charakters.
+  check:      "Skill-Proben"
 };
 
 // Diese Ziele senken einen Malus, statt einen Wert zu heben.
@@ -535,9 +558,11 @@ export function attackTotal(system, skills, weapon = null, skill = null) {
   const used = weapon ? (skill || { level: 0, factor: 0, attribute: "STR" }) : null;
   const attribute = used ? used.attribute || "STR" : "STR";
 
+  // Der Angriffsskill zaehlt mit Skill-Level x Raritaetsstufe auf den AW,
+  // nicht mit Level plus Machtfaktor.
   return 10 +
     Number(boni.awSkill || 0) +
-    (used ? Number(used.level || 0) + Number(used.factor || 0) : 0) +
+    (used ? Number(used.level || 0) * rarityRank(used.rarity) : 0) +
     abilityValue(system, attribute) +
     Number(boni.aw || 0) + typeBonus(system, "AW") +
     boostTotals(skills).totals.aw +

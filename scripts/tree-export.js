@@ -8,7 +8,7 @@
 // Ohne Foundry lauffaehig, damit der Generator testbar bleibt.
 import {
   ARCH_FORMULAS, BOOST_DEFAULT_NOTE, BOOST_TARGETS, DAMAGE_TYPES, MACHTFAKTOR_MAP, RARITY_MAP,
-  RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, condLabel, machtstufe, rarityRank,
+  BONUS_MODES, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, condLabel, rarityRank,
   skillBoosts, typeLabels
 } from "./rules.js";
 import { LEVEL_REQ, TYPE_LABELS, buildTree, effectLines } from "./skill-graph.js";
@@ -161,6 +161,11 @@ function skillBlock(tree, skill) {
   const formel = ARCH_FORMULAS[skill.arch];
   if (formel) zeilen.push(`<div class="zeile"><b>Rechenregel:</b> ${esc(formel)}</div>`);
 
+  if (BONUS_MODES[skill.bonusMode]) {
+    zeilen.push(`<div class="zeile"><b>Bonus vervielfacht mit:</b> ` +
+      `${esc(BONUS_MODES[skill.bonusMode])}</div>`);
+  }
+
   const leiter = effectLines(tree, skill.id).map(zeile =>
     `<div><span class="r">${esc(zeile.rarity)}</span> ${esc(zeile.base)}` +
     (zeile.extra ? ` <span class="zusatz">Dazu: ${esc(zeile.extra)}</span>` : "") + `</div>`).join("");
@@ -212,7 +217,7 @@ export function treeHtml(base, customs = [], { stand = new Date() } = {}) {
 
   const raritaeten = Object.keys(RARITY_MAP).map(name =>
     `<tr><td>${esc(name)}</td><td>${rarityRank(name)}</td>` +
-    `<td>${MACHTFAKTOR_MAP[name]}</td><td>${machtstufe(name)}</td></tr>`).join("");
+    `<td>${MACHTFAKTOR_MAP[name]}</td></tr>`).join("");
 
   const boni = Object.entries(SKILL_BONUS_FORMULAS).map(([key, formel]) =>
     `<tr><td>${esc(SKILL_CATEGORIES[key])}</td><td>${esc(formel)}</td></tr>`).join("");
@@ -244,11 +249,12 @@ export function treeHtml(base, customs = [], { stand = new Date() } = {}) {
     <dd><table class="uebersicht"><tr><th>Kategorie</th><th>Bonus</th></tr>${boni}</table></dd>
     <dt>Raritaet</dt>
     <dd><table class="uebersicht">
-      <tr><th>Rarität</th><th>Stufe</th><th>Machtfaktor</th><th>Machtstufe</th></tr>
+      <tr><th>Rarität</th><th>Stufe</th><th>Machtfaktor / Machtstufe</th></tr>
       ${raritaeten}
     </table>
-    Der Machtfaktor vervielfacht Schaden und Resistenzen, die Machtstufe die Ausdehnung
-    von Flächenangriffen.</dd>
+    Der Machtfaktor vervielfacht Schadenswürfel und Resistenzen. Dieselbe Zahl heißt beim
+    Flächenangriff Machtstufe und bestimmt dessen Ausdehnung. Der AW eines Angriffs rechnet
+    dagegen mit der Raritätsstufe: Skill-Level × Stufe.</dd>
     <dt>Schadensreduktion</dt>
     <dd>${esc(RESISTANCE_FORMULA)}. Mehrere Resistenzen addieren sich, es gibt keinen Deckel.
     Schadensarten: ${Object.values(DAMAGE_TYPES).join(", ")}.</dd>

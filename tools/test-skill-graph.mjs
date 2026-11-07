@@ -221,6 +221,16 @@ check("29 Resistenz-Skills", resistenzTabelle.length, 29);
 check("und alle aus dem Bereich Resistenz",
   resistenzTabelle.every(skill => skill.domain === "resistenz"), true);
 
+
+// --- Rechenregel kommt aus dem Baum --------------------------------------
+check("ohne Angabe leer", byName("Hiebresistenz").bonusMode, "");
+const eigenerModus = makeCustomSkill({ ...panzer, bonusMode: "factor" }, "x_mod");
+check("eigener Skill speichert sie", eigenerModus.bm, "factor");
+check("und der Baum liest sie wieder",
+  buildTree(base, [eigenerModus]).skills.x_mod.bonusMode, "factor");
+check("Unsinn wird nicht gespeichert",
+  makeCustomSkill({ ...panzer, bonusMode: "quatsch" }, "x_mod2").bm, "");
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

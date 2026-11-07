@@ -6,7 +6,7 @@ import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
-  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, abilityValue,
+  BONUS_MODES, BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, abilityValue,
   attackTotal, boostTotals, condLabel, damageReduction, defenceSkill, defenceTotal, enrichSkill,
   initiativeTotal, skillBoosts, typeBonus,
   machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
@@ -221,6 +221,9 @@ class MeinHausregelSheet extends ActorSheet {
       // passiven Skills stehen, wo sie vor der eigenen Tabelle eingetragen war.
       skill.category = skillCategory(enrichedByName.get(String(skill.name || "").trim().toLowerCase()) || skill);
       // Bonus nach der Formel der Kategorie, mit dem Attribut inklusive Titel-Boni
+      // Auch die Rechenregel kommt aus dem Baum, wenn der Skill eine eigene hat.
+      const ausBaum = enrichedByName.get(String(skill.name || "").trim().toLowerCase());
+      skill.bonusMode = ausBaum?.bonusMode || "";
       skill.bonus = skillBonus(skill, context.effectiveAbilities[skill.attribute || "STR"] || 0);
     });
 
@@ -294,6 +297,7 @@ class MeinHausregelSheet extends ActorSheet {
       skill.resistTypes = typeLabels(skill.types).join(", ");
       skill.resistValue = skill.resistTypes ? resistanceDR(skill) : 0;
       skill.condLabel = condLabel(skill.cond);
+      skill.bonusNote = BONUS_MODES[enrichedByName.get(String(skill.name || "").trim().toLowerCase())?.bonusMode] || "";
 
       // Was der Skill steigert, am Skill selbst zeigen.
       const enriched = enrichedByName.get(String(skill.name || "").trim().toLowerCase());

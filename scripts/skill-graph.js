@@ -5,7 +5,8 @@
 // Baum zusammen, in dem Kinder, Art und Einstiegsrarität berechnet sind.
 
 import {
-  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, derivedStartLevel, nameList, toArray, typeList
+  BONUS_MODES, BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, derivedStartLevel, nameList, toArray,
+  typeList
 } from "./rules.js";
 
 export const MAX_LEVEL = 7;
@@ -88,6 +89,8 @@ const shape = (skill, base) => ({
   // Resistenzen nicht an ihrem Typ erraten werden muessen: sie sind passive
   // Skills und haetten sonst in derselben Tabelle gelandet.
   cat: skill.cat in SKILL_CATEGORIES ? skill.cat : "",
+  // Was das Skill-Level vervielfacht, falls nicht die Regel der Kategorie.
+  bonusMode: skill.bm in BONUS_MODES ? skill.bm : "",
   // Resistenzangaben. Fehlten hier, womit sie aus den Baumdaten nie in den
   // Baum und damit auch nie in den Bogen gelangt sind — die Schadens-
   // reduktion blieb deshalb auf 0.
@@ -265,6 +268,7 @@ export function makeCustomSkill(input, id) {
     replaces: [...new Set(input.replaces || [])],
     cond: input.type === "P" ? String(input.cond || "").trim() : "",
     cat: input.cat in SKILL_CATEGORIES ? input.cat : "",
+    bm: input.bonusMode in BONUS_MODES ? input.bonusMode : "",
     // Welche Werte der Skill steigert. Ohne eigene Rechenregel gilt
     // Skill-Level x Raritaetsstufe.
     boosts: toArray(input.boosts)

@@ -1,4 +1,8 @@
-import { SKILL_BONUS_FORMULAS, rarityRank, skillBonus, skillCategory } from "./rules.js";
+import {
+  BONUS_MODES, SKILL_BONUS_FORMULAS, abilityValue, boostTotals, enrichSkill, rarityRank, skillBonus,
+  skillCategory, toArray as asArray
+} from "./rules.js";
+import { skillLookup } from "./damage.js";
 
 const MODULE_ID = "isekai-bogen";
 const SETTING_PAIRS = "skillPairs";
@@ -70,13 +74,14 @@ function findSkillOnActor(actor, skillName) {
   return toArray(actor?.system?.isekaiSkills).find(s => s && normalize(s.name) === needle) || null;
 }
 
-// Attribut inklusive Titel-Boni, genau wie der Bogen es oben anzeigt.
-function effectiveAttribute(actor, attributeKey) {
-  const key = String(attributeKey || "STR").toUpperCase();
-  const base = Number(actor?.system?.abilities?.[key]?.value || 0);
-  const titleBonus = toArray(actor?.system?.titles)
-    .reduce((acc, t) => (t?.type === key ? acc + Number(t?.bonus || 0) : acc), 0);
-  return base + titleBonus;
+// Attribut samt flacher Boni, dieselbe Funktion wie Bogen und Angriff.
+const effectiveAttribute = (actor, attributeKey) => abilityValue(actor?.system, attributeKey);
+
+// Steigerungen, die auf jede Skill-Probe zaehlen.
+function checkBonus(actor) {
+  const skills = asArray(actor?.system?.isekaiSkills)
+    .map(skill => enrichSkill(skill, skillLookup()));
+  return boostTotals(skills).totals.check;
 }
 
 // 1d100 + Skill-Level + Attribut + Modifikator. Hoher Wurf ist gut.
@@ -88,8 +93,10 @@ function effectiveAttribute(actor, attributeKey) {
 async function rollAdditive({ actor, skillName, skill, attribute, modifier = 0 }) {
   const attr = String(attribute || skill?.attribute || "STR").toUpperCase();
   const attributeValue = effectiveAttribute(actor, attr);
-  const entry = skill || { level: 0, rarity: "Common", category: "fertigkeit" };
-  const bonus = skillBonus(entry, attributeValue);
+  const entry = enrichSkill(skill, skillLookup())
+    || { level: 0, rarity: "Common", category: "fertigkeit" };
+  const checks = checkBonus(actor);
+  const bonus = skillBonus(entry, attributeValue) + checks;
   const mod = Number(modifier || 0);
 
   const roll = await new Roll("1d100").evaluate({ async: true });
@@ -103,7 +110,10 @@ async function rollAdditive({ actor, skillName, skill, attribute, modifier = 0 }
     skillLevel: Number(entry.level || 0),
     rank: rarityRank(entry.rarity),
     category: skillCategory(entry),
-    formula: SKILL_BONUS_FORMULAS[skillCategory(entry)],
+    formula: SKILL_BONUS_FORMULAS[skillCategory(entry)] +
+      (entry.bonusMode in BONUS_MODES ? `, vervielfacht mit ${BONUS_MODES[entry.bonusMode]}` : "") +
+      (checks ? `, dazu ${checks} aus Skills auf Proben` : ""),
+    checkBonus: checks,
     bonus,
     modifier: mod,
     roll,

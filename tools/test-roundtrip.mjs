@@ -177,8 +177,9 @@ await actor.update(daten);
 runde = zeichnen();
 
 check("der Skill ist gespeichert", runde.weapon.skillName, "Pistole");
-check("Angriffswert folgt: Level 5 Common auf 6 Rare, also +1 und +3 Machtfaktor",
-  runde.weapon.calculatedAW - awVorher, 4);
+// Fernkampf 5 x Stufe 1 = 5, Pistole 6 x Stufe 3 = 18
+check("Angriffswert folgt dem Skill: 18 statt 5",
+  runde.weapon.calculatedAW - awVorher, 13);
 check("Schaden folgt mit", runde.weapon.calculatedDamage !== schadenVorher, true);
 
 // --- 3. Speichern ohne Aenderung darf nichts verlieren ---

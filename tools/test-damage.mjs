@@ -220,11 +220,13 @@ const kaempferMit = (rarity) => ({
 });
 const klinge = { skillName: "Schwertkampf", bonus: 0 };
 
-// AW = 10 + AW-Skill 5 + Level 8 + Machtfaktor + STR 8
-check("AW Common: Machtfaktor 1", attackValue(kaempferMit("Common"), klinge), 32);
-check("AW Uncommon: Machtfaktor 2", attackValue(kaempferMit("Uncommon"), klinge), 33);
-check("AW Rare: Machtfaktor 4", attackValue(kaempferMit("Rare"), klinge), 35);
-check("AW Legendary: Machtfaktor 16", attackValue(kaempferMit("Legendary"), klinge), 47);
+// AW = 10 + AW-Skill 5 + Level 8 x Raritaetsstufe + STR 8
+check("AW Common: 8 x 1", attackValue(kaempferMit("Common"), klinge), 31);
+check("AW Uncommon: 8 x 2", attackValue(kaempferMit("Uncommon"), klinge), 39);
+check("AW Rare: 8 x 3", attackValue(kaempferMit("Rare"), klinge), 47);
+check("AW Legendary: 8 x 5", attackValue(kaempferMit("Legendary"), klinge), 63);
+check("ohne verknuepften Skill nur der Grundwert",
+  attackValue(kaempferMit("Rare"), { bonus: 0 }), 23);
 
 // Schaden = STR 8 + halber AW-Skill 3 + Level 8 + Machtfaktor
 check("Schaden Common", damageBonus(kaempferMit("Common"), klinge), 20);
