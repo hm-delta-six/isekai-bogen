@@ -10,7 +10,9 @@
   .st-tab:hover { color: #e2e8f0; border-color: #64748b; }
   .st-tab.active { background: #38bdf8; border-color: #38bdf8; color: #0f172a; font-weight: bold; }
   .st-search { width: 170px !important; flex: 0 0 170px; background: #0b1224; border: 1px solid #334155; color: #e2e8f0; border-radius: 4px; padding: 2px 6px; }
-  .st-new, .st-btn { flex: 0 0 auto; padding: 3px 9px; border-radius: 4px; border: 1px solid #38bdf8; color: #38bdf8; cursor: pointer; white-space: nowrap; background: transparent; }
+  .st-new, .st-btn, .st-export { flex: 0 0 auto; padding: 3px 9px; border-radius: 4px; border: 1px solid #38bdf8; color: #38bdf8; cursor: pointer; white-space: nowrap; background: transparent; }
+  .st-export { padding: 3px 9px; border-radius: 4px; border: 1px solid #64748b; color: #94a3b8; cursor: pointer; white-space: nowrap; background: transparent; }
+  .st-export:hover { background: #64748b; color: #0f172a; }
   .st-new:hover, .st-btn:hover { background: #38bdf8; color: #0f172a; }
   .st-btn.danger { border-color: #f87171; color: #f87171; }
   .st-btn.danger:hover { background: #f87171; color: #0f172a; }
@@ -57,6 +59,7 @@
       {{#each domains}}<a class="st-tab {{#if active}}active{{/if}}" data-domain="{{key}}">{{label}}</a>{{/each}}
     </div>
     <input class="st-search" type="search" placeholder="Skill suchen …" value="{{query}}"/>
+    <a class="st-export" title="Den ganzen Baum als eigenständige HTML-Datei speichern, mit allen eigenen Skills">Als HTML speichern</a>
     {{#if isGM}}<a class="st-new" title="Eigenen Skill anlegen, mit Ebene und Abhängigkeiten">+ Eigener Skill</a>{{/if}}
   </header>
 

@@ -34,6 +34,16 @@ export const DAMAGE_TYPES = {
 export const rarityRank = (rarity) => RARITY_MAP[rarity] || 1;
 export const machtfaktor = (rarity) => MACHTFAKTOR_MAP[rarity] || 1;
 
+/**
+ * Machtstufe einer Waffe: 2 hoch Raritätsstufe, also Common 2, Uncommon 4,
+ * Rare 8, Epic 16, Legendary 32, Transzendiert 64.
+ *
+ * Nicht zu verwechseln mit dem Machtfaktor (1, 2, 4, 8, 16, 32), der auf
+ * Schaden und Resistenzen wirkt. Die Machtstufe ist genau das Doppelte und
+ * bestimmt die Ausdehnung eines Flächenangriffs.
+ */
+export const machtstufe = (rarity) => 2 ** rarityRank(rarity);
+
 export const toArray = (value) => {
   if (!value) return [];
   return Array.isArray(value) ? value : Object.values(value);
@@ -77,14 +87,16 @@ export const AREA_MODES = {
  * Größte zulässige Ausdehnung in Kästchen (1 Kästchen = 5 Fuß / 1,5 m),
  * bei "marked" die Zahl der Ziele. Einzelangriff hat keine Größe.
  *
+ * Grundlage ist die Machtstufe der Waffe (2 hoch Raritätsstufe):
+ *
  *   Markierte Gegner  Skill-Level
- *   Kegel             Raritätsstufe × Skill-Level        (Länge)
- *   Kreis             Raritätsstufe × Skill-Level / 2    (Durchmesser)
- *   Linie             Raritätsstufe × Skill-Level × 2    (Länge, 1 breit)
+ *   Kegel             Machtstufe × Skill-Level        (Länge)
+ *   Kreis             Machtstufe × Skill-Level / 2    (Durchmesser)
+ *   Linie             Machtstufe × Skill-Level × 2    (Länge, 1 breit)
  */
 export function areaMaximum(mode, rarity, skillLevel) {
   const level = Math.max(0, Number(skillLevel || 0));
-  const base = rarityRank(rarity) * level;
+  const base = machtstufe(rarity) * level;
   switch (mode) {
     case "marked": return Math.max(1, level);
     case "cone":   return Math.max(1, base);

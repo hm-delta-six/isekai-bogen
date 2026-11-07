@@ -1,4 +1,4 @@
-import { areaMaximum, areaSetting } from "../scripts/rules.js";
+import { areaMaximum, areaSetting, machtfaktor, machtstufe } from "../scripts/rules.js";
 import { templateContains, templateCoverage, templateShape, HIT_COVERAGE } from "../scripts/area.js";
 
 let fails = 0;
@@ -8,22 +8,32 @@ const check = (name, got, want) => {
   else console.log(`ok   ${name}`);
 };
 
-// --- Maximale Groesse: Raritaetsstufe x Skill-Level ---
-// Rare = Stufe 3, Skill-Level 4
+// --- Maximale Groesse: Machtstufe der Waffe x Skill-Level ---
+// Machtstufe = 2 hoch Raritaetsstufe. Rare = Stufe 3, also Machtstufe 8.
+check("Machtstufe Common", machtstufe("Common"), 2);
+check("Machtstufe Uncommon", machtstufe("Uncommon"), 4);
+check("Machtstufe Rare", machtstufe("Rare"), 8);
+check("Machtstufe Epic", machtstufe("Epic"), 16);
+check("Machtstufe Legendary", machtstufe("Legendary"), 32);
+check("Machtstufe Transzendiert", machtstufe("Transzendiert"), 64);
+check("Machtstufe ist das Doppelte des Machtfaktors",
+  ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Transzendiert"]
+    .every(r => machtstufe(r) === 2 * machtfaktor(r)), true);
+
 check("Einzelangriff hat keine Groesse", areaMaximum("single", "Rare", 4), null);
 check("Markierte Gegner = Skill-Level", areaMaximum("marked", "Rare", 4), 4);
-check("Kegel = 3 x 4", areaMaximum("cone", "Rare", 4), 12);
-check("Kreis = 3 x 4 / 2 Durchmesser", areaMaximum("circle", "Rare", 4), 6);
-check("Linie = 3 x 4 x 2", areaMaximum("line", "Rare", 4), 24);
-check("Kreis rundet ab: 3 x 3 / 2", areaMaximum("circle", "Rare", 3), 4);
+check("Kegel = 8 x 4", areaMaximum("cone", "Rare", 4), 32);
+check("Kreis = 8 x 4 / 2 Durchmesser", areaMaximum("circle", "Rare", 4), 16);
+check("Linie = 8 x 4 x 2", areaMaximum("line", "Rare", 4), 64);
+check("Kreis rundet ab: 2 x 3 / 2", areaMaximum("circle", "Common", 3), 3);
 check("ohne Skill mindestens 1", areaMaximum("cone", "Common", 0), 1);
 
 // --- Verkleinern: -1 AW pro Kaestchen weniger ---
-check("leeres Feld = volle Groesse", areaSetting("cone", "Rare", 4, ""), { mode: "cone", max: 12, size: 12, malus: 0 });
-check("null = volle Groesse", areaSetting("cone", "Rare", 4, null).size, 12);
-check("verkleinert auf 9: Malus 3", areaSetting("cone", "Rare", 4, 9), { mode: "cone", max: 12, size: 9, malus: 3 });
-check("groesser als erlaubt wird gekappt", areaSetting("cone", "Rare", 4, 50), { mode: "cone", max: 12, size: 12, malus: 0 });
-check("Unsinn = volle Groesse", areaSetting("line", "Rare", 4, "abc").size, 24);
+check("leeres Feld = volle Groesse", areaSetting("cone", "Rare", 4, ""), { mode: "cone", max: 32, size: 32, malus: 0 });
+check("null = volle Groesse", areaSetting("cone", "Rare", 4, null).size, 32);
+check("verkleinert auf 9: Malus 23", areaSetting("cone", "Rare", 4, 9), { mode: "cone", max: 32, size: 9, malus: 23 });
+check("groesser als erlaubt wird gekappt", areaSetting("cone", "Rare", 4, 50), { mode: "cone", max: 32, size: 32, malus: 0 });
+check("Unsinn = volle Groesse", areaSetting("line", "Rare", 4, "abc").size, 64);
 check("weniger Ziele kosten nichts", areaSetting("marked", "Rare", 4, 2), { mode: "marked", max: 4, size: 2, malus: 0 });
 check("unbekannter Modus wird Einzelangriff", areaSetting("quatsch", "Rare", 4, 3).mode, "single");
 

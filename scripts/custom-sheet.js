@@ -109,6 +109,9 @@ class MeinHausregelSheet extends ActorSheet {
     const boni = systemData.boni || {};
 
     // FORMELN FÜR MAXIMALWERTE (inkl. Titel-Boni)
+    //
+    // MP kennen bewusst keinen Rassenbonus: die Klasse ist die Quelle von MP,
+    // HP und AP kommen aus Rasse und Klasse.
     const hpMax = (con * 5) + raceBonus + classBonus + Number(boni.hp || 0) + getTitleBonus("HP") + boosts.totals.hp;
     const mpMax = (int * 5) + classBonus + Number(boni.mp || 0) + getTitleBonus("MP") + boosts.totals.mp;
     const apMax = (con * 5) + raceBonus + classBonus + Number(boni.ap || 0) + getTitleBonus("AP") + boosts.totals.ap;

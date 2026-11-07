@@ -3,6 +3,7 @@ import {
   descendants, effectLines, formatMilestones, makeCustomSkill, sheetCategory, sheetEntry, unlockStatus,
   validateCustom
 } from "./skill-graph.js";
+import { treeHtml } from "./tree-export.js";
 import {
   ARCH_FORMULAS, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
   RESISTANCE_FORMULA, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank, resistanceDR, skillBonus,
@@ -306,9 +307,26 @@ export class SkillTreeApp extends Application {
     html.find(".st-chip, .st-link").click(ev => select(ev.currentTarget.dataset.id));
 
     html.find(".st-add").click(ev => this._addToSheet(ev.currentTarget.dataset.id));
+    html.find(".st-export").click(() => this._exportHtml());
     html.find(".st-new").click(() => this._openEditor());
     html.find(".st-edit").click(ev => this._openEditor(ev.currentTarget.dataset.id));
     html.find(".st-delete").click(ev => this._deleteCustom(ev.currentTarget.dataset.id));
+  }
+
+  /**
+   * Den Baum als eigenstaendige HTML-Datei herunterladen, mit den eigenen
+   * Skills dieser Welt. Dieselbe Funktion, die auch die Datei im Projekt
+   * erzeugt, damit beide gleich aussehen.
+   */
+  async _exportHtml() {
+    try {
+      const html = treeHtml(await loadBase(), customSkills());
+      const datum = new Date().toISOString().slice(0, 10);
+      saveDataToFile(html, "text/html", `ttrpg-lbds-skill-baum-${datum}.html`);
+    } catch (error) {
+      console.error(`${MODULE_ID} | Export des Skill-Baums fehlgeschlagen`, error);
+      ui.notifications.error("Der Skill-Baum liess sich nicht speichern, Einzelheiten in der Konsole.");
+    }
   }
 
   async _addToSheet(id) {

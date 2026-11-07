@@ -126,5 +126,43 @@ for (const [name, context] of [["sheet.html", sheetContext], ["skill-tree.html",
   }
 }
 
+
+// --- Der Skill-Baum als eigenstaendige Datei ------------------------------
+const { treeHtml } = await import("../scripts/tree-export.js");
+const baumDaten = JSON.parse(readFileSync(join(root, "data/skill-baum.json"), "utf8"));
+
+const eigener = {
+  id: "x_pruefstein", name: "Pruefstein", domain: "allgemein", parents: [], attr: "STR",
+  type: "P", res: "", level: 1, kern: "Nur zum Pruefen da.", ms: {},
+  types: [], replaces: [], cond: "", cat: "", boosts: [{ t: "init" }]
+};
+const seite = treeHtml(baumDaten, [eigener]);
+
+const bloecke = (seite.match(/class="skill/g) || []).length;
+if (bloecke === Object.keys(baumDaten.skills).length + 1) {
+  console.log(`ok   Skill-Baum-Datei enthaelt alle ${bloecke} Skills`);
+} else {
+  fails += 1;
+  console.log(`FAIL Skill-Baum-Datei hat ${bloecke} Skills statt ${Object.keys(baumDaten.skills).length + 1}`);
+}
+
+for (const stelle of ["Pruefstein", "Hiebresistenz", "Machtstufe", "Schadensreduktion",
+                      "eigener Skill", "+10 Initiative", "<!doctype html>"]) {
+  if (seite.includes(stelle)) {
+    console.log(`ok   Skill-Baum-Datei nennt "${stelle}"`);
+  } else {
+    fails += 1;
+    console.log(`FAIL Skill-Baum-Datei nennt "${stelle}" nicht`);
+  }
+}
+
+// Sie muss ohne Netz und ohne Foundry auskommen
+if (/src="http|href="http|<link/.test(seite)) {
+  fails += 1;
+  console.log("FAIL Skill-Baum-Datei laedt etwas von aussen");
+} else {
+  console.log("ok   Skill-Baum-Datei ist eigenstaendig");
+}
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);
