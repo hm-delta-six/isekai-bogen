@@ -119,6 +119,8 @@ const actor = {
       { name: "Pistole", level: 6, rarity: "Rare", attribute: "DEX", category: "aktiv", effect: "zielen" },
       { name: "Ausweichen", level: 8, rarity: "Rare", attribute: "DEX", category: "aktiv", effect: "" },
       { name: "Parade", level: 0, rarity: "Common", attribute: "STR", category: "aktiv", effect: "" },
+      // Absichtlich noch als passiv eingetragen: so standen Resistenzen vor
+      // der eigenen Tabelle im Bogen.
       { name: "Hiebresistenz", level: 10, rarity: "Uncommon", attribute: "CON", category: "passiv", effect: "", types: "hieb" }
     ],
     weapons: [{
@@ -246,5 +248,17 @@ check("die Raenge bleiben", pf1Skills.acr.rank, 3);
 check("der Bogen legt dort kein Feld an",
   Object.keys(pf1Skills).every(key => typeof pf1Skills[key] === "object"), true);
 
+
+// --- Resistenzen wandern in ihre eigene Tabelle ---------------------------
+const tabelle = (key) => runde.context.skillGroups.find(group => group.key === key);
+check("es gibt eine Resistenz-Tabelle", Boolean(tabelle("resistenz")), true);
+check("Hiebresistenz steht dort, nicht bei den passiven Skills",
+  tabelle("resistenz").entries.map(entry => entry.skill.name), ["Hiebresistenz"]);
+check("die passive Tabelle ist leer", tabelle("passiv").entries.length, 0);
+check("der Bonus ist die Schadensreduktion: 10 x 2",
+  tabelle("resistenz").entries[0].skill.bonus, 20);
+check("die Tabelle wird beim Speichern mitgeschrieben",
+  skillByName("Hiebresistenz").category, "resistenz");
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

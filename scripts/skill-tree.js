@@ -1,10 +1,12 @@
 import {
   ATTRIBUTES, LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_CATEGORY, TYPE_LABELS, ancestors, buildTree,
-  descendants, effectLines, formatMilestones, makeCustomSkill, sheetEntry, unlockStatus, validateCustom
+  descendants, effectLines, formatMilestones, makeCustomSkill, sheetCategory, sheetEntry, unlockStatus,
+  validateCustom
 } from "./skill-graph.js";
 import {
-  ARCH_FORMULAS, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES, RESISTANCE_FORMULA,
-  condLabel, machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts, toArray, typeLabels
+  ARCH_FORMULAS, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
+  RESISTANCE_FORMULA, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank, resistanceDR, skillBonus,
+  skillBoosts, toArray, typeLabels
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
@@ -48,7 +50,9 @@ export async function primeTreeLookup() {
     // Im Baum stehen in `replaces` die Ids der Eltern, im Bogen die Namen.
     lookup = new Map(Object.values(tree.skills).map(skill => [norm(skill.name), {
       ...skill,
-      replaces: toArray(skill.replaces).map(id => tree.skills[id]?.name || id)
+      replaces: toArray(skill.replaces).map(id => tree.skills[id]?.name || id),
+      // Aufgeloest, damit der Bogen die Tabelle nicht selbst erraten muss.
+      cat: sheetCategory(skill)
     }]));
   } catch (error) {
     console.error(`${MODULE_ID} | Skill-Baum konnte nicht geladen werden`, error);
@@ -197,6 +201,7 @@ export class SkillTreeApp extends Application {
       kind: skill.kind,
       custom: skill.custom,
       domainLabel: DOMAIN_LABELS[skill.domain] || skill.domain,
+      categoryLabel: SKILL_CATEGORIES[sheetCategory(skill)],
       attr: skill.attr,
       typeLabel: TYPE_LABELS[skill.type],
       res: skill.res,
@@ -384,7 +389,13 @@ export class SkillTreeApp extends Application {
         <label>Typ<select name="type">${options(TYPE_LABELS, value.type)}</select></label>
         <label>Attribut<select name="attr">${options(attributes, value.attr)}</select></label>
         <label>Kosten<select name="res">${options(costs, value.res)}</select></label>
-        <div></div>
+        <label>Tabelle im Bogen
+          <select name="cat">
+            <option value="" ${value.cat ? "" : "selected"}>nach Typ</option>
+            ${Object.entries(SKILL_CATEGORIES).map(([key, label]) =>
+              `<option value="${key}" ${value.cat === key ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
         <div style="grid-column:1 / 3;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <b>Elternskills</b>
@@ -464,6 +475,7 @@ export class SkillTreeApp extends Application {
       type: html.find('[name="type"]').val(),
       attr: html.find('[name="attr"]').val(),
       res: html.find('[name="res"]').val(),
+      cat: html.find('[name="cat"]').val() || "",
       parents: html.find('input[name="parent"]:checked').map((_, el) => el.value).get(),
       kern: html.find('[name="kern"]').val(),
       ms: html.find('[name="ms"]').val(),

@@ -4,7 +4,9 @@
 // speichert der Spielleiter als Weltdaten; buildTree() setzt beides zu einem
 // Baum zusammen, in dem Kinder, Art und Einstiegsrarität berechnet sind.
 
-import { BOOST_FORMULAS, BOOST_TARGETS, derivedStartLevel, nameList, toArray, typeList } from "./rules.js";
+import {
+  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, derivedStartLevel, nameList, toArray, typeList
+} from "./rules.js";
 
 export const MAX_LEVEL = 7;
 
@@ -82,6 +84,10 @@ const shape = (skill, base) => ({
   level: skill.level,
   kern: skill.kern || "",
   ms: { ...(skill.ms || {}) },
+  // In welche Tabelle des Bogens der Skill gehoert. Steht am Skill, damit
+  // Resistenzen nicht an ihrem Typ erraten werden muessen: sie sind passive
+  // Skills und haetten sonst in derselben Tabelle gelandet.
+  cat: skill.cat in SKILL_CATEGORIES ? skill.cat : "",
   // Resistenzangaben. Fehlten hier, womit sie aus den Baumdaten nie in den
   // Baum und damit auch nie in den Bogen gelangt sind — die Schadens-
   // reduktion blieb deshalb auf 0.
@@ -258,6 +264,7 @@ export function makeCustomSkill(input, id) {
     types: input.type === "P" ? [...new Set(input.types || [])] : [],
     replaces: [...new Set(input.replaces || [])],
     cond: input.type === "P" ? String(input.cond || "").trim() : "",
+    cat: input.cat in SKILL_CATEGORIES ? input.cat : "",
     // Welche Werte der Skill steigert. Ohne eigene Rechenregel gilt
     // Skill-Level x Raritaetsstufe.
     boosts: toArray(input.boosts)
@@ -337,6 +344,9 @@ export function shortEffect(skill) {
  * kennen. Das Startlevel ist der abgerundete Durchschnitt der Elternlevel
  * des Charakters; ohne Eltern beginnt der Skill bei 1.
  */
+export const sheetCategory = (skill) =>
+  skill?.cat in SKILL_CATEGORIES ? skill.cat : (TYPE_CATEGORY[skill?.type] || "fertigkeit");
+
 export function sheetEntry(skill, parentLevels = [], tree = null) {
   // Im Baum stehen in `replaces` die Ids der Eltern. Der Bogen kennt nur
   // Namen, deshalb werden sie hier aufgeloest.
@@ -348,7 +358,7 @@ export function sheetEntry(skill, parentLevels = [], tree = null) {
     rarity: skill.floor,
     level: derivedStartLevel(parentLevels),
     attribute: skill.attr,
-    category: TYPE_CATEGORY[skill.type] || "fertigkeit",
+    category: sheetCategory(skill),
     types: toArray(skill.types).join(","),
     replaces: replaces.join(","),
     cond: skill.cond || "",

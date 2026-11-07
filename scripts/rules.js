@@ -120,14 +120,16 @@ export const SKILL_CATEGORIES = {
   fertigkeit:   "Fertigkeiten",
   aktiv:        "Aktive Skills",
   modifikation: "Angriffs-Modifikationen",
-  passiv:       "Passive Skills"
+  passiv:       "Passive Skills",
+  resistenz:    "Resistenzen"
 };
 
 export const SKILL_CATEGORY_HINTS = {
   fertigkeit:   "Hängen von nichts ab und ändern nichts. Offen oder vergleichend gewürfelt.",
   aktiv:        "Werden mit einer Waffe oder einem Zauber eingesetzt.",
   modifikation: "Verändern einen Angriff. Lassen sich in der Waffenkarte hinzufügen.",
-  passiv:       "Immer aktiv, kein Wurf nötig."
+  passiv:       "Immer aktiv, kein Wurf nötig.",
+  resistenz:    "Mindern Schaden einer Art. Zählen in die Schadensreduktion der Kampfwerte."
 };
 
 export const skillCategory = (skill) =>
@@ -183,7 +185,9 @@ export const SKILL_BONUS_FORMULAS = {
   fertigkeit:   "Skill-Level × Raritätsstufe + Attribut",
   aktiv:        "Skill-Level + halber Attributswert (abgerundet)",
   modifikation: "Skill-Level × Raritätsstufe",
-  passiv:       "Skill-Level × Raritätsstufe / 2 (abgerundet)"
+  passiv:       "Skill-Level × Raritätsstufe / 2 (abgerundet)",
+  // Bei einer Resistenz ist der Bonus die Schadensreduktion selbst.
+  resistenz:    "Skill-Level × Machtfaktor der Raritätsstufe"
 };
 
 // Nur bei diesen Kategorien geht das Attribut in den Bonus ein; bei den
@@ -192,7 +196,8 @@ export const SKILL_USES_ATTRIBUTE = {
   fertigkeit:   true,
   aktiv:        true,
   modifikation: false,
-  passiv:       false
+  passiv:       false,
+  resistenz:    false
 };
 
 /**
@@ -208,6 +213,7 @@ export function skillBonus(skill, attributeValue = 0) {
     case "aktiv":        return level + Math.floor(attribute / 2);
     case "modifikation": return level * rank;
     case "passiv":       return Math.floor(level * rank / 2);
+    case "resistenz":    return level * machtfaktor(skill?.rarity);
     default:             return level * rank + attribute;
   }
 }
@@ -331,7 +337,10 @@ export function enrichSkill(skill, lookup = null) {
       ? nameList(skill.replaces).join(",")
       : nameList(found.replaces).join(","),
     cond: skill.cond || found.cond || "",
-    boosts: toArray(skill.boosts).length ? skill.boosts : toArray(found.boosts)
+    boosts: toArray(skill.boosts).length ? skill.boosts : toArray(found.boosts),
+    // Die Tabelle bestimmt der Baum. Im Bogen laesst sie sich nicht aendern,
+    // und Resistenzen standen vor der eigenen Tabelle bei den passiven Skills.
+    category: found.cat in SKILL_CATEGORIES ? found.cat : skill.category
   };
 }
 

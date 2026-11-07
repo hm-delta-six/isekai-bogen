@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ancestors, buildTree, descendants, effectLines, formatMilestones, LEVEL_FLOOR, LEVEL_REQ,
-  makeCustomSkill, parseMilestones, sheetEntry, shortEffect, unlockStatus, validateCustom
+  makeCustomSkill, parseMilestones, sheetCategory, sheetEntry, shortEffect, unlockStatus, validateCustom
 } from "../scripts/skill-graph.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -197,6 +197,29 @@ const standardBoost = makeCustomSkill(
 check("die Standardregel wird nicht mitgeschrieben", standardBoost.boosts, [{ t: "init" }]);
 const unbekannt = makeCustomSkill({ ...panzer, boosts: [{ t: "quatsch" }] }, "x_boost3");
 check("unbekanntes Ziel fliegt raus", unbekannt.boosts, []);
+
+
+// --- Tabelle im Bogen kommt aus dem Baum ----------------------------------
+check("Resistenz-Skills gehen in die Resistenz-Tabelle",
+  sheetCategory(byName("Hiebresistenz")), "resistenz");
+check("auch die ohne Schadensart", sheetCategory(byName("Willensstärke")), "resistenz");
+check("ein passiver Skill ausserhalb des Bereichs bleibt passiv",
+  sheetCategory(byName("Zauberkontrolle")), "passiv");
+check("Abwehr bleibt aktiv", sheetCategory(byName("Ausweichen")), "aktiv");
+check("Modifikationen bleiben Modifikationen",
+  sheetCategory(byName("Gezielter Schlag")), "modifikation");
+check("der Bogeneintrag traegt sie mit",
+  sheetEntry(byName("Hiebresistenz"), [10]).category, "resistenz");
+check("eigener Skill mit gesetzter Tabelle",
+  makeCustomSkill({ ...panzer, cat: "resistenz" }, "x_cat").cat, "resistenz");
+check("unbekannte Tabelle faellt auf den Typ zurueck",
+  sheetCategory(makeCustomSkill({ ...panzer, cat: "quatsch" }, "x_cat2")), "passiv");
+
+// Alle 29 Skills des Bereichs Resistenz landen dort
+const resistenzTabelle = Object.values(S).filter(skill => sheetCategory(skill) === "resistenz");
+check("29 Resistenz-Skills", resistenzTabelle.length, 29);
+check("und alle aus dem Bereich Resistenz",
+  resistenzTabelle.every(skill => skill.domain === "resistenz"), true);
 
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);

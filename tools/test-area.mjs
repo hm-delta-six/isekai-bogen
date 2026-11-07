@@ -91,10 +91,11 @@ check("Einzelangriff hat keine Form", templateShape("single", 5, 1.5, 100), null
 
 
 // --- Skill-Kategorien und Modifikations-Skills ---
-const { skillCategory, modBonus, summarizeMods, targetMalus, defenceSkill, boostAmount, boostTotals,
+const { skillCategory, modBonus, summarizeMods, targetMalus, defenceSkill, boostAmount, boostTotals, SKILL_CATEGORY_HINTS,
   skillBoosts, BOOST_TARGETS, BOOST_FORMULAS, SKILL_CATEGORIES } = await import("../scripts/rules.js");
 
-check("vier Kategorien", Object.keys(SKILL_CATEGORIES), ["fertigkeit", "aktiv", "modifikation", "passiv"]);
+const KATEGORIEN = ["fertigkeit", "aktiv", "modifikation", "passiv", "resistenz"];
+check("fuenf Kategorien", Object.keys(SKILL_CATEGORIES), KATEGORIEN);
 check("ohne Angabe: Fertigkeit", skillCategory({ name: "Alt" }), "fertigkeit");
 check("unbekannte Kategorie faellt zurueck", skillCategory({ category: "quatsch" }), "fertigkeit");
 check("gueltige Kategorie bleibt", skillCategory({ category: "passiv" }), "passiv");
@@ -137,9 +138,12 @@ check("Level 0 Fertigkeit: nur Attribut", skillBonus({ ...rare4, level: 0, categ
 check("negatives Level zaehlt 0", skillBonus({ ...rare4, level: -5, category: "fertigkeit" }, 7), 7);
 
 check("Attribut nur bei Fertigkeit und Aktiv", SKILL_USES_ATTRIBUTE,
-  { fertigkeit: true, aktiv: true, modifikation: false, passiv: false });
-check("zu jeder Kategorie eine Formel", Object.keys(SKILL_BONUS_FORMULAS),
-  ["fertigkeit", "aktiv", "modifikation", "passiv"]);
+  { fertigkeit: true, aktiv: true, modifikation: false, passiv: false, resistenz: false });
+check("zu jeder Kategorie eine Formel", Object.keys(SKILL_BONUS_FORMULAS), KATEGORIEN);
+check("zu jeder Kategorie ein Hinweis", Object.keys(SKILL_CATEGORY_HINTS), KATEGORIEN);
+
+// Bei einer Resistenz ist der Bonus die Schadensreduktion
+check("Resistenz 15 Rare: 15 x 4", skillBonus({ level: 15, rarity: "Rare", category: "resistenz" }, 99), 60);
 
 
 // --- Ziel-Bonus schaltet Einzelangriff auf mehrere Ziele um ---

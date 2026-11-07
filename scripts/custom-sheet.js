@@ -79,6 +79,9 @@ class MeinHausregelSheet extends ActorSheet {
     // beim Namen nach, damit niemand ein Skill-Level in ein Bonusfeld tippen
     // muss. Ohne eigene Angabe steigert ein Skill um Level x Raritaetsstufe.
     const enrichedSkills = systemData.isekaiSkills.map(skill => enrichSkill(skill, treeLookup()));
+    const enrichedByName = new Map(enrichedSkills
+      .filter(Boolean)
+      .map(entry => [String(entry.name || "").trim().toLowerCase(), entry]));
     const boosts = boostTotals(enrichedSkills);
 
     // TITEL-BONI BERECHNEN
@@ -201,7 +204,9 @@ class MeinHausregelSheet extends ActorSheet {
       const attrVal = getAttr(skill.attribute || "STR");
       const skillRarityR = rarityRank(skill.rarity);
       skill.cap = (attrVal * 3) + (skillRarityR * 5);
-      skill.category = skillCategory(skill);
+      // Die Tabelle kommt aus dem Baum, sonst bliebe eine Resistenz bei den
+      // passiven Skills stehen, wo sie vor der eigenen Tabelle eingetragen war.
+      skill.category = skillCategory(enrichedByName.get(String(skill.name || "").trim().toLowerCase()) || skill);
       // Bonus nach der Formel der Kategorie, mit dem Attribut inklusive Titel-Boni
       skill.bonus = skillBonus(skill, context.effectiveAbilities[skill.attribute || "STR"] || 0);
     });
@@ -266,9 +271,6 @@ class MeinHausregelSheet extends ActorSheet {
     // jedem Oeffnen neu nachgeschlagen werden muessen.
     const retired = new Set(reduction.retired);
     const sourceByName = new Map(sources.map(entry => [String(entry.name || "").trim().toLowerCase(), entry]));
-    const enrichedByName = new Map(enrichedSkills
-      .filter(Boolean)
-      .map(entry => [String(entry.name || "").trim().toLowerCase(), entry]));
     systemData.isekaiSkills.forEach(skill => {
       if (!skill) return;
       const source = sourceByName.get(String(skill.name || "").trim().toLowerCase());

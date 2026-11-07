@@ -66,7 +66,8 @@ const sheetContext = {
   attributeChoices: { STR: "STR", CON: "CON" },
   titleTypeChoices: { STR: "STR" }, diceChoices: { "1d8": "W8" },
   damageTypes: { hieb: "Hieb", feuer: "Feuer" }, areaModes: { single: "Einzelangriff" },
-  skillCategories: { passiv: "Passive Skills" }, modBonusTypes: { targets: "Anzahl Gegner" },
+  skillCategories: { passiv: "Passive Skills", resistenz: "Resistenzen" },
+  modBonusTypes: { targets: "Anzahl Gegner" },
   costTypes: { ap: "AP" }, armorWearChoices: { highest: "hoechste DR" },
   weaponSkillChoices: { "": "waehlen" }, modSkillChoices: { "": "waehlen" },
   resistanceFormula: "Skill-Level x Machtfaktor",
@@ -79,13 +80,18 @@ const sheetContext = {
     "Ruestungsmalus 3",                   // Hilfe am VW
     'name="system.boni.vwSkillName"',     // Auswahl des Abwehr-Skills
     "Steigert +24 Verteidigungswert",     // Steigerung am Skill
+    "Resistenzen",                        // eigene Tabelle fuer Resistenzen
+    "Resistenzen aus anderen Quellen",    // die alte Tabelle, umbenannt
     "Hieb <strong>146</strong>",          // DR je Schadensart
     "Resistenz 60 gegen Hieb, Stich, Wucht", // Resistenz am Skill
     "Hiebresistenz"                       // stillgelegt genannt
   ],
   skillGroups: [{
     key: "passiv", label: "Passive Skills", hint: "Immer aktiv", formula: "Level x Stufe / 2",
-    usesAttribute: false, entries: [{ index: 0, skill }]
+    usesAttribute: false, entries: []
+  }, {
+    key: "resistenz", label: "Resistenzen", hint: "Mindern Schaden einer Art",
+    formula: "Level x Machtfaktor", usesAttribute: false, entries: [{ index: 0, skill }]
   }]
 };
 

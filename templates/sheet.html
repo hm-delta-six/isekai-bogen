@@ -487,17 +487,17 @@
 
     <!-- TAB 2: SKILLS -->
     <div class="tab" data-group="primary" data-tab="skills">
-      <div style="margin-bottom: 8px;">
+      <div style="margin-bottom: 8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <a class="open-skill-tree" style="color:#38bdf8; cursor:pointer; font-size:11px; font-weight:bold;"
            title="Skill-Baum öffnen, Skills ansehen und zum Bogen hinzufügen"><i class="fas fa-sitemap"></i> SKILL-BAUM ÖFFNEN</a>
+        <small style="color:#64748b;">Skills kommen nur von dort. Der Baum sagt auch, in welche Tabelle ein Skill gehört.</small>
       </div>
       {{#each skillGroups as |group|}}
         <div class="section-header">
           <span>{{group.label}}
             <span class="help" title="Bonus = {{group.formula}}">?</span>
           </span>
-          <a class="open-skill-tree" data-category="{{group.key}}"
-             title="Skill-Baum öffnen. Skills werden nur von dort übernommen, damit Voraussetzungen und Einordnung stimmen.">+ AUS DEM BAUM</a>
+          <span style="font-size:10px; color:#64748b;">{{group.entries.length}}</span>
         </div>
         <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">{{group.hint}}</div>
         <table>
@@ -657,9 +657,11 @@
         </div>
       {{/each}}
 
-      <!-- RESISTENZEN -->
+      <!-- RESISTENZEN AUS ANDEREN QUELLEN -->
       <div class="section-header">
-        <span>Resistenzen</span>
+        <span>Resistenzen aus anderen Quellen
+          <span class="help" title="Resistenz-Skills stehen im Reiter Skills unter Resistenzen und kommen aus dem Skill-Baum. Hier nur, was nicht von einem Skill kommt: Rasse, Gegenstand, Segen. Beides zählt in dieselbe Schadensreduktion, ein Eintrag mit verknüpftem Skill zählt nicht doppelt.">?</span>
+        </span>
         <a class="add-resistance" title="Resistenz hinzufügen">+ HINZUFÜGEN</a>
       </div>
       <div style="font-size: 10px; color: #94a3b8; margin-bottom: 5px;">
