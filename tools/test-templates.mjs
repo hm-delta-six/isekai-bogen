@@ -132,41 +132,72 @@ for (const [name, context] of [["sheet.html", sheetContext], ["skill-tree.html",
 
 
 // --- Der Skill-Baum als eigenstaendige Datei ------------------------------
-const { treeHtml } = await import("../scripts/tree-export.js");
+// Sie soll aussehen und arbeiten wie das Fenster: dieselben Klassen, dasselbe
+// Stylesheet, dieselbe Aufbereitung.
+const { treeHtml, styleFromTemplate } = await import("../scripts/tree-export.js");
 const baumDaten = JSON.parse(readFileSync(join(root, "data/skill-baum.json"), "utf8"));
+const baumTemplate = readFileSync(join(root, "templates/skill-tree.html"), "utf8");
 
 const eigener = {
   id: "x_pruefstein", name: "Pruefstein", domain: "allgemein", parents: [], attr: "STR",
   type: "P", res: "", level: 1, kern: "Nur zum Pruefen da.", ms: {},
-  types: [], replaces: [], cond: "", cat: "", boosts: [{ t: "init" }]
+  types: [], replaces: [], cond: "", cat: "", bm: "", boosts: [{ t: "init" }]
 };
-const seite = treeHtml(baumDaten, [eigener]);
+const seite = treeHtml(baumDaten, [eigener], { template: baumTemplate });
 
-const bloecke = (seite.match(/class="skill/g) || []).length;
-if (bloecke === Object.keys(baumDaten.skills).length + 1) {
-  console.log(`ok   Skill-Baum-Datei enthaelt alle ${bloecke} Skills`);
-} else {
-  fails += 1;
-  console.log(`FAIL Skill-Baum-Datei hat ${bloecke} Skills statt ${Object.keys(baumDaten.skills).length + 1}`);
-}
+const pruef = (name, bedingung) => {
+  if (bedingung) console.log(`ok   ${name}`);
+  else { fails += 1; console.log(`FAIL ${name}`); }
+};
 
-for (const stelle of ["Pruefstein", "Hiebresistenz", "Machtstufe", "Schadensreduktion",
-                      "eigener Skill", "+10 Initiative", "<!doctype html>"]) {
-  if (seite.includes(stelle)) {
-    console.log(`ok   Skill-Baum-Datei nennt "${stelle}"`);
-  } else {
-    fails += 1;
-    console.log(`FAIL Skill-Baum-Datei nennt "${stelle}" nicht`);
-  }
-}
+// Das Stylesheet kommt aus dem Template, nicht aus einer zweiten Kopie.
+const stil = styleFromTemplate(baumTemplate);
+pruef("Stylesheet wird aus dem Template gelesen", stil.includes(".st-chip"));
+pruef("und steht in der Datei", seite.includes(stil.trim().slice(0, 120)));
 
-// Sie muss ohne Netz und ohne Foundry auskommen
-if (/src="http|href="http|<link/.test(seite)) {
-  fails += 1;
-  console.log("FAIL Skill-Baum-Datei laedt etwas von aussen");
-} else {
-  console.log("ok   Skill-Baum-Datei ist eigenstaendig");
+// Jede Klasse, die das Fenster-Template fuer den Baum benutzt, muss auch in
+// der Datei vorkommen — sonst sieht sie anders aus. Die Kaestchen und das
+// Detail entstehen dort beim Laden, ihre Klassen stehen also in den Daten.
+const klassenAus = (text) => new Set([...text.matchAll(/class="([^"]+)"/g)]
+  .flatMap(match => match[1].split(/[ ]+/))
+  .filter(name => (name.startsWith("st-") || name.startsWith("r-")) && !name.includes("{{")));
+const imFenster = klassenAus(baumTemplate);
+// Diese gibt es nur in Foundry: Export- und Anlegen-Knopf sowie die
+// Knopfreihe, die einen Charakter braucht.
+for (const nurFoundry of ["st-export", "st-new", "st-actions", "st-btn", "st-add", "st-edit", "st-delete"]) {
+  imFenster.delete(nurFoundry);
 }
+const fehlend = [...imFenster].filter(name => !seite.includes(name));
+pruef(`alle ${imFenster.size} Klassen des Fensters kommen vor` +
+  (fehlend.length ? ` (fehlt: ${fehlend.join(", ")})` : ""), fehlend.length === 0);
+
+// Inhalt: alle Skills, eigene dabei, die Regeln, nichts von aussen
+const marke = seite.indexOf('id="st-daten"');
+const roh = seite.slice(seite.indexOf(">", marke) + 1, seite.indexOf("<" + "/scr" + "ipt>", marke));
+const eintraege = JSON.parse(roh.split(String.fromCharCode(60, 92, 47)).join("<" + "/"));
+pruef(`Daten enthalten alle ${Object.keys(baumDaten.skills).length + 1} Skills`,
+  Object.keys(eintraege.detail).length === Object.keys(baumDaten.skills).length + 1);
+pruef("der eigene Skill ist dabei", Boolean(eintraege.detail.x_pruefstein));
+// st-tabs faengt genauso an, deshalb das Zeichen danach mitpruefen
+pruef("Reiter fuer jeden Bereich und Alle",
+  (seite.match(/class="st-tab[" ]/g) || []).length === baumDaten.doms.length + 1);
+pruef("Spalten je Reiter vorbereitet", Object.keys(eintraege.spalten).length === baumDaten.doms.length + 1);
+pruef("Vorstufen und Nachfolger je Skill", Array.isArray(eintraege.rel.x_pruefstein.anc));
+pruef("Suchfeld vorhanden", seite.includes('class="st-search"'));
+pruef("Regeln stehen darunter", seite.includes("Schadensreduktion") && seite.includes("Machtfaktor"));
+pruef("nichts wird von aussen geladen", !/src="http|href="http|<link/.test(seite));
+
+// Im Detail steht, was der Skill bringt, und die Resistenz nur einmal
+const dickeHaut = Object.entries(eintraege.detail)
+  .find(([, html]) => html.includes("<h3>Dicke Haut</h3>"))[1];
+// Im Kasten "Was der Skill bringt" steht die Reduktion genau einmal; die
+// Rechenregel darunter nennt sie noch einmal als Formel, das ist gewollt.
+const kasten = dickeHaut.slice(dickeHaut.indexOf("st-payoff"), dickeHaut.indexOf("st-note"));
+pruef("Detail nennt die Schadensreduktion genau einmal",
+  (kasten.match(/Schadensreduktion/g) || []).length === 1);
+pruef("Detail nennt die Eltern", dickeHaut.includes("Hiebresistenz"));
+pruef("Detail nennt die Raritaetsleiter", dickeHaut.includes("st-eff"));
+pruef("Detail nennt die Tabelle im Bogen", dickeHaut.includes("Resistenzen"));
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

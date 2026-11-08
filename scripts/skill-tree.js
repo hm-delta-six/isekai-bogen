@@ -1,26 +1,18 @@
 import {
-  ATTRIBUTES, LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_CATEGORY, TYPE_LABELS, ancestors, buildTree,
-  descendants, effectLines, formatMilestones, makeCustomSkill, sheetCategory, sheetEntry, unlockStatus,
-  validateCustom
+  ATTRIBUTES, MAX_LEVEL, TYPE_LABELS, ancestors, buildTree, descendants, formatMilestones,
+  makeCustomSkill, sheetCategory, sheetEntry, unlockStatus, validateCustom
 } from "./skill-graph.js";
 import { treeHtml } from "./tree-export.js";
+import { DOMAIN_LABELS, columnList, detailData, domainList, norm } from "./tree-view.js";
 import {
-  ARCH_FORMULAS, BONUS_MODES, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
-  RESISTANCE_FORMULA, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank, resistanceDR, skillBonus,
-  skillBoosts, toArray, typeLabels
+  BONUS_MODES, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
+  RESISTANCE_FORMULA, SKILL_CATEGORIES, toArray
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
 const DATA_URL = `modules/${MODULE_ID}/data/skill-baum.json`;
 const SETTING = "customSkills";
 
-const DOMAIN_LABELS = {
-  waffen: "Waffen", verteidigung: "Verteidigung", spezial: "Spezialangriffe", magie: "Magie",
-  wissen: "Wissen", herstellung: "Herstellung", resistenz: "Resistenz", allgemein: "Allgemein",
-  kombi: "Verschmelzungen"
-};
-
-const norm = (text) => String(text ?? "").trim().toLowerCase();
 
 // Eigener Escape: Namen und Texte des Spielleiters landen in HTML-Strings.
 const esc = (text) => String(text ?? "").replace(/[&<>"']/g, ch =>
@@ -150,33 +142,14 @@ export class SkillTreeApp extends Application {
     const anc = selected ? ancestors(tree, selected.id) : new Set();
     const desc = selected ? descendants(tree, selected.id) : new Set();
 
-    const domains = [{ key: "alle", label: "Alle" }, ...tree.doms.map(key => ({ key, label: DOMAIN_LABELS[key] || key }))]
-      .map(entry => ({ ...entry, active: entry.key === state.domain }));
-
-    const visible = tree.order
-      .map(id => tree.skills[id])
-      .filter(skill => state.domain === "alle" || skill.domain === state.domain);
-
-    const columns = [];
-    for (let level = 1; level <= MAX_LEVEL; level++) {
-      const skills = visible
-        .filter(skill => skill.level === level)
-        .sort((a, b) => a.name.localeCompare(b.name, "de"))
-        .map(skill => ({
-          id: skill.id,
-          name: skill.name,
-          lname: norm(skill.name),
-          rarity: skill.floor,
-          title: `${skill.name} (${skill.kind}${skill.custom ? ", eigener Skill" : ""})`,
-          cls: [
-            ownedNames.has(norm(skill.name)) ? "owned" : "",
-            skill.custom ? "custom" : "",
-            skill.id === state.selected ? "sel" : anc.has(skill.id) ? "anc" : desc.has(skill.id) ? "desc" : ""
-          ].filter(Boolean).join(" ")
-        }));
-      if (!skills.length) continue;
-      columns.push({ level, floor: tree.rn[LEVEL_FLOOR[level] - 1], req: LEVEL_REQ[level], skills });
-    }
+    const domains = domainList(tree, state.domain);
+    const columns = columnList(tree, {
+      domain: state.domain,
+      selected: state.selected,
+      ownedNames,
+      anc,
+      desc
+    });
 
     return {
       domains,
@@ -184,101 +157,13 @@ export class SkillTreeApp extends Application {
       query: state.query,
       isGM: game.user.isGM,
       actorName: this.actor?.name || "",
-      detail: selected ? this._detail(selected, ownedList, anc) : null
+      detail: selected ? detailData(tree, selected.id, {
+        owned: ownedList,
+        hasActor: Boolean(this.actor),
+        actorName: this.actor?.name || "",
+        canAdd: Boolean(this.actor?.isOwner)
+      }) : null
     };
-  }
-
-  _detail(skill, ownedList, anc) {
-    const tree = this.tree;
-    const status = unlockStatus(tree, skill.id, ownedList);
-    const hasActor = Boolean(this.actor);
-    const link = (id) => ({ id, name: tree.skills[id].name, rarity: tree.skills[id].floor });
-
-    return {
-      id: skill.id,
-      name: skill.name,
-      level: skill.level,
-      floor: skill.floor,
-      kind: skill.kind,
-      custom: skill.custom,
-      domainLabel: DOMAIN_LABELS[skill.domain] || skill.domain,
-      categoryLabel: SKILL_CATEGORIES[sheetCategory(skill)],
-      attr: skill.attr,
-      typeLabel: TYPE_LABELS[skill.type],
-      res: skill.res,
-      kern: skill.kern,
-      hasActor,
-      actorName: this.actor?.name || "",
-      owned: status.owned,
-      ownedLevel: status.ownedLevel,
-      needed: status.needed,
-      canAdd: hasActor && this.actor.isOwner && !status.owned,
-      parents: status.parents.map(parent => ({
-        ...link(parent.id),
-        level: parent.level,
-        needed: parent.needed,
-        ok: parent.ok,
-        hint: parent.has ? `Level ${parent.level}, nötig ${parent.needed}` : "nicht im Bogen"
-      })),
-      ancestors: [...anc]
-        .sort((a, b) => (tree.skills[a].level - tree.skills[b].level) || tree.skills[a].name.localeCompare(tree.skills[b].name, "de"))
-        .map(link),
-      children: skill.children.map(link),
-      formula: ARCH_FORMULAS[skill.arch] || "",
-      bonusModeLabel: BONUS_MODES[skill.bonusMode] || "",
-      payoff: this._payoff(skill, status),
-      effects: effectLines(tree, skill.id)
-    };
-  }
-
-  /**
-   * Was der Skill konkret bringt — gerechnet mit dem Level aus dem Bogen,
-   * sonst mit Level 10 als Beispiel. Die Formel selbst steht einmal in
-   * ARCH_FORMULAS und wird hier nicht wiederholt.
-   */
-  _payoff(skill, status) {
-    const level = status.owned ? Number(status.ownedLevel || 0) : 10;
-    const rank = rarityRank(skill.floor);
-    const factor = machtfaktor(skill.floor);
-    const category = TYPE_CATEGORY[skill.type] || "fertigkeit";
-    const lines = [];
-
-    const head = status.owned
-      ? `Level ${level}, ${skill.floor} (Stufe ${rank}, Machtfaktor ${factor})`
-      : `Beispiel Level 10, ${skill.floor} (Stufe ${rank}, Machtfaktor ${factor})`;
-
-    const types = typeLabels(skill.types);
-    if (types.length) {
-      lines.push(`Schadensreduktion <b>${resistanceDR({ level, rarity: skill.floor })}</b> gegen ${types.join(", ")}` +
-        (skill.cond ? ` — nur gegen ${condLabel(skill.cond)}` : ""));
-    }
-
-    const bonus = skillBonus({ level, rarity: skill.floor, category });
-    if (category === "modifikation") {
-      lines.push(`Bonus auf den Angriff <b>${bonus}</b>` +
-        `; beim Bonustyp Anzahl Gegner <b>${bonus}</b> zusätzliche Ziele für −${6 - rank} AW`);
-    } else if (category === "passiv") {
-      lines.push(`Passiver Wert <b>${bonus}</b>`);
-    } else if (category === "aktiv") {
-      lines.push(`Bonus <b>${bonus}</b> plus die Hälfte deines ${skill.attr} (abgerundet)`);
-    } else {
-      lines.push(`Bonus <b>${bonus}</b> plus dein ${skill.attr}`);
-    }
-
-    if (skill.arch === "waffe" || skill.arch === "zauber") {
-      lines.push(`Schadenswürfel und Schadensbonus × ${factor}`);
-    }
-
-    // Was der Skill im Bogen von selbst hebt.
-    for (const boost of skillBoosts({ ...skill, level, rarity: skill.floor })) {
-      const vorzeichen = boost.lowers ? "−" : "+";
-      lines.push(`<b>${vorzeichen}${boost.amount}</b> ${BOOST_TARGETS[boost.target]}` +
-        (boost.situation
-          ? ` — nur ${boost.situation}, der Bogen rechnet es nicht ein`
-          : " — rechnet der Bogen von selbst ein"));
-    }
-
-    return { head, lines, sample: !status.owned };
   }
 
   activateListeners(html) {
@@ -321,7 +206,10 @@ export class SkillTreeApp extends Application {
    */
   async _exportHtml() {
     try {
-      const html = treeHtml(await loadBase(), customSkills());
+      // Dasselbe Stylesheet, aus dem auch dieses Fenster gebaut wird.
+      const antwort = await fetch(foundry.utils.getRoute(`modules/${MODULE_ID}/templates/skill-tree.html`));
+      const template = antwort.ok ? await antwort.text() : "";
+      const html = treeHtml(await loadBase(), customSkills(), { template });
       const datum = new Date().toISOString().slice(0, 10);
       saveDataToFile(html, "text/html", `ttrpg-lbds-skill-baum-${datum}.html`);
     } catch (error) {

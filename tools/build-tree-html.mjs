@@ -13,7 +13,10 @@ const root = join(import.meta.dirname, "..");
 const ziel = process.argv[2] || join(root, "ttrpg-lbds-skill-tree.html");
 const base = JSON.parse(readFileSync(join(root, "data/skill-baum.json"), "utf8"));
 
-const html = treeHtml(base, []);
+// Das Stylesheet kommt aus dem Fenster-Template, damit die Datei genauso
+// aussieht wie der Baum im Bogen.
+const template = readFileSync(join(root, "templates/skill-tree.html"), "utf8");
+const html = treeHtml(base, [], { template });
 writeFileSync(ziel, html, "utf8");
 
 console.log(`${ziel}`);
