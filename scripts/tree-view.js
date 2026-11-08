@@ -49,10 +49,10 @@ export function columnList(tree, {
         name: skill.name,
         lname: norm(skill.name),
         rarity: skill.floor,
-        title: `${skill.name} (${skill.kind}${skill.custom ? ", eigener Skill" : ""})`,
+        title: `${skill.name} (${skill.kind}${skill.custom ? ", eigener Skill" : skill.changed ? ", geändert" : ""})`,
         cls: [
           ownedNames.has(norm(skill.name)) ? "owned" : "",
-          skill.custom ? "custom" : "",
+          skill.custom || skill.changed ? "custom" : "",
           skill.id === selected ? "sel" : anc.has(skill.id) ? "anc" : desc.has(skill.id) ? "desc" : ""
         ].filter(Boolean).join(" ")
       }));
@@ -148,6 +148,7 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
     floor: skill.floor,
     kind: skill.kind,
     custom: skill.custom,
+    changed: Boolean(skill.changed),
     domainLabel: DOMAIN_LABELS[skill.domain] || skill.domain,
     categoryLabel: SKILL_CATEGORIES[sheetCategory(skill)],
     attr: skill.attr,

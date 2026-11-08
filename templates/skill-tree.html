@@ -79,7 +79,7 @@
       {{#if detail}}
         {{#with detail}}
           <h3>{{name}}</h3>
-          <div class="st-meta">Ebene {{level}} · ab {{floor}} · {{domainLabel}} · {{attr}} · {{typeLabel}}{{#if res}} · Kosten {{res}}{{/if}} · {{kind}}{{#if custom}} · eigener Skill{{/if}}</div>
+          <div class="st-meta">Ebene {{level}} · ab {{floor}} · {{domainLabel}} · {{attr}} · {{typeLabel}}{{#if res}} · Kosten {{res}}{{/if}} · {{kind}}{{#if custom}} · eigener Skill{{/if}}{{#if changed}} · geändert{{/if}}</div>
           <div class="st-meta">Im Bogen unter &bdquo;{{categoryLabel}}&ldquo;</div>
           <p>{{kern}}</p>
 
@@ -125,10 +125,11 @@
 
           <div class="st-actions">
             {{#if canAdd}}<a class="st-btn primary st-add" data-id="{{id}}">Zum Bogen von {{actorName}} hinzufügen</a>{{/if}}
-            {{#if custom}}{{#if ../isGM}}
+            {{#if ../isGM}}
               <a class="st-btn st-edit" data-id="{{id}}">Bearbeiten</a>
-              <a class="st-btn danger st-delete" data-id="{{id}}">Löschen</a>
-            {{/if}}{{/if}}
+              {{#if custom}}<a class="st-btn danger st-delete" data-id="{{id}}">Löschen</a>{{/if}}
+              {{#if changed}}<a class="st-btn danger st-delete" data-id="{{id}}">Änderung verwerfen</a>{{/if}}
+            {{/if}}
           </div>
           {{#unless hasActor}}<p class="st-note" style="margin-top:8px;">Kein Charakter gewählt. Öffne den Baum über den Bogen, um Skills hinzuzufügen.</p>{{/unless}}
         {{/with}}

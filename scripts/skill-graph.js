@@ -126,6 +126,8 @@ const shape = (skill, base) => ({
   // mitgepflegt werden muss.
   boosts: toArray(skill.boosts).filter(entry => entry && entry.t).map(entry => ({ ...entry })),
   custom: !base,
+  // Wird gesetzt, wenn der Eintrag einen mitgelieferten Skill ersetzt.
+  changed: false,
   children: []
 });
 
@@ -148,7 +150,14 @@ export function buildTree(base, customs = []) {
     (a.level - b.level) || String(a.name).localeCompare(String(b.name), "de"));
 
   for (const custom of sortedCustoms) {
-    if (!custom?.id || skills[custom.id]) continue;
+    if (!custom?.id) continue;
+
+    // Traegt der Eintrag die Id eines mitgelieferten Skills, ersetzt er ihn.
+    // So bleiben Aenderungen des Spielleiters erhalten, wenn die Baumdaten
+    // des Moduls spaeter aktualisiert werden: sie liegen in der Welt, nicht
+    // in der Datei.
+    const ueberschreibt = Boolean(skills[custom.id]);
+
     const level = Math.min(MAX_LEVEL, Math.max(1, Math.trunc(Number(custom.level)) || 1));
     const entry = shape({ ...custom, level }, false);
     entry.domain = base.doms.includes(custom.domain) ? custom.domain : "allgemein";
@@ -157,8 +166,11 @@ export function buildTree(base, customs = []) {
     entry.arch = archetype(entry.domain, entry.type);
     entry.fl = LEVEL_FLOOR[level];
     entry.floor = rn[entry.fl - 1];
+    entry.custom = !ueberschreibt;
+    entry.changed = ueberschreibt;
+
     skills[custom.id] = entry;
-    order.push(custom.id);
+    if (!ueberschreibt) order.push(custom.id);
   }
 
   for (const id of order) {

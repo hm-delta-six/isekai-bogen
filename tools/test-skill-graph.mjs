@@ -282,6 +282,51 @@ check("nur Leerzeichen zaehlt nicht als Eintrag",
 check("ein Eintrag mit Leerzeichen davor zaehlt",
   parseMilestones("Rare:   trifft doppelt"), { R: "trifft doppelt" });
 
+
+// --- Mitgelieferte Skills ueberschreiben ---------------------------------
+// Aenderungen des Spielleiters liegen in der Welt, nicht in der Datei des
+// Moduls. Ein Datenupdate darf sie deshalb nicht ueberschreiben.
+const original = byName("Hiebresistenz");
+const geaendert = makeCustomSkill({
+  ...original,
+  name: "Hiebresistenz",
+  kern: "Vom Spielleiter umgeschrieben.",
+  level: original.level,
+  domain: original.domain,
+  attr: "STR",
+  type: original.type,
+  cat: "resistenz",
+  types: ["hieb", "wucht"]
+}, original.id);
+
+const mitAenderung = buildTree(base, [geaendert]);
+const drin = mitAenderung.skills[original.id];
+check("die Aenderung ersetzt den Skill", drin.kern, "Vom Spielleiter umgeschrieben.");
+check("und behaelt seine Id", drin.id, original.id);
+check("der Baum wird nicht groesser", mitAenderung.order.length, tree.order.length);
+check("sie gilt als geaendert, nicht als eigener Skill",
+  [drin.changed, drin.custom], [true, false]);
+check("das Attribut ist uebernommen", drin.attr, "STR");
+check("die Schadensarten auch", drin.types, ["hieb", "wucht"]);
+check("der Archetyp bleibt, also auch die Raritaetsleiter", drin.arch, original.arch);
+check("Kinder haengen weiter daran",
+  mitAenderung.skills[original.id].children.length, original.children.length);
+
+// Dasselbe mit spaeter geaenderten Baumdaten: die Aenderung gewinnt
+const spaeter = JSON.parse(JSON.stringify(base));
+spaeter.skills[original.id].kern = "Neuer Text aus einem Modul-Update.";
+const nachUpdate = buildTree(spaeter, [geaendert]);
+check("ein Datenupdate ueberschreibt die Aenderung nicht",
+  nachUpdate.skills[original.id].kern, "Vom Spielleiter umgeschrieben.");
+
+// Ohne Aenderung kommt der neue Text durch
+check("ohne Aenderung kommt der neue Text an",
+  buildTree(spaeter, []).skills[original.id].kern, "Neuer Text aus einem Modul-Update.");
+
+// Ein eigener Skill bleibt ein eigener Skill
+const eigen = buildTree(base, [makeCustomSkill({ ...panzer }, "x_eigen")]).skills.x_eigen;
+check("eigener Skill bleibt als solcher markiert", [eigen.custom, eigen.changed], [true, false]);
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

@@ -40,3 +40,41 @@ oder an den Formeln in `scripts/rules.js` neu erzeugen.**
 Die eigenen Skills einer Welt stehen in Foundry, nicht im Projekt. Dafuer gibt
 es im Skill-Baum-Fenster den Knopf **Als HTML speichern**: derselbe Generator,
 aber mit den eigenen Skills der Welt.
+
+## Varianten des Skill-Baums
+
+Das Modul bringt zwei Grundbestaende mit; welcher gilt, waehlt eine
+Welteinstellung ("Skill-Baum") in den Moduleinstellungen:
+
+| Datei | Inhalt |
+| --- | --- |
+| `data/skill-baum.json` | Grundbestand, 304 Skills |
+| `data/skill-baum-modern.json` | dazu 68 moderne bis futuristische, 372 Skills |
+
+Die Variante wird erzeugt, nicht von Hand gepflegt:
+
+```bash
+node tools/build-modern-tree.mjs
+```
+
+Sie entsteht aus dem Grundbestand plus `docs/vorschlag-moderne-skills.json`
+und wird dabei gegen dieselben Regeln geprueft wie jeder eigene Skill.
+
+Die HTML-Datei gibt es zu beiden:
+
+```bash
+node tools/build-tree-html.mjs
+node tools/build-tree-html.mjs data/skill-baum-modern.json
+```
+
+## Aenderungen an mitgelieferten Skills
+
+Der Spielleiter kann jeden Skill bearbeiten, nicht nur eigene. Eine Aenderung
+an einem mitgelieferten Skill wird **nicht** in `data/` geschrieben, sondern
+als Ueberschreibung in der Welt gespeichert (dieselbe Einstellung wie eigene
+Skills, erkennbar an der Id des Originals). `buildTree` legt sie beim Laden
+ueber den Grundbestand.
+
+Darum darf `data/skill-baum.json` jederzeit aktualisiert werden: was der
+Spielleiter geaendert hat, bleibt. `tools/test-skill-graph.mjs` prueft genau
+das.

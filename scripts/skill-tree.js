@@ -11,8 +11,22 @@ import {
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
-const DATA_URL = `modules/${MODULE_ID}/data/skill-baum.json`;
 const SETTING = "customSkills";
+const SETTING_BAUM = "skillTree";
+
+/**
+ * Welcher Grundbestand geladen wird. Die eigenen Skills und die Aenderungen
+ * an mitgelieferten liegen davon getrennt in der Welt und gelten in beiden.
+ */
+const BAUM_DATEIEN = {
+  basis: { label: "Grundbestand (304 Skills)", file: "skill-baum.json" },
+  modern: { label: "Mit modernen und futuristischen Skills (372)", file: "skill-baum-modern.json" }
+};
+
+const baumDatei = () => {
+  const gewaehlt = game.settings.get(MODULE_ID, SETTING_BAUM);
+  return (BAUM_DATEIEN[gewaehlt] || BAUM_DATEIEN.basis).file;
+};
 
 
 // Eigener Escape: Namen und Texte des Spielleiters landen in HTML-Strings.
@@ -20,11 +34,16 @@ const esc = (text) => String(text ?? "").replace(/[&<>"']/g, ch =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
 let baseData = null;
+let baseFile = null;
 async function loadBase() {
-  if (baseData) return baseData;
-  const response = await fetch(foundry.utils.getRoute(DATA_URL));
-  if (!response.ok) throw new Error(`${DATA_URL}: HTTP ${response.status}`);
+  const datei = baumDatei();
+  if (baseData && baseFile === datei) return baseData;
+
+  const url = `modules/${MODULE_ID}/data/${datei}`;
+  const response = await fetch(foundry.utils.getRoute(url));
+  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   baseData = await response.json();
+  baseFile = datei;
   return baseData;
 }
 
@@ -55,6 +74,23 @@ export async function primeTreeLookup() {
 }
 
 export function registerSkillTreeSettings() {
+  // Welcher Grundbestand gilt. Sichtbar in den Moduleinstellungen, damit der
+  // Spielleiter die Variante ohne Dateiarbeit waehlen kann.
+  game.settings.register(MODULE_ID, SETTING_BAUM, {
+    name: "Skill-Baum",
+    hint: "Welcher Grundbestand geladen wird. Eigene Skills und Änderungen an mitgelieferten " +
+      "bleiben in beiden Fällen erhalten.",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: Object.fromEntries(Object.entries(BAUM_DATEIEN).map(([key, eintrag]) => [key, eintrag.label])),
+    default: "basis",
+    onChange: () => {
+      baseData = null;
+      primeTreeLookup().then(() => SkillTreeApp.refresh());
+    }
+  });
+
   // Eigene Skills gehören der Welt: der Spielleiter pflegt sie, alle sehen sie.
   game.settings.register(MODULE_ID, SETTING, {
     scope: "world",
@@ -259,7 +295,12 @@ export class SkillTreeApp extends Application {
     if (!game.user.isGM) return;
 
     const tree = this.tree;
-    const existing = editId ? customSkills().find(entry => entry.id === editId) : null;
+    // Bearbeiten laesst sich jeder Skill. Bei einem mitgelieferten kommt die
+    // Vorlage aus dem Baum; gespeichert wird sie als Ueberschreibung in der
+    // Welt, die Datei des Moduls bleibt unberuehrt.
+    const existing = editId
+      ? (customSkills().find(entry => entry.id === editId) || tree.skills[editId])
+      : null;
     if (editId && !existing) return ui.notifications.error("Der Skill existiert nicht mehr.");
 
     const value = prefill || (existing
@@ -495,7 +536,11 @@ export class SkillTreeApp extends Application {
     const list = customSkills();
     const id = editId || `x_${foundry.utils.randomID(10)}`;
     const entry = makeCustomSkill(input, id);
-    const next = editId ? list.map(old => old.id === editId ? entry : old) : [...list, entry];
+    // Ein mitgelieferter Skill hat noch keinen Eintrag in der Welt; dann wird
+    // die Ueberschreibung angelegt statt eine vorhandene ersetzt.
+    const next = list.some(old => old.id === id)
+      ? list.map(old => old.id === id ? entry : old)
+      : [...list, entry];
 
     this.state.selected = id;
     this.state.domain = entry.domain;
@@ -508,7 +553,21 @@ export class SkillTreeApp extends Application {
   async _deleteCustom(id) {
     if (!game.user.isGM) return;
     const skill = this.tree.skills[id];
-    if (!skill?.custom) return;
+    if (!skill) return;
+
+    // Bei einem geaenderten mitgelieferten Skill wird nicht geloescht,
+    // sondern die Aenderung verworfen — der Skill selbst bleibt.
+    if (skill.changed) {
+      const zurueck = await Dialog.confirm({
+        title: "Änderung verwerfen?",
+        content: `<p>„${esc(skill.name)}“ steht danach wieder so da, wie das Modul ihn mitbringt.</p>`
+      });
+      if (!zurueck) return;
+      await game.settings.set(MODULE_ID, SETTING, customSkills().filter(entry => entry.id !== id));
+      return;
+    }
+
+    if (!skill.custom) return;
 
     if (skill.children.length) {
       const names = skill.children.map(child => this.tree.skills[child].name).join(", ");
