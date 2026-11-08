@@ -67,6 +67,13 @@ node tools/build-tree-html.mjs
 node tools/build-tree-html.mjs data/skill-baum-modern.json
 ```
 
+Mit `--fragment` entsteht eine Fassung ohne eigenes Dokumentgeruest, wie sie
+eine Artifact-Seite braucht; dort kommt der Rahmen von der Plattform:
+
+```bash
+node tools/build-tree-html.mjs data/skill-baum-modern.json skill-baum-artifact.html --fragment
+```
+
 ## Aenderungen an mitgelieferten Skills
 
 Der Spielleiter kann jeden Skill bearbeiten, nicht nur eigene. Eine Aenderung

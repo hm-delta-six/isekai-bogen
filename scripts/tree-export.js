@@ -176,7 +176,7 @@ zeichnen();
  * Welt; `template` ist der Text von templates/skill-tree.html, aus dem das
  * Stylesheet kommt.
  */
-export function treeHtml(base, customs = [], { template = "", stand = new Date() } = {}) {
+export function treeHtml(base, customs = [], { template = "", stand = new Date(), fragment = false } = {}) {
   const tree = buildTree(base, customs);
   const eigene = tree.order.filter(id => tree.skills[id].custom).length;
 
@@ -223,7 +223,18 @@ export function treeHtml(base, customs = [], { template = "", stand = new Date()
 
   const datum = stand.toISOString().slice(0, 10);
 
-  return `<!doctype html>
+  // Als Artifact-Seite kommt das Dokumentgeruest von der Plattform; dann
+  // faengt die Datei direkt mit Titel und Stylesheet an.
+  const kopf = fragment
+    ? `<title>TTRPG-LBDS Skill-Baum</title>
+<style>
+:root { color-scheme: dark; }
+html, body { height: 100%; }
+.st-root { height: 100%; }
+${styleFromTemplate(template)}
+${RAHMEN}
+</style>`
+    : `<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8"/>
@@ -234,7 +245,13 @@ ${styleFromTemplate(template)}
 ${RAHMEN}
 </style>
 </head>
-<body>
+<body>`;
+
+  const fuss = fragment ? "" : `
+</body>
+</html>`;
+
+  return `${kopf}
 <div class="st-root">
   <header class="st-top">
     <div class="st-tabs">
@@ -275,9 +292,7 @@ ${RAHMEN}
 <script>
 const DATEN = JSON.parse(document.getElementById("st-daten").textContent);
 ${SKRIPT}
-</script>
-</body>
-</html>
+</script>${fuss}
 `;
 }
 
