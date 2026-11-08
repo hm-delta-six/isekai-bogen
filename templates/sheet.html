@@ -473,9 +473,9 @@
             </div>
           </div>
           <div class="entry-values">
-            <div><span class="stat">Angriffswert</span><span class="statval">{{weapon.calculatedAW}}</span>
+            <div><span class="stat">Angriffswert<span class="help" title="{{weapon.awHelp}}">?</span></span><span class="statval">{{weapon.calculatedAW}}</span>
               {{#if weapon.areaMalus}}<small style="color:#94a3b8; font-size:10px;"> (−{{weapon.areaMalus}} Fläche)</small>{{/if}}</div>
-            <div><span class="stat">Schaden</span><span class="statval" style="font-size:12px;">{{weapon.calculatedDamage}}</span></div>
+            <div><span class="stat">Schaden<span class="help" title="{{weapon.damageHelp}}">?</span></span><span class="statval" style="font-size:12px;">{{weapon.calculatedDamage}}</span></div>
           </div>
         </div>
       {{/each}}

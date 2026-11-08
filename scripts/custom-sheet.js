@@ -1,4 +1,7 @@
-import { areaDescription, attackFromMacro, attackValue, damageBonus, dieBonus, executeAttack, weaponArea } from "./attack.js";
+import {
+  areaDescription, attackBreakdown, attackFromMacro, attackValue, damageBonus, damageBreakdown,
+  dieBonus, executeAttack, weaponArea
+} from "./attack.js";
 import { SkillTreeApp, primeTreeLookup, registerSkillTreeSettings, treeLookup } from "./skill-tree.js";
 import { rollSkillCheck } from "./skill-check.js";
 import { ARMOR_WEAR_CHOICES, armorSummary, isIntact, registerDamageHooks, useSkillLookup } from "./damage.js";
@@ -351,6 +354,15 @@ class MeinHausregelSheet extends ActorSheet {
       w.areaMalus = area.malus;
       w.areaText = areaDescription(area);
       w.calculatedAW = attackValue(context.actor, w) - area.malus;
+
+      // Aufschluesselung fuer das Fragezeichen an der Waffe.
+      w.awHelp = `AW ${w.calculatedAW} = ${attackBreakdown(context.actor, w)}` +
+        (area.malus ? ` − Flächenmalus ${area.malus}` : "") +
+        `. Beim Angriff kommen die gewählten Modifikationen dazu und ihr Zielmalus ab.`;
+      w.damageHelp = `Schaden ${w.calculatedDamage} = ${damageBreakdown(context.actor, w)}.` +
+        ` Der Würfel wird je Machtfaktor öfter geworfen; ein Würfelbonus zählt vor der` +
+        ` Vervielfachung. Vom Ergebnis gehen beim Treffer die DR der Rüstung und die Resistenzen` +
+        ` des Ziels ab.`;
 
       // Modifikations-Skills: Bonushoehe kommt aus dem verknuepften Skill
       w.mods = toArray(w.mods);

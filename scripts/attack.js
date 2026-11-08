@@ -2,8 +2,9 @@ import { currentPool, describeDamage, payCosts, prepareDamage, resolveDamage, sk
 import { placeTemplate } from "./area-template.js";
 import { HIT_COVERAGE, templateCoverage, templateShape } from "./area.js";
 import {
-  COST_TYPES, MOD_BONUS_TYPES, abilityValue, areaSetting, attackTotal, defenceTotal, enrichSkill,
-  machtfaktor, modBonus, rarityRank, summarizeMods, targetMalus, toArray, typeBonus, typeLabels
+  COST_TYPES, MOD_BONUS_TYPES, abilityValue, areaSetting, attackTotal, boostTotals, defenceTotal,
+  enrichSkill, machtfaktor, modBonus, rarityRank, summarizeMods, targetMalus, toArray, typeBonus,
+  typeLabels
 } from "./rules.js";
 
 // Boni aus Titeln und Ausrüstung für einen Typ (STR, AW, VW, ...) summieren.
@@ -82,19 +83,59 @@ export function damageDice(weapon, factor) {
   return `(${inner}) * ${factor}`;
 }
 
-function attackBreakdown(actor, weapon) {
+/**
+ * Woraus sich der Angriffswert zusammensetzt, in Worten. Haelt sich an
+ * attackTotal; was dort gerechnet wird, steht hier.
+ */
+export function attackBreakdown(actor, weapon) {
   const skill = weaponSkill(actor, weapon);
+  const rank = rarityRank(skill.rarity);
   const parts = [
-    `10`,
-    `AW-Skill ${Number(actor.system?.boni?.awSkill || 0)}`,
-    `${skill.name ? `${skill.name} ` : "Waffen-Skill "}${skill.level}`,
-    ...(skill.factor ? [`Machtfaktor ${skill.rarity} ${skill.factor}`] : []),
-    `${skill.attribute} ${effectiveAttribute(actor, skill.attribute)}`
+    "Grundwert 10",
+    `AW-Skill ${Number(actor.system?.boni?.awSkill || 0)}`
   ];
+
+  if (skill.name) {
+    parts.push(`${skill.name} ${skill.level} × Stufe ${rank} (${skill.rarity}) = ${skill.level * rank}`);
+  }
+  parts.push(`${skill.attribute} ${effectiveAttribute(actor, skill.attribute)}`);
+
   const general = Number(actor.system?.boni?.aw || 0) + bonusForType(actor, "AW");
   if (general) parts.push(`Boni ${general}`);
+
+  const ausSkills = boostTotals(skillsOf(actor)).totals.aw;
+  if (ausSkills) parts.push(`Steigerungen aus Skills ${ausSkills}`);
   if (Number(weapon.bonus || 0)) parts.push(`Waffenbonus ${Number(weapon.bonus)}`);
-  return parts.join(" + ") + (skill.missing ? ` — Skill "${skill.name}" nicht im Bogen, als 0 gewertet` : "");
+
+  return parts.join(" + ") +
+    (skill.missing ? ` — Skill "${skill.name}" steht nicht im Bogen und zählt als 0` : "");
+}
+
+/**
+ * Woraus sich der Schaden zusammensetzt. Der Waffenwuerfel wird mit dem
+ * Machtfaktor der Waffe vervielfacht, der Angriffsskill zaehlt wie beim AW
+ * mit Level x Raritaetsstufe.
+ */
+export function damageBreakdown(actor, weapon) {
+  const skill = weaponSkill(actor, weapon);
+  const rank = rarityRank(skill.rarity);
+  const factor = machtfaktor(weapon?.rarity);
+  const perDie = dieBonus(weapon);
+  const wuerfel = weapon?.dice || "1d6";
+
+  const teile = [
+    `${perDie ? `(${wuerfel} ${perDie > 0 ? "+" : "−"} ${Math.abs(perDie)})` : wuerfel}` +
+      ` × Machtfaktor ${factor} (${weapon?.rarity || "Common"})`,
+    `${skill.attribute} ${effectiveAttribute(actor, skill.attribute)}`,
+    `halber AW-Skill ${Math.ceil(Number(actor?.system?.boni?.awSkill || 0) / 2)}`
+  ];
+
+  if (skill.name) {
+    teile.push(`${skill.name} ${skill.level} × Stufe ${rank} = ${skill.level * rank}`);
+  }
+  if (Number(weapon?.bonus || 0)) teile.push(`Waffenbonus ${Number(weapon.bonus)}`);
+
+  return teile.join(" + ");
 }
 
 // Der Bogen schreibt den fertigen VW nach system.isekai.vw.value.

@@ -49,7 +49,10 @@ const sheetContext = {
     system: {
       abilities: { STR: { value: 10 } }, boni: {}, details: {}, isekai: {},
       isekaiSkills: [skill],
-      weapons: [{ name: "Klinge", dice: "1d8", rarity: "Rare", types: "hieb", mods: [{ skillName: "Rundumschlag" }] }],
+      weapons: [{ name: "Klinge", dice: "1d8", rarity: "Rare", types: "hieb",
+        awHelp: "AW 40 = Grundwert 10 + Schwertkampf 8 x Stufe 3 = 24 + STR 6",
+        damageHelp: "Schaden (W8 + 1) x 4 + 30 = ...",
+        mods: [{ skillName: "Rundumschlag" }] }],
       armors: [{ name: "Panzer", dr: 6, durability: 20, types: "hieb" }],
       resistances: [{ name: "Feuerschutz", rarity: "Rare", skillName: "Feuerresistenz", types: "feuer" }],
       equipment: [{ name: "Amulett", type: "VW", bonus: 2, quantity: 1, effect: "" }],
@@ -82,6 +85,9 @@ const sheetContext = {
     "Ruestungsmalus 3",                   // Hilfe am VW
     "Steigert +24 Verteidigungswert",     // Steigerung am Skill
     "Abwehr: Ausweichen (+24), Attribut DEX",
+    // Handlebars schreibt "=" als &#x3D;, deshalb ohne Gleichheitszeichen
+    "Grundwert 10 + Schwertkampf 8 x Stufe 3",  // Hilfe am Angriffswert
+    "Schaden (W8 + 1) x 4",                     // Hilfe am Schaden
     'name="system.equipment.0.type"',     // Ausruestung kann einen Wert heben
     'name="system.equipment.0.bonus"',
     "Resistenzen",                        // eigene Tabelle fuer Resistenzen

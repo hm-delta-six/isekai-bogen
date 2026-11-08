@@ -90,10 +90,11 @@ function detailHtml(detail) {
     teile.push(`<p class="st-note">Eigener Bonus nach eigener Regel: ${esc(detail.bonusModeLabel)}.</p>`);
   }
 
-  teile.push(`<h5>Dazu je Rarität</h5>`);
+  teile.push(`<h5>Was jede Rarität bringt</h5>`);
   teile.push(detail.effects.map(zeile =>
     `<div class="st-eff r-${esc(zeile.rarity)}"><b>${esc(zeile.rarity)}</b> ${esc(zeile.base)}` +
-    (zeile.extra ? `<div class="extra">Dazu: ${esc(zeile.extra)}</div>` : "") + `</div>`).join(""));
+    (zeile.extra ? `<div class="extra">Neu bei dieser Rarität: ${esc(zeile.extra)}</div>` : "") +
+    `</div>`).join(""));
 
   return teile.join("\n");
 }

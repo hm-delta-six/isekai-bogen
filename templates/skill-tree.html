@@ -114,12 +114,12 @@
           {{#if formula}}<p class="st-note" style="margin-top:6px;">{{formula}}</p>{{/if}}
           {{#if bonusModeLabel}}<p class="st-note">Eigener Bonus nach eigener Regel: {{bonusModeLabel}}.</p>{{/if}}
 
-          <h5>Dazu je Rarität</h5>
+          <h5>Was jede Rarität bringt</h5>
           {{#each effects}}
             <div class="st-eff r-{{rarity}}">
               <b>{{rarity}}</b>
               {{base}}
-              {{#if extra}}<div class="extra">Dazu: {{extra}}</div>{{/if}}
+              {{#if extra}}<div class="extra">Neu bei dieser Rarität: {{extra}}</div>{{/if}}
             </div>
           {{/each}}
 
