@@ -5,7 +5,7 @@ import {
 import { treeHtml } from "./tree-export.js";
 import { DOMAIN_LABELS, columnList, detailData, domainList, norm } from "./tree-view.js";
 import {
-  BONUS_MODES, BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
+  BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
   RESISTANCE_FORMULA, SKILL_CATEGORIES, toArray
 } from "./rules.js";
 
@@ -296,10 +296,10 @@ export class SkillTreeApp extends Application {
         <label>Typ<select name="type">${options(TYPE_LABELS, value.type)}</select></label>
         <label>Attribut<select name="attr">${options(attributes, value.attr)}</select></label>
         <label>Kosten<select name="res">${options(costs, value.res)}</select></label>
-        <label>Bonus vervielfacht mit
+        <label>Eigener Bonus &mdash; Rechenregel
           <select name="bonusMode">
             <option value="" ${value.bonusMode ? "" : "selected"}>nach Kategorie</option>
-            ${Object.entries(BONUS_MODES).map(([key, label]) =>
+            ${Object.entries(BOOST_FORMULAS).map(([key, label]) =>
               `<option value="${key}" ${value.bonusMode === key ? "selected" : ""}>${esc(label)}</option>`).join("")}
           </select>
         </label>
@@ -348,7 +348,12 @@ export class SkillTreeApp extends Application {
 
         <div style="grid-column:1 / 3; border-top:1px solid #334155; padding-top:6px;">
           <div style="font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">
-            Steigert einen Wert
+            Steigert einen anderen Wert
+          </div>
+          <div style="font-size:11px; color:#94a3b8; margin-bottom:6px;">
+            Nicht zu verwechseln mit dem eigenen Bonus oben: der ist, was der Skill selbst wert ist
+            (Spalte Bonus im Bogen, Zuschlag auf die eigene Probe). Hier geht es um einen anderen
+            Wert, den er nebenbei hebt &mdash; etwa Ausweichen auf den Verteidigungswert.
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
             <label style="margin:0;">Wert
@@ -358,7 +363,7 @@ export class SkillTreeApp extends Application {
                   `<option value="${key}" ${value.boosts?.[0]?.t === key ? "selected" : ""}>${label}</option>`).join("")}
               </select>
             </label>
-            <label style="margin:0;">Rechenregel
+            <label style="margin:0;">Rechenregel der Steigerung
               <select name="boostFormula" style="width:auto; min-width:180px;">
                 ${Object.entries(BOOST_FORMULAS).map(([key, label]) =>
                   `<option value="${key}" ${(value.boosts?.[0]?.f || "standard") === key ? "selected" : ""}>${esc(label)}</option>`).join("")}

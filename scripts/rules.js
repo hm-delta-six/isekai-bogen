@@ -228,38 +228,41 @@ export const SKILL_USES_ATTRIBUTE = {
  * attributeValue ist der effektive Attributswert inklusive Titel-Boni.
  */
 /**
- * Was das Skill-Level vervielfacht. Ohne Angabe gilt die Regel der Kategorie;
- * ein Skill kann es im Baum abweichend festlegen.
+ * Rechenregel des eigenen Bonus je Kategorie, wenn der Skill keine eigene
+ * angibt. Es sind dieselben Regeln wie bei den Steigerungen (BOOST_FORMULAS),
+ * damit es nur eine Liste gibt.
  */
-export const BONUS_MODES = {
-  rank:   "Raritätsstufe (1 bis 6)",
-  factor: "Machtstufe (1, 2, 4, 8, 16, 32)",
-  none:   "nichts, nur das Skill-Level"
+export const CATEGORY_BONUS_FORMULA = {
+  fertigkeit:   "standard",
+  aktiv:        "level",
+  modifikation: "standard",
+  passiv:       "half",
+  resistenz:    "factor"
 };
 
-export const bonusMultiplier = (skill, fallback) => {
-  switch (skill?.bonusMode in BONUS_MODES ? skill.bonusMode : fallback) {
-    case "factor": return machtfaktor(skill?.rarity);
-    case "none":   return 1;
-    default:       return rarityRank(skill?.rarity);
-  }
+// Aeltere Schreibweisen aus der Zeit, als es zwei Listen gab.
+const BONUS_FORMULA_ALIAS = { rank: "standard", none: "level" };
+
+export const bonusFormula = (skill) => {
+  const eigene = BONUS_FORMULA_ALIAS[skill?.bonusMode] || skill?.bonusMode;
+  if (eigene in BOOST_FORMULAS) return eigene;
+  return CATEGORY_BONUS_FORMULA[skillCategory(skill)] || "standard";
 };
 
+/**
+ * Bonus eines Skills: die Rechenregel liefert den Wert aus Level und
+ * Raritaet, die Kategorie sagt, ob und wie das Attribut dazukommt.
+ */
 export function skillBonus(skill, attributeValue = 0) {
-  const level = Math.max(0, Number(skill?.level || 0));
   const attribute = Number(attributeValue || 0);
-  const category = skillCategory(skill);
+  const wert = boostAmount(skill, bonusFormula(skill));
 
-  // Die Kategorie sagt, was ohne eigene Angabe vervielfacht wird.
-  const standard = category === "resistenz" ? "factor" : category === "aktiv" ? "none" : "rank";
-  const faktor = bonusMultiplier(skill, standard);
-
-  switch (category) {
-    case "aktiv":        return level * faktor + Math.floor(attribute / 2);
-    case "modifikation": return level * faktor;
-    case "passiv":       return Math.floor(level * faktor / 2);
-    case "resistenz":    return level * faktor;
-    default:             return level * faktor + attribute;
+  switch (skillCategory(skill)) {
+    case "aktiv":        return wert + Math.floor(attribute / 2);
+    case "modifikation":
+    case "passiv":
+    case "resistenz":    return wert;
+    default:             return wert + attribute;
   }
 }
 

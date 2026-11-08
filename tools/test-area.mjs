@@ -133,7 +133,7 @@ check("unbekannter Bonustyp wird ignoriert", summarizeMods([{ bonusType: "quatsc
 
 
 // --- Bonusformeln je Skill-Kategorie ---
-const { skillBonus, BONUS_MODES, SKILL_USES_ATTRIBUTE, SKILL_BONUS_FORMULAS } = await import("../scripts/rules.js");
+const { skillBonus, bonusFormula, CATEGORY_BONUS_FORMULA, SKILL_USES_ATTRIBUTE, SKILL_BONUS_FORMULAS } = await import("../scripts/rules.js");
 
 // Rare = Stufe 3, Level 4, Attribut 7
 const rare4 = { rarity: "Rare", level: 4 };
@@ -267,24 +267,37 @@ const fert = { level: 10, rarity: "Rare", category: "fertigkeit" };
 check("Fertigkeit: Level x Stufe + Attribut", skillBonus(fert, 5), 35);
 check("mit Machtstufe: Level x 4 + Attribut",
   skillBonus({ ...fert, bonusMode: "factor" }, 5), 45);
-check("ohne Faktor: nur Level + Attribut",
-  skillBonus({ ...fert, bonusMode: "none" }, 5), 15);
+check("nur das Level + Attribut",
+  skillBonus({ ...fert, bonusMode: "level" }, 5), 15);
+check("halbiert + Attribut", skillBonus({ ...fert, bonusMode: "half" }, 5), 20);
 check("unbekannte Angabe faellt auf die Kategorie zurueck",
   skillBonus({ ...fert, bonusMode: "quatsch" }, 5), 35);
 
+// Die alten Schreibweisen aus der Zeit mit zwei Listen gelten weiter
+check("alt: rank ist standard", skillBonus({ ...fert, bonusMode: "rank" }, 5), 35);
+check("alt: none ist level", skillBonus({ ...fert, bonusMode: "none" }, 5), 15);
+
 const passiv = { level: 10, rarity: "Rare", category: "passiv" };
 check("Passiv: Level x Stufe / 2", skillBonus(passiv), 15);
-check("Passiv mit Machtstufe: Level x 4 / 2",
-  skillBonus({ ...passiv, bonusMode: "factor" }, 0), 20);
+check("Passiv mit Machtstufe: Level x 4",
+  skillBonus({ ...passiv, bonusMode: "factor" }, 0), 40);
 
 check("Aktiv rechnet von sich aus ohne Faktor",
   skillBonus({ level: 10, rarity: "Transzendiert", category: "aktiv" }, 8), 14);
 check("Resistenz rechnet von sich aus mit der Machtstufe",
   skillBonus({ level: 10, rarity: "Rare", category: "resistenz" }), 40);
 check("Resistenz kann auf die Stufe umgestellt werden",
-  skillBonus({ level: 10, rarity: "Rare", category: "resistenz", bonusMode: "rank" }), 30);
-check("zu jeder Rechenregel eine Beschriftung",
-  Object.keys(BONUS_MODES), ["rank", "factor", "none"]);
+  skillBonus({ level: 10, rarity: "Rare", category: "resistenz", bonusMode: "standard" }), 30);
+
+// Eine Liste von Rechenregeln, nicht zwei: der eigene Bonus und eine
+// Steigerung benutzen dieselben Schluessel.
+check("zu jeder Kategorie eine Standardregel",
+  Object.keys(CATEGORY_BONUS_FORMULA), KATEGORIEN);
+check("alle Standardregeln sind bekannte Rechenregeln",
+  Object.values(CATEGORY_BONUS_FORMULA).every(regel => regel in BOOST_FORMULAS), true);
+check("ohne Angabe die Regel der Kategorie",
+  bonusFormula({ category: "passiv" }), "half");
+check("mit Angabe die eigene", bonusFormula({ category: "passiv", bonusMode: "factor" }), "factor");
 
 // --- Steigerung auf Skill-Proben -----------------------------------------
 check("Skill-Proben sind ein Ziel", "check" in BOOST_TARGETS, true);
@@ -292,6 +305,24 @@ const kundig = { name: "Gelehrsamkeit", level: 6, rarity: "Uncommon", boosts: [{
 check("Steigerung auf Proben: 6 x 2", boostTotals([kundig]).totals.check, 12);
 check("und wird als Quelle genannt",
   boostTotals([kundig]).sources.check.map(e => e.name), ["Gelehrsamkeit"]);
+
+
+// Der angezeigte Formeltext je Kategorie muss zu der Regel passen, mit der
+// gerechnet wird — sonst steht im Bogen etwas anderes als herauskommt.
+const attributZusatz = {
+  fertigkeit: " + Attribut",
+  aktiv: " + halber Attributswert (abgerundet)",
+  modifikation: "", passiv: "", resistenz: ""
+};
+for (const kategorie of KATEGORIEN) {
+  const regel = BOOST_FORMULAS[CATEGORY_BONUS_FORMULA[kategorie]];
+  const text = SKILL_BONUS_FORMULAS[kategorie];
+  const beginnt = text.startsWith(regel.split(" (")[0].replace(" ÷ ", " / "))
+    || text.startsWith(regel);
+  check(`Formeltext passt zur Regel: ${kategorie}`, beginnt, true);
+  check(`Attributsteil genannt: ${kategorie}`,
+    attributZusatz[kategorie] === "" || text.includes("Attribut"), true);
+}
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

@@ -87,7 +87,7 @@ function detailHtml(detail) {
 
   if (detail.formula) teile.push(`<p class="st-note" style="margin-top:6px;">${esc(detail.formula)}</p>`);
   if (detail.bonusModeLabel) {
-    teile.push(`<p class="st-note">Bonus vervielfacht mit ${esc(detail.bonusModeLabel)}.</p>`);
+    teile.push(`<p class="st-note">Eigener Bonus nach eigener Regel: ${esc(detail.bonusModeLabel)}.</p>`);
   }
 
   teile.push(`<h5>Dazu je Rarität</h5>`);

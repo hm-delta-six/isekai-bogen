@@ -4,7 +4,7 @@
 // eigenstaendige HTML-Datei. Beide bekommen damit dieselben Spalten und
 // dasselbe Detail — ohne Foundry, also auch testbar.
 import {
-  ARCH_FORMULAS, BONUS_MODES, BOOST_TARGETS, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank,
+  ARCH_FORMULAS, BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank,
   resistanceDR, skillBonus, skillBoosts, typeLabels
 } from "./rules.js";
 import {
@@ -173,7 +173,7 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
       .map(link),
     children: skill.children.map(link),
     formula: ARCH_FORMULAS[skill.arch] || "",
-    bonusModeLabel: BONUS_MODES[skill.bonusMode] || "",
+    bonusModeLabel: BOOST_FORMULAS[skill.bonusMode] || "",
     payoff: payoff(skill, status),
     effects: effectLines(tree, id)
   };

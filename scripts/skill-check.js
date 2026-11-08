@@ -1,5 +1,5 @@
 import {
-  BONUS_MODES, SKILL_BONUS_FORMULAS, abilityValue, boostTotals, enrichSkill, rarityRank, skillBonus,
+  BOOST_FORMULAS, SKILL_BONUS_FORMULAS, abilityValue, boostTotals, enrichSkill, rarityRank, skillBonus,
   skillCategory, toArray as asArray
 } from "./rules.js";
 import { skillLookup } from "./damage.js";
@@ -111,7 +111,7 @@ async function rollAdditive({ actor, skillName, skill, attribute, modifier = 0 }
     rank: rarityRank(entry.rarity),
     category: skillCategory(entry),
     formula: SKILL_BONUS_FORMULAS[skillCategory(entry)] +
-      (entry.bonusMode in BONUS_MODES ? `, vervielfacht mit ${BONUS_MODES[entry.bonusMode]}` : "") +
+      (BOOST_FORMULAS[entry.bonusMode] ? `, eigene Rechenregel: ${BOOST_FORMULAS[entry.bonusMode]}` : "") +
       (checks ? `, dazu ${checks} aus Skills auf Proben` : ""),
     checkBonus: checks,
     bonus,
