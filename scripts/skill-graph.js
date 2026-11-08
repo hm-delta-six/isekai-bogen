@@ -57,13 +57,38 @@ export function archetype(domain, type) {
 export function parseMilestones(text) {
   const out = {};
   for (const line of String(text ?? "").split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Za-zÄÖÜäöü]+)\s*[:\-–]\s*(.+?)\s*$/);
+    // Der Wert muss mit einem sichtbaren Zeichen beginnen: eine Zeile der
+    // Vorlage ("Rare: ") ist damit noch kein Eintrag.
+    const match = line.match(/^\s*([A-Za-zÄÖÜäöü]+)\s*[:\-–]\s*(\S.*?)\s*$/);
     if (!match) continue;
     const index = RARITY_ALIASES[match[1].toLowerCase()];
     if (index === undefined) continue;
     out[RARITY_LETTERS[index]] = match[2];
   }
   return out;
+}
+
+/**
+ * Vorlage fuer "Neu pro Raritaet": je eine Zeile ab der Einstiegsraritaet des
+ * Skills, damit man nur noch dahinterschreibt. Schon Geschriebenes bleibt
+ * stehen, auch wenn seine Raritaet nach einem Ebenenwechsel unter der
+ * Einstiegsraritaet liegt — getippter Text geht nie verloren.
+ *
+ * Leere Zeilen liest parseMilestones nicht, eine ungenutzte Vorlage schadet
+ * also nicht.
+ */
+export function milestoneTemplate(text, floorRank, rn) {
+  const vorhanden = parseMilestones(text);
+  const zeilen = [];
+
+  for (let rank = 1; rank <= RARITY_LETTERS.length; rank++) {
+    const letter = RARITY_LETTERS[rank - 1];
+    const inhalt = vorhanden[letter] || "";
+    if (rank < floorRank && !inhalt) continue;
+    zeilen.push(`${rn[rank - 1]}: ${inhalt}`);
+  }
+
+  return zeilen.join(String.fromCharCode(10));
 }
 
 export function formatMilestones(ms, rn) {

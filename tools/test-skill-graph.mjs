@@ -3,7 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ancestors, buildTree, descendants, effectLines, formatMilestones, LEVEL_FLOOR, LEVEL_REQ,
-  makeCustomSkill, parseMilestones, sheetCategory, sheetEntry, shortEffect, unlockStatus, validateCustom
+  makeCustomSkill, milestoneTemplate, parseMilestones, sheetCategory, sheetEntry, shortEffect,
+  unlockStatus, validateCustom
 } from "../scripts/skill-graph.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -251,6 +252,35 @@ check("Vorausahnung behaelt ihre anderen Steigerungen",
 check("Diplomatie rechnet mit der Machtstufe", byName("Diplomatie").bonusMode, "factor");
 check("Handel ebenso", byName("Handel").bonusMode, "factor");
 check("ein anderer Fertigkeitsskill nicht", byName("Athletik").bonusMode, "");
+
+
+// --- Ausfuellhilfe fuer "Neu pro Raritaet" --------------------------------
+const zeilen = (text) => text.split(String.fromCharCode(10));
+
+const leer = milestoneTemplate("", 3, base.rn);
+check("Vorlage beginnt bei der Einstiegsraritaet", zeilen(leer)[0], "Rare: ");
+check("und reicht bis Transzendiert", zeilen(leer).length, 4);
+check("eine leere Vorlage ergibt keine Eintraege", parseMilestones(leer), {});
+check("Common beginnt bei Common", zeilen(milestoneTemplate("", 1, base.rn)).length, 6);
+
+const getippt = "Rare: trifft doppelt" + String.fromCharCode(10) + "Legendary: dreifach";
+const gefuellt = milestoneTemplate(getippt, 3, base.rn);
+check("Geschriebenes bleibt stehen", parseMilestones(gefuellt),
+  { R: "trifft doppelt", L: "dreifach" });
+check("und die Luecken dazwischen werden angeboten", zeilen(gefuellt), [
+  "Rare: trifft doppelt", "Epic: ", "Legendary: dreifach", "Transzendiert: "
+]);
+
+// Steigt die Ebene, faellt nur weg, was leer war
+const hoeher = milestoneTemplate(gefuellt, 4, base.rn);
+check("leere Zeile unter der neuen Einstiegsraritaet faellt weg",
+  zeilen(hoeher).includes("Rare: "), false);
+check("getippte Zeile darunter bleibt", zeilen(hoeher)[0], "Rare: trifft doppelt");
+
+check("nur Leerzeichen zaehlt nicht als Eintrag",
+  parseMilestones("Rare:    "), {});
+check("ein Eintrag mit Leerzeichen davor zaehlt",
+  parseMilestones("Rare:   trifft doppelt"), { R: "trifft doppelt" });
 
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);

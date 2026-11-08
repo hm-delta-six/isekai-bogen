@@ -1,6 +1,7 @@
 import {
-  ATTRIBUTES, MAX_LEVEL, TYPE_LABELS, ancestors, buildTree, descendants, formatMilestones,
-  makeCustomSkill, sheetCategory, sheetEntry, unlockStatus, validateCustom
+  ATTRIBUTES, LEVEL_FLOOR, MAX_LEVEL, TYPE_LABELS, ancestors, buildTree, descendants,
+  formatMilestones, makeCustomSkill, milestoneTemplate, sheetCategory, sheetEntry, unlockStatus,
+  validateCustom
 } from "./skill-graph.js";
 import { treeHtml } from "./tree-export.js";
 import { DOMAIN_LABELS, columnList, detailData, domainList, norm } from "./tree-view.js";
@@ -320,8 +321,11 @@ export class SkillTreeApp extends Application {
         </div>
         <label style="grid-column:1 / 3;">Beschreibung (was der Skill bewirkt)
           <textarea name="kern" rows="4" style="width:100%;">${esc(value.kern)}</textarea></label>
-        <label style="grid-column:1 / 3;">Neu pro Rarität (optional, eine Zeile je Rarität, z. B. „Rare: …“)
-          <textarea name="ms" rows="3" style="width:100%;">${esc(value.ms)}</textarea></label>
+        <label style="grid-column:1 / 3;">Neu pro Rarität
+          <span style="color:#64748b; font-size:11px;">&mdash; was der Skill ab dieser Rarität zusätzlich kann.
+          Hinter die Zeile schreiben; was leer bleibt, zählt nicht.</span>
+          <textarea name="ms" rows="6" style="width:100%;"
+            >${esc(milestoneTemplate(value.ms, LEVEL_FLOOR[value.level] || 1, tree.rn))}</textarea></label>
 
         <div class="st-passive" style="grid-column:1 / 3; ${value.type === "P" ? "" : "display:none;"}">
           <div style="font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">
@@ -415,6 +419,14 @@ export class SkillTreeApp extends Application {
       title: editId ? `Eigenen Skill bearbeiten: ${existing.name}` : "Eigenen Skill anlegen",
       content,
       render: (html) => {
+        // Die Vorlage beginnt bei der Einstiegsraritaet, die an der Ebene
+        // haengt. Geschriebenes bleibt dabei stehen.
+        const applyMilestones = () => {
+          const level = Number(html.find('[name="level"]').val());
+          const feld = html.find('[name="ms"]');
+          feld.val(milestoneTemplate(feld.val(), LEVEL_FLOOR[level] || 1, tree.rn));
+        };
+
         const applyLevel = () => {
           const level = Number(html.find('[name="level"]').val());
           html.find(".par").each((_, row) => {
@@ -451,7 +463,7 @@ export class SkillTreeApp extends Application {
 
         html.find('[name="type"]').on("change", applyType);
         html.find('input[name="parent"]').on("change", applyReplaces);
-        html.find('[name="level"]').on("change", () => { applyLevel(); applyReplaces(); });
+        html.find('[name="level"]').on("change", () => { applyLevel(); applyReplaces(); applyMilestones(); });
         html.find(".par-filter").on("input", ev => {
           const query = norm(ev.currentTarget.value);
           html.find(".par").each((_, row) => { row.style.display = !query || row.dataset.name.includes(query) ? "flex" : "none"; });
