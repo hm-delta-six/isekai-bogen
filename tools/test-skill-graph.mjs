@@ -21,7 +21,10 @@ const tree = buildTree(base);
 const S = tree.skills;
 
 // --- Datenbestand ---
-check("Anzahl Skills", tree.order.length, 304);
+// Keine feste Zahl: der Bestand waechst. Geprueft wird, dass der Baum
+// genau die Skills der Datei enthaelt.
+check("Baum enthaelt alle Skills der Datei", tree.order.length, Object.keys(base.skills).length);
+check("Reihenfolge ohne Dubletten", new Set(tree.order).size, tree.order.length);
 check("Ebene 5 hat mindestens 5 Skills", tree.order.filter(id => S[id].level === 5).length >= 5, true);
 
 let broken = [];
@@ -105,7 +108,7 @@ check("Kind als Elternskill", errs({ ...licht, level: 3, parents: ["x_blitz"] },
 // Basis-Skills werden durch ungültige Eltern in eigenen Daten nicht beschädigt
 const orphan = buildTree(base, [{ id: "x_waise", name: "Waise", level: 3, domain: "allgemein", type: "F", attr: "STR", parents: ["weg"] }]);
 check("unbekannte Eltern werden verworfen", orphan.skills.x_waise.parents, []);
-check("Skill-Zahl mit Waise", orphan.order.length, 305);
+check("Skill-Zahl mit Waise", orphan.order.length, tree.order.length + 1);
 
 // --- Wirkung, Voraussetzungen, Bogen-Eintrag ---
 check("Anforderung je Ebene", [LEVEL_REQ[1], LEVEL_REQ[2], LEVEL_REQ[5], LEVEL_REQ[7]], [0, 5, 20, 40]);
@@ -219,7 +222,9 @@ check("unbekannte Tabelle faellt auf den Typ zurueck",
 
 // Alle 29 Skills des Bereichs Resistenz landen dort
 const resistenzTabelle = Object.values(S).filter(skill => sheetCategory(skill) === "resistenz");
-check("29 Resistenz-Skills", resistenzTabelle.length, 29);
+check("alle Resistenz-Skills aus dem Bereich Resistenz",
+  resistenzTabelle.length,
+  Object.values(S).filter(skill => skill.domain === "resistenz").length);
 check("und alle aus dem Bereich Resistenz",
   resistenzTabelle.every(skill => skill.domain === "resistenz"), true);
 
@@ -239,7 +244,7 @@ check("Unsinn wird nicht gespeichert",
 // wird, weiss der Bogen nicht.
 const probenBoosts = Object.values(S)
   .filter(skill => skill.boosts.some(boost => boost.t === "check"));
-check("14 Skills steigern Proben", probenBoosts.length, 14);
+check("mehrere Skills steigern Proben", probenBoosts.length >= 14, true);
 check("und alle nur in einer Lage",
   probenBoosts.every(skill => skill.boosts.filter(b => b.t === "check").every(b => b.s)), true);
 check("Willensstaerke gegen Beeinflussung",

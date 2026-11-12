@@ -51,14 +51,24 @@ Welteinstellung ("Skill-Baum") in den Moduleinstellungen:
 | `data/skill-baum.json` | Grundbestand, 304 Skills |
 | `data/skill-baum-modern.json` | dazu 68 moderne bis futuristische, 372 Skills |
 
-Die Variante wird erzeugt, nicht von Hand gepflegt:
+Beide entstehen aus Vorschlagsdateien, nicht aus Handarbeit:
+
+| Vorschlag | gehoert in |
+| --- | --- |
+| `docs/vorschlag-zauber.json` | den Grundbestand — Magie gilt in jedem Setting |
+| `docs/vorschlag-moderne-skills.json` | nur die Variante — Technik und moderne Waffen |
 
 ```bash
+node tools/merge-skills.mjs data/skill-baum.json docs/vorschlag-zauber.json
 node tools/build-modern-tree.mjs
 ```
 
-Sie entsteht aus dem Grundbestand plus `docs/vorschlag-moderne-skills.json`
-und wird dabei gegen dieselben Regeln geprueft wie jeder eigene Skill.
+`merge-skills.mjs` prueft dabei dasselbe wie bei jedem eigenen Skill, dazu
+zwei Regeln: jede Ebene ist tiefster Elternskill + 1, und ein Zauber sitzt nie
+unter der Raritaet, die sein Grad verlangt (Grad 0–2 ab Common, 3–4 ab
+Uncommon, 5–6 ab Rare, 7–8 ab Epic, 9 ab Legendary). Ein Lauf ist
+nicht wiederholbar: er fuegt ein, was noch nicht da ist, und bricht bei einem
+doppelten Namen ab.
 
 Die HTML-Datei gibt es zu beiden:
 
