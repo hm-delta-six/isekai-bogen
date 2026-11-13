@@ -332,6 +332,44 @@ check("ohne Aenderung kommt der neue Text an",
 const eigen = buildTree(base, [makeCustomSkill({ ...panzer }, "x_eigen")]).skills.x_eigen;
 check("eigener Skill bleibt als solcher markiert", [eigen.custom, eigen.changed], [true, false]);
 
+
+// --- Jeder Skill muss von Ebene 1 aus erreichbar sein --------------------
+// Der Baum faengt bei Ebene 1 an. Ein Skill, dessen Weg dorthin abreisst,
+// liesse sich nie erwerben.
+const erreichbar = new Map();
+const fuehrtZuEbene1 = (id, pfad = new Set()) => {
+  if (erreichbar.has(id)) return erreichbar.get(id);
+  const skill = S[id];
+  let ok;
+  if (skill.level === 1) ok = true;
+  else if (!skill.parents.length) ok = false;
+  else ok = skill.parents.some(parent => !pfad.has(parent) &&
+    fuehrtZuEbene1(parent, new Set([...pfad, id])));
+  erreichbar.set(id, ok);
+  return ok;
+};
+const abgehaengt = tree.order.filter(id => !fuehrtZuEbene1(id));
+check("jeder Skill fuehrt zurueck auf Ebene 1", abgehaengt.map(id => S[id].name), []);
+check("ab Ebene 2 hat jeder Skill Eltern",
+  tree.order.filter(id => S[id].level > 1 && !S[id].parents.length), []);
+check("jede Ebene ist tiefster Elternskill + 1",
+  tree.order.filter(id => {
+    const tiefste = Math.max(0, ...S[id].parents.map(p => S[p].level));
+    return S[id].level !== tiefste + 1;
+  }).map(id => S[id].name), []);
+
+// Jeder Bereich ausser den Verschmelzungen hat einen eigenen Einstieg: sonst
+// sieht ein Skill im eigenen Reiter wurzellos aus.
+const ohneEigeneWurzel = tree.order
+  .map(id => S[id])
+  .filter(skill => skill.level > 1 && skill.parents.length &&
+    skill.parents.every(parent => S[parent].domain !== skill.domain));
+check("nur Verschmelzungen haengen ganz an anderen Bereichen",
+  [...new Set(ohneEigeneWurzel.map(skill => skill.domain))], ["kombi"]);
+check("jeder Bereich ausser Verschmelzungen hat einen Skill auf Ebene 1",
+  base.doms.filter(domain => domain !== "kombi" &&
+    !tree.order.some(id => S[id].domain === domain && S[id].level === 1)), []);
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

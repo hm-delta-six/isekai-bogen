@@ -122,6 +122,7 @@ function zeichneSpalten() {
     const kaestchen = spalte.skills.map(skill => {
       const klassen = ["st-chip", "r-" + skill.rarity];
       if (skill.custom) klassen.push("custom");
+      if (skill.extern) klassen.push("extern");
       if (skill.id === stand.selected) klassen.push("sel");
       else if (anc.has(skill.id)) klassen.push("anc");
       else if (desc.has(skill.id)) klassen.push("desc");
@@ -196,7 +197,9 @@ export function treeHtml(base, customs = [], { template = "", stand = new Date()
         lname: skill.lname,
         rarity: skill.rarity,
         title: esc(skill.title),
-        custom: Boolean(tree.skills[skill.id].custom)
+        custom: Boolean(tree.skills[skill.id].custom),
+        // Alle Voraussetzungen liegen in anderen Bereichen.
+        extern: skill.cls.split(" ").includes("extern")
       }))
     }));
   }

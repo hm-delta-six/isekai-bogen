@@ -44,18 +44,30 @@ export function columnList(tree, {
     const skills = visible
       .filter(skill => skill.level === level)
       .sort((a, b) => a.name.localeCompare(b.name, "de"))
-      .map(skill => ({
-        id: skill.id,
-        name: skill.name,
-        lname: norm(skill.name),
-        rarity: skill.floor,
-        title: `${skill.name} (${skill.kind}${skill.custom ? ", eigener Skill" : skill.changed ? ", geändert" : ""})`,
-        cls: [
-          ownedNames.has(norm(skill.name)) ? "owned" : "",
-          skill.custom || skill.changed ? "custom" : "",
-          skill.id === selected ? "sel" : anc.has(skill.id) ? "anc" : desc.has(skill.id) ? "desc" : ""
-        ].filter(Boolean).join(" ")
-      }));
+      .map(skill => {
+        // Liegen alle Elternskills in anderen Bereichen, sieht der Skill in
+        // diesem Reiter wurzellos aus. Der Weg zur Ebene 1 fuehrt dann ueber
+        // einen anderen Reiter, und das muss am Kaestchen stehen.
+        const auswaerts = skill.parents.length
+          && skill.parents.every(parent => tree.skills[parent]?.domain !== skill.domain);
+        const bereiche = [...new Set(skill.parents
+          .map(parent => DOMAIN_LABELS[tree.skills[parent]?.domain] || ""))].filter(Boolean);
+
+        return {
+          id: skill.id,
+          name: skill.name,
+          lname: norm(skill.name),
+          rarity: skill.floor,
+          title: `${skill.name} (${skill.kind}${skill.custom ? ", eigener Skill" : skill.changed ? ", geändert" : ""})` +
+            (auswaerts ? ` — Voraussetzung in ${bereiche.join(" und ")}` : ""),
+          cls: [
+            ownedNames.has(norm(skill.name)) ? "owned" : "",
+            skill.custom || skill.changed ? "custom" : "",
+            auswaerts ? "extern" : "",
+            skill.id === selected ? "sel" : anc.has(skill.id) ? "anc" : desc.has(skill.id) ? "desc" : ""
+          ].filter(Boolean).join(" ")
+        };
+      });
     if (!skills.length) continue;
     columns.push({ level, floor: tree.rn[LEVEL_FLOOR[level] - 1], req: LEVEL_REQ[level], skills });
   }
@@ -161,6 +173,8 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
     ownedLevel: status.ownedLevel,
     needed: status.needed,
     canAdd: canAdd && !status.owned,
+    auswaerts: Boolean(skill.parents.length) &&
+      skill.parents.every(parent => tree.skills[parent]?.domain !== skill.domain),
     parents: status.parents.map(parent => ({
       ...link(parent.id),
       level: parent.level,
