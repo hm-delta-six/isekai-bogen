@@ -68,6 +68,13 @@ function detailHtml(detail) {
     `<p>${esc(detail.kern)}</p>`
   ];
 
+  if (detail.weg.length) {
+    teile.push(`<h5>Weg von Ebene 1</h5>`);
+    teile.push(`<div class="st-links">` + detail.weg.map(eintrag =>
+      `<a class="st-link r-${esc(eintrag.rarity)}" data-id="${esc(eintrag.id)}"` +
+      ` title="Ebene ${eintrag.level}">${esc(eintrag.name)}</a>`).join("") + `</div>`);
+  }
+
   if (detail.parents.length) {
     teile.push(`<h5>Voraussetzung (Elternskills ab Level ${detail.needed})</h5>`);
     teile.push(links(detail.parents, entry => ` title="${esc(entry.hint)}"`));

@@ -88,6 +88,13 @@
 
           {{#if owned}}<div class="st-note">Im Bogen vorhanden (Level {{ownedLevel}}).</div>{{/if}}
 
+          {{#if weg.length}}
+            <h5>Weg von Ebene 1</h5>
+            <div class="st-links">
+              {{#each weg}}<a class="st-link r-{{rarity}}" data-id="{{id}}" title="Ebene {{level}}">{{name}}</a>{{/each}}
+            </div>
+          {{/if}}
+
           {{#if parents.length}}
             <h5>Voraussetzung (Elternskills ab Level {{needed}})</h5>
             {{#if auswaerts}}<p class="st-note warn">Alle Voraussetzungen liegen in anderen Bereichen — der Weg hierher beginnt dort.</p>{{/if}}

@@ -370,6 +370,22 @@ check("jeder Bereich ausser Verschmelzungen hat einen Skill auf Ebene 1",
   base.doms.filter(domain => domain !== "kombi" &&
     !tree.order.some(id => S[id].domain === domain && S[id].level === 1)), []);
 
+
+// --- Der Weg von Ebene 1 steht am Skill ----------------------------------
+const { pathToRoot } = await import("../scripts/tree-view.js");
+check("jeder Weg beginnt auf Ebene 1",
+  tree.order.filter(id => pathToRoot(tree, id)[0].level !== 1).map(id => S[id].name), []);
+check("jeder Weg endet beim Skill selbst",
+  tree.order.filter(id => pathToRoot(tree, id).at(-1).id !== id).map(id => S[id].name), []);
+check("jeder Schritt ist ein Elternskill des naechsten",
+  tree.order.filter(id => {
+    const weg = pathToRoot(tree, id);
+    return weg.some((eintrag, i) => i > 0 && !S[eintrag.id].parents.includes(weg[i - 1].id));
+  }).map(id => S[id].name), []);
+check("Elektronik kommt von Handwerkskunde",
+  pathToRoot(tree, byName("Elektronik").id).map(e => e.name),
+  ["Handwerkskunde", "Elektronik"]);
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

@@ -138,6 +138,32 @@ export function payoff(skill, status) {
 }
 
 /**
+ * Der kuerzeste Weg von einer Wurzel auf Ebene 1 bis zu diesem Skill. Jeder
+ * Skill muss einen haben: der Baum faengt bei Ebene 1 an, und ohne Weg
+ * dorthin liesse sich ein Skill nie erwerben.
+ *
+ * Gewaehlt wird je Schritt der flachste Elternskill, damit der Weg so kurz
+ * wie moeglich ist.
+ */
+export function pathToRoot(tree, id) {
+  const weg = [];
+  const gesehen = new Set();
+  let aktuell = tree.skills[id];
+
+  while (aktuell && !gesehen.has(aktuell.id)) {
+    gesehen.add(aktuell.id);
+    weg.unshift({ id: aktuell.id, name: aktuell.name, rarity: aktuell.floor, level: aktuell.level });
+    if (aktuell.level <= 1 || !aktuell.parents.length) break;
+    aktuell = aktuell.parents
+      .map(parent => tree.skills[parent])
+      .filter(Boolean)
+      .sort((a, b) => (a.level - b.level) || a.name.localeCompare(b.name, "de"))[0];
+  }
+
+  return weg;
+}
+
+/**
  * Alles, was das Detail eines Skills zeigt. Ohne Charakter bleiben die Felder
  * zum Hinzufuegen leer und der Payoff rechnet mit dem Beispiel-Level.
  */
@@ -173,6 +199,7 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
     ownedLevel: status.ownedLevel,
     needed: status.needed,
     canAdd: canAdd && !status.owned,
+    weg: pathToRoot(tree, id),
     auswaerts: Boolean(skill.parents.length) &&
       skill.parents.every(parent => tree.skills[parent]?.domain !== skill.domain),
     parents: status.parents.map(parent => ({
