@@ -12,21 +12,7 @@ import {
 
 const MODULE_ID = "isekai-bogen";
 const SETTING = "customSkills";
-const SETTING_BAUM = "skillTree";
-
-/**
- * Welcher Grundbestand geladen wird. Die eigenen Skills und die Aenderungen
- * an mitgelieferten liegen davon getrennt in der Welt und gelten in beiden.
- */
-const BAUM_DATEIEN = {
-  basis: { label: "Grundbestand (304 Skills)", file: "skill-baum.json" },
-  modern: { label: "Mit modernen und futuristischen Skills (372)", file: "skill-baum-modern.json" }
-};
-
-const baumDatei = () => {
-  const gewaehlt = game.settings.get(MODULE_ID, SETTING_BAUM);
-  return (BAUM_DATEIEN[gewaehlt] || BAUM_DATEIEN.basis).file;
-};
+const DATA_URL = `modules/${MODULE_ID}/data/skill-baum.json`;
 
 
 // Eigener Escape: Namen und Texte des Spielleiters landen in HTML-Strings.
@@ -34,16 +20,11 @@ const esc = (text) => String(text ?? "").replace(/[&<>"']/g, ch =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
 let baseData = null;
-let baseFile = null;
 async function loadBase() {
-  const datei = baumDatei();
-  if (baseData && baseFile === datei) return baseData;
-
-  const url = `modules/${MODULE_ID}/data/${datei}`;
-  const response = await fetch(foundry.utils.getRoute(url));
-  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  if (baseData) return baseData;
+  const response = await fetch(foundry.utils.getRoute(DATA_URL));
+  if (!response.ok) throw new Error(`${DATA_URL}: HTTP ${response.status}`);
   baseData = await response.json();
-  baseFile = datei;
   return baseData;
 }
 
@@ -74,23 +55,6 @@ export async function primeTreeLookup() {
 }
 
 export function registerSkillTreeSettings() {
-  // Welcher Grundbestand gilt. Sichtbar in den Moduleinstellungen, damit der
-  // Spielleiter die Variante ohne Dateiarbeit waehlen kann.
-  game.settings.register(MODULE_ID, SETTING_BAUM, {
-    name: "Skill-Baum",
-    hint: "Welcher Grundbestand geladen wird. Eigene Skills und Änderungen an mitgelieferten " +
-      "bleiben in beiden Fällen erhalten.",
-    scope: "world",
-    config: true,
-    type: String,
-    choices: Object.fromEntries(Object.entries(BAUM_DATEIEN).map(([key, eintrag]) => [key, eintrag.label])),
-    default: "basis",
-    onChange: () => {
-      baseData = null;
-      primeTreeLookup().then(() => SkillTreeApp.refresh());
-    }
-  });
-
   // Eigene Skills gehören der Welt: der Spielleiter pflegt sie, alle sehen sie.
   game.settings.register(MODULE_ID, SETTING, {
     scope: "world",

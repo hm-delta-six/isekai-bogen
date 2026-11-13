@@ -41,47 +41,34 @@ Die eigenen Skills einer Welt stehen in Foundry, nicht im Projekt. Dafuer gibt
 es im Skill-Baum-Fenster den Knopf **Als HTML speichern**: derselbe Generator,
 aber mit den eigenen Skills der Welt.
 
-## Varianten des Skill-Baums
+## Der Skill-Baum und seine Vorschlagsdateien
 
-Das Modul bringt zwei Grundbestaende mit; welcher gilt, waehlt eine
-Welteinstellung ("Skill-Baum") in den Moduleinstellungen:
-
-| Datei | Inhalt |
-| --- | --- |
-| `data/skill-baum.json` | Grundbestand, 304 Skills |
-| `data/skill-baum-modern.json` | dazu 68 moderne bis futuristische, 372 Skills |
-
-Beide entstehen aus Vorschlagsdateien, nicht aus Handarbeit:
-
-| Vorschlag | gehoert in |
-| --- | --- |
-| `docs/vorschlag-zauber.json` | den Grundbestand — Magie gilt in jedem Setting |
-| `docs/vorschlag-moderne-skills.json` | nur die Variante — Technik und moderne Waffen |
+Es gibt **einen** Baum: `data/skill-baum.json`. Er entsteht nicht aus
+Handarbeit, sondern aus Vorschlagsdateien, die eingefuegt werden:
 
 ```bash
 node tools/merge-skills.mjs data/skill-baum.json docs/vorschlag-zauber.json
-node tools/build-modern-tree.mjs
+node tools/merge-skills.mjs data/skill-baum.json docs/vorschlag-moderne-skills.json
 ```
 
 `merge-skills.mjs` prueft dabei dasselbe wie bei jedem eigenen Skill, dazu
 zwei Regeln: jede Ebene ist tiefster Elternskill + 1, und ein Zauber sitzt nie
-unter der Raritaet, die sein Grad verlangt (Grad 0–2 ab Common, 3–4 ab
-Uncommon, 5–6 ab Rare, 7–8 ab Epic, 9 ab Legendary). Ein Lauf ist
-nicht wiederholbar: er fuegt ein, was noch nicht da ist, und bricht bei einem
+unter der Raritaet, die sein Grad verlangt (Grad 0-2 ab Common, 3-4 ab
+Uncommon, 5-6 ab Rare, 7-8 ab Epic, 9 ab Legendary). Ein Lauf ist nicht
+wiederholbar: er fuegt ein, was noch nicht da ist, und bricht bei einem
 doppelten Namen ab.
 
-Die HTML-Datei gibt es zu beiden:
+Die HTML-Datei dazu:
 
 ```bash
 node tools/build-tree-html.mjs
-node tools/build-tree-html.mjs data/skill-baum-modern.json
 ```
 
 Mit `--fragment` entsteht eine Fassung ohne eigenes Dokumentgeruest, wie sie
 eine Artifact-Seite braucht; dort kommt der Rahmen von der Plattform:
 
 ```bash
-node tools/build-tree-html.mjs data/skill-baum-modern.json skill-baum-artifact.html --fragment
+node tools/build-tree-html.mjs data/skill-baum.json skill-baum-artifact.html --fragment
 ```
 
 ## Aenderungen an mitgelieferten Skills

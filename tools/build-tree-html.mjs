@@ -16,8 +16,7 @@ const root = join(import.meta.dirname, "..");
 const fragment = process.argv.includes("--fragment");
 const argumente = process.argv.slice(2).filter(wert => wert !== "--fragment");
 const quelle = argumente[0] || "data/skill-baum.json";
-const ziel = argumente[1] ||
-  join(root, quelle.includes("modern") ? "ttrpg-lbds-skill-tree-modern.html" : "ttrpg-lbds-skill-tree.html");
+const ziel = argumente[1] || join(root, "ttrpg-lbds-skill-tree.html");
 const base = JSON.parse(readFileSync(join(root, quelle), "utf8"));
 
 // Das Stylesheet kommt aus dem Fenster-Template, damit die Datei genauso
