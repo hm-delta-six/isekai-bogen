@@ -9,7 +9,7 @@ import { registerTokenBars } from "./token-bars.js";
 import {
   AREA_MODES, COST_TYPES, DAMAGE_TYPES, MOD_BONUS_TYPES, RARITY_CHOICES,
   DAMAGE_TYPES as DT, RESISTANCE_FORMULA, SKILL_BONUS_FORMULAS, SKILL_CATEGORIES,
-  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, abilityValue,
+  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORY_HINTS, SKILL_USES_ATTRIBUTE, abilityValue, armorMalus,
   attackTotal, boostTotals, condLabel, damageReduction, defenceSkill, defenceTotal, enrichSkill,
   initiativeTotal, skillBoosts, typeBonus,
   machtfaktor, modBonus, rarityRank, resistanceDR, resistanceSources,
@@ -134,9 +134,9 @@ class MeinHausregelSheet extends ActorSheet {
     const dexEff = context.effectiveAbilities.DEX;
     const strTitle = getTitleBonus("STR");
     const dexTitle = getTitleBonus("DEX");
-    // Skills wie Ruestungstragen senken den Ruestungsmalus.
-    const armorMalusRaw = Number(boni.armormalus || 0);
-    const armorMalus = Math.max(0, armorMalusRaw - boosts.totals.armormalus);
+    // Der Ruestungsmalus ergibt sich aus der angelegten Ruestung und der
+    // Staerke; Skills wie Ruestungstragen senken ihn weiter.
+    const malus = armorMalus(systemData, enrichedSkills);
 
     // Das Attribut des Verteidigungswerts kommt vom staerksten Abwehr-Skill:
     // Ausweichen traegt DEX, Parade STR. Nichts auszuwaehlen.
@@ -170,7 +170,8 @@ class MeinHausregelSheet extends ActorSheet {
       `Grundwert 10 + AW-Skill ${awSkillLvl} + STR ${titleNote(strEff, str, strTitle)}` +
       ` + Boni ${Number(boni.aw || 0)}` +
       `${getTitleBonus("AW") ? ` + Titel/Ausrüstung ${getTitleBonus("AW")}` : ""}` +
-      ` + Skills ${boosts.totals.aw} = ${awTotal}. ` +
+      ` + Skills ${boosts.totals.aw}` +
+      `${malus.wert ? ` − Rüstungsmalus ${malus.wert}` : ""} = ${awTotal}. ` +
       boostNote("aw") + situationNote("aw") +
       `Beim Angriff mit einer Waffe kommen dazu: Level und Machtfaktor des Waffenskills, ` +
       `der Waffenbonus und die Boni der gewaehlten Modifikationen. ` +
@@ -181,9 +182,20 @@ class MeinHausregelSheet extends ActorSheet {
       ? `Das Attribut kommt von ${defence.name}, dem stärksten Abwehr-Skill: ${defence.attribute}. `
       : `Ohne Abwehr-Skill trägt DEX den Verteidigungswert. `;
 
-    const malusNote = boosts.totals.armormalus
-      ? `Rüstungsmalus ${armorMalusRaw} − ${boosts.totals.armormalus} aus Skills = ${armorMalus}. `
-      : "";
+    const malusNote = `Rüstungsmalus: ${malus.ruestung} DR aus ${malus.teile} angelegten Teilen` +
+      ` − STR ${malus.staerke}` +
+      `${malus.extra ? ` + Extra ${malus.extra}` : ""}` +
+      `${malus.ausSkills ? ` − ${malus.ausSkills} aus Skills` : ""}` +
+      ` = ${malus.wert}. `;
+
+    context.armorMalus = malus;
+    context.armorMalusHelp =
+      `Die DR aller angelegten Rüstungsteile zusammen, abzüglich deiner Stärke: ` +
+      `${malus.ruestung} − ${malus.staerke}` +
+      `${malus.extra ? ` + Extra ${malus.extra}` : ""} = ${Math.max(0, malus.roh)}` +
+      `${malus.ausSkills ? `, davon ${malus.ausSkills} durch Skills gesenkt` : ""}` +
+      ` = ${malus.wert}. Er geht auf Angriffswert, Verteidigungswert und Bewegung. ` +
+      `Nur angelegte und heile Teile zählen — Resistenzen wiegen nichts.`;
 
     context.vwHelp =
       `Grundwert 10 + Extra ${vwSkillLvl} + ${defence.attribute} ` +
@@ -191,7 +203,7 @@ class MeinHausregelSheet extends ActorSheet {
       ` + Boni ${Number(boni.vw || 0)}` +
       `${getTitleBonus("VW") ? ` + Titel/Ausrüstung ${getTitleBonus("VW")}` : ""}` +
       ` + Skills ${boosts.totals.vw}` +
-      ` − Rüstungsmalus ${armorMalus} = ${vwTotal}. ` +
+      ` − Rüstungsmalus ${malus.wert} = ${vwTotal}. ` +
       boostNote("vw") + situationNote("vw") + malusNote + defenceNote +
       `Ein Angreifer vergleicht seinen AW mit diesem Wert; die Trefferchance ist ` +
       `50 × AW ÷ VW, begrenzt auf 5 bis 95 Prozent. ` +
@@ -259,6 +271,7 @@ class MeinHausregelSheet extends ActorSheet {
     systemData.armors.forEach(armor => {
       if (!armor) return;
       armor.intact = isIntact(armor);
+      armor.worn = armor.worn !== false;
       armor.typeLabel = typeLabels(armor.types).join(", ") || "alle Arten";
       armor.typeValue = typeValue(armor.types);
     });
@@ -573,7 +586,7 @@ class MeinHausregelSheet extends ActorSheet {
     html.find('.delete-weapon-mod').click(ev => handleModAction(ev, 'delete'));
 
     // RÜSTUNG
-    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, types: "", description: "" }));
+    html.find('.add-armor').click(ev => handleArrayAction(ev, 'armors', 'add', { name: "", rarity: "Common", dr: 0, durability: 10, worn: true, types: "", description: "" }));
     html.find('.delete-armor').click(ev => handleArrayAction(ev, 'armors', 'delete'));
 
     // TITEL

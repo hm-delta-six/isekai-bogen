@@ -332,7 +332,8 @@ export function damageReduction({ armors = [], resistances = [] } = {}) {
   for (const key of Object.keys(DAMAGE_TYPES)) { flat[key] = 0; conditional[key] = 0; }
 
   for (const armor of toArray(armors)) {
-    if (!armor || Number(armor.durability || 0) <= 0) continue;
+    // Was nicht angelegt ist, schuetzt auch nicht.
+    if (!armor || !isWorn(armor)) continue;
     const covered = typeList(armor.types);
     const against = covered.length ? covered : Object.keys(DAMAGE_TYPES);
     for (const key of against) flat[key] += Number(armor.dr || 0);
@@ -562,6 +563,41 @@ export const abilityValue = (system, key) => {
 };
 
 /**
+ * Ein Ruestungsteil zaehlt nur, solange es angelegt und heil ist. Alte
+ * Eintraege ohne das Feld gelten als angelegt, damit sich an einem
+ * vorhandenen Bogen nichts stillschweigend aendert.
+ */
+export const isWorn = (armor) => armor?.worn !== false && Number(armor?.durability || 0) > 0;
+
+/**
+ * Ruestungsmalus: die DR aller angelegten Teile zusammen, abzueglich der
+ * Staerke des Charakters — wer kraeftig ist, traegt Ruestung leichter. Was
+ * uebrig bleibt, senken Skills wie Ruestungstragen; der Rest geht auf
+ * Angriffswert, Verteidigungswert und Bewegung.
+ *
+ * Nur Ausruestung macht Malus. Resistenzen nicht: sie wiegen nichts.
+ */
+export function armorMalus(system, skills = []) {
+  const teile = toArray(system?.armors).filter(isWorn);
+  const ruestung = teile.reduce((summe, armor) => summe + Math.max(0, Number(armor.dr || 0)), 0);
+  const staerke = abilityValue(system, "STR");
+  const extra = Number(system?.boni?.armormalus || 0);
+
+  const roh = Math.max(0, ruestung - staerke) + extra;
+  const ausSkills = boostTotals(skills).totals.armormalus;
+
+  return {
+    teile: teile.length,
+    ruestung,
+    staerke,
+    extra,
+    roh,
+    ausSkills,
+    wert: Math.max(0, roh - ausSkills)
+  };
+}
+
+/**
  * Angriffswert. Ohne Waffe ist es der Grundwert des Bogens, mit Waffe der
  * Wert des Angriffs: dann kommen Level und Machtfaktor des Waffenskills, das
  * Attribut dieses Skills und der Waffenbonus hinzu.
@@ -582,7 +618,8 @@ export function attackTotal(system, skills, weapon = null, skill = null) {
     abilityValue(system, attribute) +
     Number(boni.aw || 0) + typeBonus(system, "AW") +
     boostTotals(skills).totals.aw +
-    (weapon ? Number(weapon.bonus || 0) : 0);
+    (weapon ? Number(weapon.bonus || 0) : 0) -
+    armorMalus(system, skills).wert;
 }
 
 /**
@@ -594,7 +631,7 @@ export function defenceTotal(system, skills) {
   const boni = system?.boni || {};
   const boosts = boostTotals(skills);
   const defence = defenceSkill(skills);
-  const malus = Math.max(0, Number(boni.armormalus || 0) - boosts.totals.armormalus);
+  const malus = armorMalus(system, skills).wert;
 
   return 10 +
     Number(boni.vwSkill || 0) +

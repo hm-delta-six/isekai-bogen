@@ -386,6 +386,20 @@ check("Elektronik kommt von Handwerkskunde",
   pathToRoot(tree, byName("Elektronik").id).map(e => e.name),
   ["Handwerkskunde", "Elektronik"]);
 
+
+// --- Die Ruestungsskills senken den Malus --------------------------------
+const senkt = (name) => byName(name).boosts.filter(boost => boost.t === "armormalus");
+check("Ruestungstragen senkt", senkt("Rüstungstragen").length, 1);
+check("Schildfuehrung auch", senkt("Schildführung").length, 1);
+check("Ruestungsmeister ohne Deckel",
+  senkt("Rüstungsmeister"), [{ t: "armormalus" }]);
+check("die drei Ruestungsarten nur fuer ihre eigene",
+  ["Leichte Rüstung", "Mittlere Rüstung", "Schwere Rüstung"]
+    .every(name => senkt(name).every(boost => boost.s)), true);
+check("ein Zauber senkt keinen Ruestungsmalus",
+  Object.values(S).filter(skill => skill.domain === "magie" &&
+    skill.boosts.some(boost => boost.t === "armormalus")).map(skill => skill.name), []);
+
 if (fails) {
   console.log(`\n${fails} Test(s) fehlgeschlagen`);
   process.exit(1);

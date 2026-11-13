@@ -113,7 +113,10 @@ const actor = {
       apr: { rank: 0, cs: false, rt: true, mod: 0 },
       blf: { rank: 5, cs: true, rt: false, mod: 0 }
     },
-    armors: [{ name: "Weste", dr: 4, durability: 10, types: "stich", wear: "" }],
+    armors: [
+      { name: "Weste", dr: 4, durability: 10, types: "stich", wear: "", worn: true },
+      { name: "Ersatzhelm", dr: 6, durability: 10, types: "hieb", wear: "", worn: false }
+    ],
     isekaiSkills: [
       { name: "Fernkampf", level: 5, rarity: "Common", attribute: "DEX", category: "aktiv", effect: "schiessen" },
       { name: "Pistole", level: 6, rarity: "Rare", attribute: "DEX", category: "aktiv", effect: "zielen" },
@@ -302,6 +305,47 @@ vwFelder["system.boni.vw"] = 3;
 await actor.update(vwFelder);
 runde = zeichnen();
 check("ein Bonus von 3 kommt an", runde.context.derived.vwTotal - vwVorFeld, 3);
+
+
+// --- Ruestungsmalus ------------------------------------------------------
+// Summe der DR aller angelegten Teile minus Staerke, dann die Skills.
+const malus = runde.context.armorMalus;
+check("nur angelegte Teile zaehlen", malus.teile, 1);
+check("ihre DR", malus.ruestung, 4);
+check("STR 10 traegt 4 DR muehelos", malus.wert, 0);
+check("der abgelegte Helm gibt auch keine DR",
+  runde.context.drByType.find(entry => entry.label === "Hieb").flat, 20);
+
+// Schwerere Ruestung anlegen
+actor.system.armors.push({ name: "Platte", dr: 18, durability: 20, types: "hieb", wear: "", worn: true });
+const awVorMalus = runde.context.derived.awTotal;
+const vwVorMalus = runde.context.derived.vwTotal;
+runde = zeichnen();
+check("22 DR minus STR 10", runde.context.armorMalus.wert, 12);
+check("der Malus geht vom Angriffswert ab",
+  awVorMalus - runde.context.derived.awTotal, 12);
+check("und vom Verteidigungswert",
+  vwVorMalus - runde.context.derived.vwTotal, 12);
+check("die Hilfe nennt Bewegung",
+  runde.context.armorMalusHelp.includes("Bewegung"), true);
+
+// Ein Skill senkt ihn
+actor.system.isekaiSkills.push({
+  name: "Rüstungstragen", level: 10, rarity: "Common", attribute: "CON", category: "passiv"
+});
+runde = zeichnen();
+check("Ruestungstragen 10 senkt um ein Fuenftel", runde.context.armorMalus.ausSkills, 2);
+check("Malus danach", runde.context.armorMalus.wert, 10);
+
+// Ablegen nimmt Malus und DR
+for (const stueck of actor.system.armors) stueck.worn = false;
+runde = zeichnen();
+check("nichts angelegt, kein Malus", runde.context.armorMalus.wert, 0);
+check("und keine DR aus Ruestung",
+  runde.context.drByType.find(entry => entry.label === "Stich").flat, 0);
+
+// Die Checkbox steht im Formular
+check("Angelegt-Feld im Formular", "system.armors.0.worn" in formular(runde.html), true);
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

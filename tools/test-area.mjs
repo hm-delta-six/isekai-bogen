@@ -324,5 +324,41 @@ for (const kategorie of KATEGORIEN) {
     attributZusatz[kategorie] === "" || text.includes("Attribut"), true);
 }
 
+
+// --- Ruestungsmalus: angelegte DR minus Staerke --------------------------
+const { armorMalus, isWorn } = await import("../scripts/rules.js");
+const traeger = (armors, str = 10, boni = {}) => ({
+  abilities: { STR: { value: str } }, boni, titles: [], equipment: [], armors
+});
+
+check("ohne Ruestung kein Malus", armorMalus(traeger([])).wert, 0);
+check("leichte Ruestung traegt sich muehelos",
+  armorMalus(traeger([{ dr: 8, durability: 10 }])).wert, 0);
+check("18 DR minus STR 10", armorMalus(traeger([{ dr: 18, durability: 10 }])).wert, 8);
+check("mehrere Teile summieren sich",
+  armorMalus(traeger([{ dr: 10, durability: 5 }, { dr: 8, durability: 5 }])).wert, 8);
+check("staerkere Leute tragen leichter",
+  armorMalus(traeger([{ dr: 18, durability: 10 }], 16)).wert, 2);
+
+check("abgelegtes zaehlt nicht",
+  armorMalus(traeger([{ dr: 18, durability: 10, worn: false }])).wert, 0);
+check("kaputtes zaehlt nicht",
+  armorMalus(traeger([{ dr: 18, durability: 0 }])).wert, 0);
+check("ohne Angabe gilt es als angelegt", isWorn({ dr: 5, durability: 5 }), true);
+
+check("das Extra-Feld kommt dazu",
+  armorMalus(traeger([{ dr: 18, durability: 10 }], 10, { armormalus: 3 })).wert, 11);
+
+const traegerSkill = [{ name: "Rüstungstragen", level: 10, rarity: "Common",
+  boosts: [{ t: "armormalus", f: "fifth" }] }];
+check("Ruestungstragen senkt um Level durch 5",
+  armorMalus(traeger([{ dr: 18, durability: 10 }]), traegerSkill).wert, 6);
+check("der Malus wird nie negativ",
+  armorMalus(traeger([{ dr: 11, durability: 10 }]), traegerSkill).wert, 0);
+
+// Resistenzen wiegen nichts
+check("Resistenzen machen keinen Malus",
+  armorMalus({ ...traeger([]), resistances: [{ name: "Feuerschutz", rarity: "Rare" }] }).wert, 0);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

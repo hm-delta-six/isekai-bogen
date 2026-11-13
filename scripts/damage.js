@@ -1,5 +1,5 @@
 import {
-  DAMAGE_TYPES, damageReduction, resistanceSources, toArray, typeLabels, typeList
+  DAMAGE_TYPES, damageReduction, isWorn, resistanceSources, toArray, typeLabels, typeList
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
@@ -44,7 +44,7 @@ export function armorState(actor, type = null) {
   const list = toArray(actor?.system?.armors);
   const pieces = list
     .map((armor, index) => ({ index, armor }))
-    .filter(entry => entry.armor && isIntact(entry.armor) && armorCovers(entry.armor, type));
+    .filter(entry => entry.armor && isWorn(entry.armor) && armorCovers(entry.armor, type));
 
   const totalDR = pieces.reduce((sum, entry) => sum + Number(entry.armor.dr || 0), 0);
   return { list, pieces, totalDR };

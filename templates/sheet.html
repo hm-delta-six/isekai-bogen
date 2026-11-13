@@ -339,13 +339,24 @@
           <small style="color:#94a3b8;">(10 + {{defence.attribute}} {{derived.defenceAttr}}
           + Boni: <input type="number" class="num-short" name="system.boni.vw" value="{{actor.system.boni.vw}}"/>
           + Extra: <input type="number" class="num-short" name="system.boni.vwSkill" value="{{actor.system.boni.vwSkill}}" title="Altes Feld fuer ein von Hand eingetragenes Skill-Level. Die Skills rechnet der Bogen jetzt selbst ein — dieses Feld kann auf 0."/>
-          - Malus: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>)</small>
+          − Rüstungsmalus {{armorMalus.wert}})</small>
           {{#if defence.name}}
             <div style="margin-top:2px;">
               <small style="color:#94a3b8;">Abwehr: {{defence.name}} (+{{defence.amount}}), Attribut {{defence.attribute}}</small>
             </div>
           {{/if}}
         </div>
+      </div>
+
+      <div style="margin-bottom: 6px;">
+        <strong>Rüstungsmalus:</strong>
+        <strong style="color:{{#if armorMalus.wert}}#f87171{{else}}#38bdf8{{/if}};">−{{armorMalus.wert}}</strong>
+        <span class="help" title="{{armorMalusHelp}}">?</span>
+        <small style="color:#94a3b8;">
+          ({{armorMalus.ruestung}} DR angelegt − STR {{armorMalus.staerke}}{{#if armorMalus.ausSkills}} − {{armorMalus.ausSkills}} aus Skills{{/if}})
+          · geht auf AW, VW und Bewegung
+          · Extra: <input type="number" class="num-short" name="system.boni.armormalus" value="{{actor.system.boni.armormalus}}"/>
+        </small>
       </div>
 
       <!-- SCHADENSREDUKTION JE SCHADENSART -->
@@ -643,6 +654,10 @@
               <div class="f">
                 <label>Haltbarkeit</label>
                 <input type="number" class="num-short" name="system.armors.{{index}}.durability" value="{{armor.durability}}"/>
+              </div>
+              <div class="f">
+                <label title="Nur angelegte Teile geben DR und machen Rüstungsmalus.">Angelegt</label>
+                <input type="checkbox" style="width:auto;" name="system.armors.{{index}}.worn" {{#if armor.worn}}checked{{/if}}/>
               </div>
               <a class="delete-armor btn-del" data-index="{{index}}"><i class="fas fa-trash"></i></a>
             </div>
