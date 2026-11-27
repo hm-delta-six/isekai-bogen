@@ -241,6 +241,11 @@ export function validateCustom(tree, input, selfId = null) {
   if (Number.isInteger(level)) {
     if (level === 1 && known.length) errors.push("Ebene 1 hat keine Elternskills.");
     if (level > 1 && !known.length) errors.push("Ab Ebene 2 braucht ein Skill mindestens einen Elternskill.");
+    // Ein Skill waechst aus einem anderen. Mehrere Eltern machen den Weg im
+    // Baum mehrdeutig und die Entwicklung eines Skills in sein Kind unklar.
+    if (known.length > 1) {
+      warnings.push("Ein Skill sollte nur einen Elternskill haben; der Baum wird sonst mehrdeutig.");
+    }
 
     for (const parent of known) {
       const parentSkill = tree.skills[parent];

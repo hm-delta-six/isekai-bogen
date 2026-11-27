@@ -434,6 +434,49 @@ export function resistanceSources({ resistances = [], skills = [], lookup = null
  * Steht genau hier, damit eine Formel nicht in jeder Raritaetszeile wiederholt
  * werden muss — die Zeilen nennen nur noch den konkreten Wert.
  */
+/**
+ * Glossar: jede Abkuerzung und jeder Fachbegriff, den eine Skill-
+ * Beschreibung verwenden darf, genau einmal erklaert. Was hier nicht steht,
+ * gehoert nicht in eine Beschreibung.
+ */
+export const GLOSSARY = [
+  { gruppe: "Werte des Charakters", begriffe: [
+    { kurz: "HP", lang: "Trefferpunkte", text: "Lebenspunkte. Bei 0 ist der Charakter kampfunfähig." },
+    { kurz: "AP", lang: "Ausdauerpunkte", text: "Zahlen Anstrengung: Spezialangriffe, Hetzen, Sprinten." },
+    { kurz: "MP", lang: "Manapunkte", text: "Zahlen Zauber." },
+    { kurz: "AW", lang: "Angriffswert", text: "Der Wurf gegen den Verteidigungswert des Ziels." },
+    { kurz: "VW", lang: "Verteidigungswert", text: "Was ein Angreifer mit seinem AW übertreffen muss." },
+    { kurz: "DR", lang: "Schadensreduktion", text: "Zieht sich von jedem Treffer ab, je Schadensart getrennt." },
+    { kurz: "INI", lang: "Initiative", text: "Die Reihenfolge im Kampf." }
+  ] },
+  { gruppe: "Maße einer Wirkung", begriffe: [
+    { kurz: "Stufe", lang: "Skill-Level", text: "Das Level genau dieses Skills im Bogen — nicht die Charakterstufe." },
+    { kurz: "Raritätsstufe", lang: "", text: "Common 1, Uncommon 2, Rare 3, Epic 4, Legendary 5, Transzendiert 6." },
+    { kurz: "Machtfaktor", lang: "", text: "Verdoppelt sich je Raritätsstufe: 1, 2, 4, 8, 16, 32." },
+    { kurz: "Kästchen", lang: "", text: "Ein Feld auf der Karte, 1,5 m. Entfernungen zählen in Kästchen, nicht in Metern." },
+    { kurz: "Runde", lang: "", text: "Eine Kampfrunde, in der jeder einmal handelt." },
+    { kurz: "1W6, 2W6", lang: "Würfel", text: "So viele sechsseitige Würfel. Gewürfelt wird die Wirkung, nie die Kosten." },
+    { kurz: "Ebene", lang: "", text: "Die Tiefe im Skill-Baum, 1 bis 7. Sie legt fest, ab welcher Rarität ein Skill überhaupt existiert." },
+    { kurz: "Steigerungspunkt", lang: "", text: "Wofür ein Skill-Level gekauft wird." }
+  ] },
+  { gruppe: "Wie eine Wirkung wächst", begriffe: [
+    { kurz: "S", lang: "nach Stufe", text: "Der Wert ist das Skill-Level." },
+    { kurz: "R", lang: "nach Rarität", text: "Skill-Level × Raritätsstufe." },
+    { kurz: "M", lang: "nach Macht", text: "Skill-Level × Machtfaktor." },
+    { kurz: "Primäreffekt", lang: "", text: "Worum es dem Skill geht: Schaden, Schutz, Zahl der Ziele." },
+    { kurz: "Sekundäreffekt", lang: "", text: "Was ab Rare dazukommt, auf einer anderen Dimension als der Primäreffekt." }
+  ] }
+];
+
+/** Die Zahlen im Glossar sind keine Erfindung: sie kommen aus den Regeln. */
+export const glossaryLines = () => GLOSSARY.map(block => ({
+  gruppe: block.gruppe,
+  begriffe: block.begriffe.map(eintrag => ({
+    ...eintrag,
+    titel: eintrag.lang ? `${eintrag.kurz} — ${eintrag.lang}` : eintrag.kurz
+  }))
+}));
+
 export const ARCH_FORMULAS = {
   resist:   `Schadensreduktion = ${RESISTANCE_FORMULA}. Mehrere Resistenzen addieren sich, es gibt keinen Deckel.`,
   passiv:   `Passiver Wert = ${SKILL_BONUS_FORMULAS.passiv}.`,

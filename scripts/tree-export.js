@@ -12,7 +12,7 @@
 // Ohne Foundry lauffaehig, damit der Generator testbar bleibt.
 import {
   BOOST_DEFAULT_NOTE, DAMAGE_TYPES, MACHTFAKTOR_MAP, RARITY_MAP, RESISTANCE_FORMULA,
-  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, rarityRank
+  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, glossaryLines, rarityRank
 } from "./rules.js";
 import { buildTree } from "./skill-graph.js";
 import { columnList, detailData, domainList, norm, relations } from "./tree-view.js";
@@ -130,11 +130,17 @@ function detailHtml(detail) {
   return teile.join("\n");
 }
 
+const GLOSSAR = `<div class="st-gloss"><h5>Glossar</h5>` +
+  glossaryLines().map(block => `<h6>${esc(block.gruppe)}</h6><dl>` +
+    block.begriffe.map(eintrag =>
+      `<dt>${esc(eintrag.titel)}</dt><dd>${esc(eintrag.text)}</dd>`).join("") + `</dl>`).join("") +
+  `</div>`;
+
 const LEER = `<div class="st-empty">
   <b>Skill wählen</b><br>
   Klick auf einen Skill zeigt Wirkung, Voraussetzungen und alle enthaltenen Vorstufen.
   Blau markiert sind die Vorstufen, gelb die Skills, die darauf aufbauen.
-</div>`;
+</div>` + GLOSSAR;
 
 // --- Das Verhalten in der Datei: Reiter, Suche, Auswahl --------------------
 const SKRIPT = `
@@ -191,6 +197,8 @@ function zeichnen() {
 wurzel.addEventListener("click", event => {
   const reiter = event.target.closest(".st-tab");
   if (reiter) { stand.domain = reiter.dataset.domain; zeichnen(); return; }
+  // Das Glossar steht im leeren Detail.
+  if (event.target.closest(".st-glossar")) { stand.selected = null; zeichnen(); return; }
   const kaestchen = event.target.closest(".st-chip, .st-link");
   if (kaestchen) { waehle(kaestchen.dataset.id); }
 });
@@ -293,6 +301,7 @@ ${RAHMEN}
         `<a class="st-tab${bereich.active ? " active" : ""}" data-domain="${esc(bereich.key)}">${esc(bereich.label)}</a>`).join("")}
     </div>
     <input class="st-search" type="search" placeholder="Skill suchen &hellip;"/>
+    <a class="st-glossar" title="Was die Abkürzungen in den Beschreibungen bedeuten">Glossar</a>
     <span class="st-stand">Stand ${datum} · ${tree.order.length} Skills${eigene ? ` · ${eigene} eigene` : ""}</span>
   </header>
 

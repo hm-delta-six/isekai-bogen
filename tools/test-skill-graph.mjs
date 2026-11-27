@@ -81,10 +81,13 @@ const full = buildTree(base, [custom, makeCustomSkill(blitz, "x_blitz")]);
 check("Kinder werden gesetzt", full.skills.x_licht.children, ["x_blitz"]);
 check("Vorstufen eines eigenen Skills", [...ancestors(full, "x_blitz")], ["x_licht"]);
 
-// Verschmelzung mit Basisskill
-const mix = { ...blitz, name: "Heiliges Schwert", level: 5, domain: "kombi", type: "A", attr: "STR", parents: ["waf_schwert", "x_licht"] };
+// Zwei Eltern aus verschiedenen Bereichen
+const mix = { ...blitz, name: "Heiliges Schwert", level: 5, domain: "waffen", type: "A", attr: "STR", parents: ["waf_schwert", "x_licht"] };
 const mixCheck = validateCustom(withLight, mix);
-check("Lücke zur Grundregel gibt einen Hinweis, keinen Fehler", [mixCheck.errors.length, mixCheck.warnings.length], [0, 1]);
+// Zwei Hinweise, kein Fehler: die Luecke zur Grundregel und der zweite Eltern.
+check("Lücke zur Grundregel gibt einen Hinweis, keinen Fehler", [mixCheck.errors.length, mixCheck.warnings.length], [0, 2]);
+check("zwei Eltern geben einen Hinweis",
+  mixCheck.warnings.some(zeile => zeile.includes("nur einen Elternskill")), true);
 const mixTree = buildTree(base, [custom, makeCustomSkill(mix, "x_mix")]);
 check("Verschmelzung erkannt", mixTree.skills.x_mix.kind, "Verschmelzung");
 check("Vorstufen reichen bis zur Wurzel", [...ancestors(mixTree, "x_mix")].sort(), ["waf_klinge", "waf_nah", "waf_schwert", "x_licht"]);
@@ -358,16 +361,16 @@ check("jede Ebene ist tiefster Elternskill + 1",
     return S[id].level !== tiefste + 1;
   }).map(id => S[id].name), []);
 
-// Jeder Bereich ausser den Verschmelzungen hat einen eigenen Einstieg: sonst
-// sieht ein Skill im eigenen Reiter wurzellos aus.
+// Jeder Bereich hat einen eigenen Einstieg: sonst sieht ein Skill im eigenen
+// Reiter wurzellos aus.
 const ohneEigeneWurzel = tree.order
   .map(id => S[id])
   .filter(skill => skill.level > 1 && skill.parents.length &&
     skill.parents.every(parent => S[parent].domain !== skill.domain));
-check("nur Verschmelzungen haengen ganz an anderen Bereichen",
-  [...new Set(ohneEigeneWurzel.map(skill => skill.domain))], ["kombi"]);
-check("jeder Bereich ausser Verschmelzungen hat einen Skill auf Ebene 1",
-  base.doms.filter(domain => domain !== "kombi" &&
+check("kein Skill haengt ganz an anderen Bereichen",
+  ohneEigeneWurzel.map(skill => skill.name), []);
+check("jeder Bereich hat einen Skill auf Ebene 1",
+  base.doms.filter(domain =>
     !tree.order.some(id => S[id].domain === domain && S[id].level === 1)), []);
 
 

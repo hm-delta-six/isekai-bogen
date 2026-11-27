@@ -60,6 +60,10 @@
   .st-eff .extra { color: #fbbf24; }
   .st-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
   .st-empty { color: #64748b; padding: 20px 4px; line-height: 1.5; }
+  .st-gloss h6 { margin: 12px 0 3px; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; border: 0; }
+  .st-gloss dl { margin: 0; }
+  .st-gloss dt { color: #cbd5e1; font-weight: 600; margin-top: 5px; }
+  .st-gloss dd { margin: 0 0 0 10px; color: #94a3b8; }
   .st-note { font-size: 11px; color: #94a3b8; }
   .st-note.warn { color: #fbbf24; }
 </style>
@@ -70,6 +74,7 @@
       {{#each domains}}<a class="st-tab {{#if active}}active{{/if}}" data-domain="{{key}}">{{label}}</a>{{/each}}
     </div>
     <input class="st-search" type="search" placeholder="Skill suchen …" value="{{query}}"/>
+    <a class="st-glossar" title="Was die Abkürzungen in den Beschreibungen bedeuten">Glossar</a>
     <a class="st-export" title="Den ganzen Baum als eigenständige HTML-Datei speichern, mit allen eigenen Skills">Als HTML speichern</a>
     {{#if isGM}}<a class="st-new" title="Eigenen Skill anlegen, mit Ebene und Abhängigkeiten">+ Eigener Skill</a>{{/if}}
   </header>
@@ -177,6 +182,15 @@
           <b>Skill wählen</b><br>
           Klick auf einen Skill zeigt Wirkung, Voraussetzungen und alle enthaltenen Vorstufen.
           Blau markiert sind die Vorstufen, gelb die Skills, die darauf aufbauen. Ein Haken zeigt, was {{#if actorName}}{{actorName}}{{else}}der Charakter{{/if}} schon hat.
+        </div>
+        <div class="st-gloss">
+          <h5>Glossar</h5>
+          {{#each glossar}}
+            <h6>{{gruppe}}</h6>
+            <dl>
+              {{#each begriffe}}<dt>{{titel}}</dt><dd>{{text}}</dd>{{/each}}
+            </dl>
+          {{/each}}
         </div>
       {{/if}}
     </aside>

@@ -24,6 +24,15 @@ npm install --no-save handlebars jsdom
 | `test-skill-graph.mjs` | Baumaufbau, Voraussetzungen, eigene Skills, Uebergabe in den Bogen. |
 | `test-wiring.mjs` | jeder Listener findet sein Element, und jedes Feld, das gespeichert werden muss, steht im Formular. |
 | `test-werte.mjs` | jeder Skill mit konkreten Werten nennt Reichweite, Wirkung und Kosten fuer jede Raritaet ab seiner Einstiegsraritaet, beziffert und ohne Platzhalter. |
+| `test-glossar.mjs` | das Glossar ist vollstaendig, und keine Beschreibung rechnet mit einer Groesse, die es nicht erklaert. |
+
+## Glossar
+
+`GLOSSARY` in `scripts/rules.js` erklaert jede Abkuerzung genau einmal. Es
+steht im Skill-Baum im leeren Detail, erreichbar ueber "Glossar" in der
+Kopfzeile, und in der exportierten Datei an derselben Stelle. Was dort nicht
+steht, gehoert nicht in eine Beschreibung: `test-glossar.mjs` faengt
+"W x 5", "Wirkungswert", "Level" und "LP".
 
 ## Konkrete Werte je Raritaet
 

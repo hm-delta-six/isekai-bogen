@@ -7,7 +7,7 @@ import { treeHtml } from "./tree-export.js";
 import { DOMAIN_LABELS, columnList, detailData, domainList, norm } from "./tree-view.js";
 import {
   BOOST_DEFAULT_NOTE, BOOST_FORMULAS, BOOST_TARGETS, COND_LABELS, DAMAGE_TYPES,
-  RESISTANCE_FORMULA, SKILL_CATEGORIES, toArray
+  RESISTANCE_FORMULA, SKILL_CATEGORIES, glossaryLines, toArray
 } from "./rules.js";
 
 const MODULE_ID = "isekai-bogen";
@@ -155,6 +155,8 @@ export class SkillTreeApp extends Application {
     return {
       domains,
       columns,
+      // Steht im leeren Detail: jede Abkuerzung einmal erklaert.
+      glossar: glossaryLines(),
       query: state.query,
       isGM: game.user.isGM,
       actorName: this.actor?.name || "",
@@ -194,6 +196,8 @@ export class SkillTreeApp extends Application {
     html.find(".st-chip, .st-link").click(ev => select(ev.currentTarget.dataset.id));
 
     html.find(".st-add").click(ev => this._addToSheet(ev.currentTarget.dataset.id));
+    // Das Glossar steht im leeren Detail: die Auswahl loeschen zeigt es.
+    html.find(".st-glossar").click(() => { this.state.selected = null; this.render(); });
     html.find(".st-export").click(() => this._exportHtml());
     html.find(".st-new").click(() => this._openEditor());
     html.find(".st-edit").click(ev => this._openEditor(ev.currentTarget.dataset.id));
