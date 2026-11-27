@@ -308,20 +308,21 @@ check("ein Bonus von 3 kommt an", runde.context.derived.vwTotal - vwVorFeld, 3);
 
 
 // --- Ruestungsmalus ------------------------------------------------------
-// Summe der DR aller angelegten Teile minus Staerke, dann die Skills.
+// Summe der DR aller angelegten Teile minus (STR + DEX), dann die Skills.
+// Der Charakter hat STR 10 und DEX 14, traegt also 24 DR muehelos.
 const malus = runde.context.armorMalus;
 check("nur angelegte Teile zaehlen", malus.teile, 1);
 check("ihre DR", malus.ruestung, 4);
-check("STR 10 traegt 4 DR muehelos", malus.wert, 0);
+check("STR 10 und DEX 14 tragen 4 DR muehelos", malus.wert, 0);
 check("der abgelegte Helm gibt auch keine DR",
   runde.context.drByType.find(entry => entry.label === "Hieb").flat, 20);
 
 // Schwerere Ruestung anlegen
-actor.system.armors.push({ name: "Platte", dr: 18, durability: 20, types: "hieb", wear: "", worn: true });
+actor.system.armors.push({ name: "Platte", dr: 32, durability: 20, types: "hieb", wear: "", worn: true });
 const awVorMalus = runde.context.derived.awTotal;
 const vwVorMalus = runde.context.derived.vwTotal;
 runde = zeichnen();
-check("22 DR minus STR 10", runde.context.armorMalus.wert, 12);
+check("36 DR minus STR 10 und DEX 14", runde.context.armorMalus.wert, 12);
 check("der Malus geht vom Angriffswert ab",
   awVorMalus - runde.context.derived.awTotal, 12);
 check("und vom Verteidigungswert",
