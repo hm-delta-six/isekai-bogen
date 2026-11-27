@@ -11,7 +11,7 @@
 //
 // Ohne Foundry lauffaehig, damit der Generator testbar bleibt.
 import {
-  BOOST_DEFAULT_NOTE, DAMAGE_TYPES, MACHTFAKTOR_MAP, RARITY_MAP, RESISTANCE_FORMULA,
+  BOOST_DEFAULT_NOTE, DAMAGE_TYPES, DERIVED_START_NOTE, EFFECT_FORMULA, MACHTFAKTOR_MAP, RARITY_MAP, RESISTANCE_FORMULA,
   SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, glossaryLines, rarityRank
 } from "./rules.js";
 import { buildTree } from "./skill-graph.js";
@@ -313,6 +313,8 @@ ${RAHMEN}
 
 <section class="st-regeln">
   <dl>
+    <dt>Wirkung eines Skills</dt>
+    <dd>${esc(EFFECT_FORMULA)}</dd>
     <dt>Skill-Bonus</dt>
     <dd><table><tr><th>Kategorie</th><th>Bonus</th></tr>${boni}</table></dd>
     <dt>Rarität</dt>
@@ -326,8 +328,8 @@ ${RAHMEN}
     <dd>${esc(BOOST_DEFAULT_NOTE)} Eine Steigerung mit Lage zählt nur dort und wird im Bogen
       nicht mitgerechnet.</dd>
     <dt>Abgeleitete Skills</dt>
-    <dd>Das Startlevel ist der abgerundete Durchschnitt der Elternlevel. Jeder Elternskill muss das
-      Level haben, das die Ebene verlangt.</dd>
+    <dd>${esc(DERIVED_START_NOTE)} Jeder Elternskill muss das Level haben, das die Ebene
+      verlangt.</dd>
   </dl>
 </section>
 

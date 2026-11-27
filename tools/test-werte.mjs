@@ -7,6 +7,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { effectValue } from "../scripts/rules.js";
 import { buildTree, effectLines, makeCustomSkill, RARITY_LETTERS } from "../scripts/skill-graph.js";
 import { detailData } from "../scripts/tree-view.js";
 
@@ -55,6 +56,19 @@ for (const skill of mitWerten) {
 check("keine Raritaet fehlt", luecken, []);
 check("jede Wirkung nennt eine Zahl", unbeziffert, []);
 check("keine Wirkung rechnet mit der Raritaet als Wort", platzhalter, []);
+
+// Das passende Attribut gehoert in den Primaereffekt: halb, abgerundet.
+const ohneAttribut = [];
+for (const skill of mitWerten) {
+  for (const [brief, stufe] of Object.entries(skill.werte.st)) {
+    if (!String(stufe.w).includes(skill.attr)) ohneAttribut.push(`${skill.id}/${brief}`);
+  }
+}
+check("jede Wirkung nennt das Attribut des Skills", ohneAttribut, []);
+check("die Formel rechnet das Attribut halb",
+  effectValue({ level: 10, rarity: "Rare", attribute: 16 }), 54);
+check("ein ungerades Attribut wird abgerundet",
+  effectValue({ level: 10, rarity: "Common", attribute: 5 }), 12);
 check("jede Raritaet nennt Kosten", ohneKosten, []);
 check("keine Raritaet unter der Einstiegsraritaet", zuTief, []);
 

@@ -309,13 +309,22 @@ export const resistanceDR = (skill) =>
   Math.max(0, Number(skill?.level || 0)) * machtfaktor(skill?.rarity);
 
 /**
- * Startlevel eines abgeleiteten Skills: Durchschnitt der Elternlevel,
- * abgerundet. Ohne Eltern beginnt er bei 1.
+ * Startlevel eines abgeleiteten Skills: die Haelfte dessen, was die
+ * Elternskills im Schnitt stehen, abgerundet, mindestens 1.
+ *
+ * Ein Skill entwickelt sich nicht aus seinem Eltern heraus — der Eltern
+ * bleibt. Wer die Voraussetzungen erfuellt, lernt das Kind dazu und faengt
+ * dort auf halbem Weg an: das Geuebte traegt, ersetzt das Neue aber nicht.
  */
+export const DERIVED_START_NOTE =
+  "Das Startlevel ist die Hälfte des Durchschnitts der Elternlevel, abgerundet, mindestens 1. " +
+  "Der Elternskill bleibt erhalten.";
+
 export function derivedStartLevel(parentLevels) {
   const levels = toArray(parentLevels).map(value => Math.max(0, Number(value || 0)));
   if (!levels.length) return 1;
-  return Math.floor(levels.reduce((sum, value) => sum + value, 0) / levels.length);
+  const schnitt = levels.reduce((sum, value) => sum + value, 0) / levels.length;
+  return Math.max(1, Math.floor(schnitt / 2));
 }
 
 /**
@@ -439,6 +448,15 @@ export function resistanceSources({ resistances = [], skills = [], lookup = null
  * Beschreibung verwenden darf, genau einmal erklaert. Was hier nicht steht,
  * gehoert nicht in eine Beschreibung.
  */
+export const EFFECT_FORMULA =
+  "Primäreffekt = Raritätsstufe × (Stufe + Attribut ÷ 2, abgerundet). " +
+  "Reichweiten, Runden und Zielzahlen rechnen ohne das Attribut.";
+
+/** Der Primaereffekt eines Skills aus Level, Raritaet und Attribut. */
+export const effectValue = ({ level = 0, rarity = "", attribute = 0 } = {}) =>
+  rarityRank(rarity) * (Math.max(0, Math.trunc(Number(level) || 0)) +
+    Math.floor(Math.max(0, Number(attribute) || 0) / 2));
+
 export const GLOSSARY = [
   { gruppe: "Werte des Charakters", begriffe: [
     { kurz: "HP", lang: "Trefferpunkte", text: "Lebenspunkte. Bei 0 ist der Charakter kampfunfähig." },
@@ -447,7 +465,9 @@ export const GLOSSARY = [
     { kurz: "AW", lang: "Angriffswert", text: "Der Wurf gegen den Verteidigungswert des Ziels." },
     { kurz: "VW", lang: "Verteidigungswert", text: "Was ein Angreifer mit seinem AW übertreffen muss." },
     { kurz: "DR", lang: "Schadensreduktion", text: "Zieht sich von jedem Treffer ab, je Schadensart getrennt." },
-    { kurz: "INI", lang: "Initiative", text: "Die Reihenfolge im Kampf." }
+    { kurz: "INI", lang: "Initiative", text: "Die Reihenfolge im Kampf." },
+    { kurz: "Bonus", lang: "", text: "Die Zahl, die ein Skill im Bogen liefert — die Spalte Bonus in der Skill-Tabelle. Wie sie gerechnet wird, hängt an der Kategorie des Skills." },
+    { kurz: "Cap", lang: "Deckel", text: "Bis zu welchem Level ein Skill steigen sollte: Attribut × 3 + Raritätsstufe × 5." }
   ] },
   { gruppe: "Maße einer Wirkung", begriffe: [
     { kurz: "Stufe", lang: "Skill-Level", text: "Das Level genau dieses Skills im Bogen — nicht die Charakterstufe." },
@@ -457,13 +477,14 @@ export const GLOSSARY = [
     { kurz: "Runde", lang: "", text: "Eine Kampfrunde, in der jeder einmal handelt." },
     { kurz: "1W6, 2W6", lang: "Würfel", text: "So viele sechsseitige Würfel. Gewürfelt wird die Wirkung, nie die Kosten." },
     { kurz: "Ebene", lang: "", text: "Die Tiefe im Skill-Baum, 1 bis 7. Sie legt fest, ab welcher Rarität ein Skill überhaupt existiert." },
-    { kurz: "Steigerungspunkt", lang: "", text: "Wofür ein Skill-Level gekauft wird." }
+    { kurz: "Steigerungspunkt", lang: "", text: "Wofür ein Skill-Level gekauft wird." },
+    { kurz: "Attribut ÷ 2", lang: "", text: "Das passende Attribut zählt zur Hälfte, abgerundet, in den Primäreffekt — STR, DEX, CON, INT, WIS oder CHA, je Skill festgelegt." }
   ] },
   { gruppe: "Wie eine Wirkung wächst", begriffe: [
     { kurz: "S", lang: "nach Stufe", text: "Der Wert ist das Skill-Level." },
     { kurz: "R", lang: "nach Rarität", text: "Skill-Level × Raritätsstufe." },
     { kurz: "M", lang: "nach Macht", text: "Skill-Level × Machtfaktor." },
-    { kurz: "Primäreffekt", lang: "", text: "Worum es dem Skill geht: Schaden, Schutz, Zahl der Ziele." },
+    { kurz: "Primäreffekt", lang: "", text: "Worum es dem Skill geht: Schaden, Schutz, Zahl der Ziele. Er rechnet Raritätsstufe × (Stufe + Attribut ÷ 2)." },
     { kurz: "Sekundäreffekt", lang: "", text: "Was ab Rare dazukommt, auf einer anderen Dimension als der Primäreffekt." }
   ] }
 ];

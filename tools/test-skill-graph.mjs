@@ -85,9 +85,9 @@ check("Vorstufen eines eigenen Skills", [...ancestors(full, "x_blitz")], ["x_lic
 const mix = { ...blitz, name: "Heiliges Schwert", level: 5, domain: "waffen", type: "A", attr: "STR", parents: ["waf_schwert", "x_licht"] };
 const mixCheck = validateCustom(withLight, mix);
 // Zwei Hinweise, kein Fehler: die Luecke zur Grundregel und der zweite Eltern.
-check("Lücke zur Grundregel gibt einen Hinweis, keinen Fehler", [mixCheck.errors.length, mixCheck.warnings.length], [0, 2]);
-check("zwei Eltern geben einen Hinweis",
-  mixCheck.warnings.some(zeile => zeile.includes("nur einen Elternskill")), true);
+check("Lücke zur Grundregel gibt einen Hinweis, keinen Fehler", [mixCheck.errors.length, mixCheck.warnings.length], [0, 1]);
+check("zwei Eltern sind kein Fehler und kein Hinweis",
+  mixCheck.warnings.some(zeile => zeile.includes("Elternskill haben")), false);
 const mixTree = buildTree(base, [custom, makeCustomSkill(mix, "x_mix")]);
 check("Verschmelzung erkannt", mixTree.skills.x_mix.kind, "Verschmelzung");
 check("Vorstufen reichen bis zur Wurzel", [...ancestors(mixTree, "x_mix")].sort(), ["waf_klinge", "waf_nah", "waf_schwert", "x_licht"]);

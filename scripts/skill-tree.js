@@ -248,7 +248,8 @@ export class SkillTreeApp extends Application {
       if (!proceed) return;
     }
 
-    // Startlevel ist der Durchschnitt der Elternlevel, die der Charakter hat.
+    // Startlevel ist die Haelfte des Durchschnitts der Elternlevel, die der
+    // Charakter hat. Die Eltern bleiben: der Skill kommt dazu.
     const parentLevels = status.parents.filter(parent => parent.has).map(parent => parent.level);
     const entry = sheetEntry(skill, parentLevels, this.tree);
 

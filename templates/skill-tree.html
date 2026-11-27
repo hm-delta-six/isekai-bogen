@@ -168,7 +168,7 @@
           {{/if}}
 
           <div class="st-actions">
-            {{#if canAdd}}<a class="st-btn primary st-add" data-id="{{id}}">Zum Bogen von {{actorName}} hinzufügen</a>{{/if}}
+            {{#if canAdd}}<a class="st-btn primary st-add" data-id="{{id}}" title="Die Elternskills bleiben erhalten">Zum Bogen von {{actorName}} hinzufügen &mdash; Start auf Level {{startLevel}}</a>{{/if}}
             {{#if ../isGM}}
               <a class="st-btn st-edit" data-id="{{id}}">Bearbeiten</a>
               {{#if custom}}<a class="st-btn danger st-delete" data-id="{{id}}">Löschen</a>{{/if}}

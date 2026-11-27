@@ -14,9 +14,11 @@ check("Epic 10 -> 80", resistanceDR({level:10, rarity:"Epic"}), 80);
 check("Common 15 -> 15", resistanceDR({level:15, rarity:"Common"}), 15);
 check("Level 0 -> 0", resistanceDR({level:0, rarity:"Legendary"}), 0);
 
-check("Durchschnitt abgerundet", derivedStartLevel([10,10,11]), 10);
-check("Durchschnitt exakt", derivedStartLevel([10,12]), 11);
+check("halber Durchschnitt, abgerundet", derivedStartLevel([10,10,11]), 5);
+check("halber Durchschnitt zweier Eltern", derivedStartLevel([10,12]), 5);
 check("ohne Eltern -> 1", derivedStartLevel([]), 1);
+check("nie unter 1", derivedStartLevel([1]), 1);
+check("ein Eltern auf 20 -> 10", derivedStartLevel([20]), 10);
 
 // Hookwolf
 const hookwolf = damageReduction({ resistances: [

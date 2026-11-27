@@ -5,7 +5,7 @@
 // dasselbe Detail — ohne Foundry, also auch testbar.
 import {
   ARCH_FORMULAS, BOOST_FORMULAS, BOOST_LOWERS, BOOST_TARGETS, SKILL_CATEGORIES, bonusFormula, condLabel,
-  machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts, toArray, typeLabels
+  derivedStartLevel, machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts, toArray, typeLabels
 } from "./rules.js";
 import {
   LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_CATEGORY, TYPE_LABELS, ancestors, descendants,
@@ -223,6 +223,9 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
     ownedLevel: status.ownedLevel,
     needed: status.needed,
     canAdd: canAdd && !status.owned,
+    // Auf welchem Level der Skill im Bogen anfinge: die Haelfte dessen, was
+    // die Eltern dieses Charakters stehen. Die Eltern bleiben erhalten.
+    startLevel: derivedStartLevel(status.parents.filter(parent => parent.has).map(parent => parent.level)),
     weg: pathToRoot(tree, id),
     auswaerts: Boolean(skill.parents.length) &&
       skill.parents.every(parent => tree.skills[parent]?.domain !== skill.domain),
