@@ -109,6 +109,10 @@ const shape = (skill, base) => ({
   level: skill.level,
   kern: skill.kern || "",
   ms: { ...(skill.ms || {}) },
+  // Konkrete Werte je Raritaet: { rw, st: { "R": { w, k } } }. Wer sie hat,
+  // zeigt im Detail eine Tabelle mit Wirkung und Kosten statt der Staffel
+  // seiner Art.
+  werte: skill.werte?.st ? { rw: skill.werte.rw || "", st: { ...skill.werte.st } } : null,
   // In welche Tabelle des Bogens der Skill gehoert. Steht am Skill, damit
   // Resistenzen nicht an ihrem Typ erraten werden muessen: sie sind passive
   // Skills und haetten sonst in derselben Tabelle gelandet.
@@ -303,6 +307,9 @@ export function makeCustomSkill(input, id) {
     types: input.type === "P" ? [...new Set(input.types || [])] : [],
     replaces: [...new Set(input.replaces || [])],
     cond: input.type === "P" ? String(input.cond || "").trim() : "",
+    // Konkrete Werte kennt das Formular nicht; ein bearbeiteter Skill soll
+    // sie trotzdem behalten.
+    ...(input.werte?.st ? { werte: input.werte } : {}),
     cat: input.cat in SKILL_CATEGORIES ? input.cat : "",
     bm: input.bonusMode in BOOST_FORMULAS ? input.bonusMode : "",
     // Welche Werte der Skill steigert. Ohne eigene Rechenregel gilt
@@ -330,11 +337,17 @@ export function effectLines(tree, id) {
   const ladder = tree.lad[skill.arch] || [];
   const lines = [];
   for (let rank = skill.fl; rank <= 6; rank++) {
+    const letter = RARITY_LETTERS[rank - 1];
+    // Stehen konkrete Werte am Skill, gelten sie. In ihnen ist die
+    // Raritaetsstufe schon eingerechnet; sie ersetzen deshalb die Staffel
+    // der Art und nicht nur deren Text.
+    const eigen = skill.werte?.st?.[letter];
     lines.push({
       rank,
       rarity: tree.rn[rank - 1],
-      base: ladder[rank - 1] || "",
-      extra: skill.ms[RARITY_LETTERS[rank - 1]] || null
+      base: eigen ? eigen.w : (ladder[rank - 1] || ""),
+      kosten: eigen ? eigen.k : "",
+      extra: eigen ? null : (skill.ms[letter] || null)
     });
   }
   return lines;

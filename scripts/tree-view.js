@@ -4,8 +4,8 @@
 // eigenstaendige HTML-Datei. Beide bekommen damit dieselben Spalten und
 // dasselbe Detail — ohne Foundry, also auch testbar.
 import {
-  ARCH_FORMULAS, BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, condLabel, machtfaktor, rarityRank,
-  resistanceDR, skillBonus, skillBoosts, typeLabels
+  ARCH_FORMULAS, BOOST_FORMULAS, BOOST_LOWERS, BOOST_TARGETS, SKILL_CATEGORIES, bonusFormula, condLabel,
+  machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts, toArray, typeLabels
 } from "./rules.js";
 import {
   LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_CATEGORY, TYPE_LABELS, ancestors, descendants,
@@ -75,9 +75,33 @@ export function columnList(tree, {
 }
 
 /**
+ * Was der Bogen von selbst rechnet: welcher Wert sich bewegt und nach welcher
+ * Regel. Ohne Beispielzahlen — die konkreten Zahlen stehen in der Tabelle je
+ * Raritaet am Skill.
+ */
+export function autoValues(skill) {
+  const zeilen = [];
+  const types = typeLabels(skill.types);
+  const nurGegen = skill.cond ? ` — nur gegen ${condLabel(skill.cond)}` : "";
+
+  if (types.length) {
+    zeilen.push(`Schadensreduktion gegen ${types.join(", ")}${nurGegen}` +
+      ` — ${BOOST_FORMULAS[bonusFormula({ ...skill, category: sheetCategory(skill) })] || ""}`);
+  }
+
+  for (const boost of toArray(skill.boosts).filter(entry => entry?.t in BOOST_TARGETS)) {
+    const regel = BOOST_FORMULAS[boost.f in BOOST_FORMULAS ? boost.f : "standard"];
+    const vorzeichen = BOOST_LOWERS.has(boost.t) ? "senkt" : "steigert";
+    zeilen.push(`${vorzeichen} ${BOOST_TARGETS[boost.t]} um ${regel}` +
+      (boost.s ? ` — nur ${boost.s}, der Bogen rechnet es nicht ein` : " — rechnet der Bogen von selbst ein"));
+  }
+
+  return zeilen;
+}
+
+/**
  * Was der Skill konkret bringt — gerechnet mit dem Level aus dem Bogen, sonst
- * mit BEISPIEL_LEVEL. Die Formel selbst steht einmal in ARCH_FORMULAS und wird
- * hier nicht wiederholt.
+ * mit BEISPIEL_LEVEL. Nur noch fuer Skills ohne eigene Werte-Tabelle.
  */
 export function payoff(skill, status) {
   const level = status.owned ? Number(status.ownedLevel || 0) : BEISPIEL_LEVEL;
@@ -214,9 +238,14 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
         tree.skills[a].name.localeCompare(tree.skills[b].name, "de"))
       .map(link),
     children: skill.children.map(link),
-    formula: ARCH_FORMULAS[skill.arch] || "",
+    // Steht eine eigene Werte-Tabelle am Skill, ersetzt sie die Staffel der
+    // Art: dann braucht es weder die Formel der Art noch ein Beispiel.
+    hatWerte: Boolean(skill.werte?.st),
+    reichweite: skill.werte?.rw || "",
+    formula: skill.werte?.st ? "" : (ARCH_FORMULAS[skill.arch] || ""),
     bonusModeLabel: BOOST_FORMULAS[skill.bonusMode] || "",
-    payoff: payoff(skill, status),
+    auto: autoValues(skill),
+    payoff: skill.werte?.st ? null : payoff(skill, status),
     effects: effectLines(tree, id)
   };
 }

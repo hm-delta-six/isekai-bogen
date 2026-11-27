@@ -30,7 +30,7 @@
   .st-chip.custom { font-style: italic; }
   /* Alle Voraussetzungen liegen in anderen Bereichen: der Weg zur Ebene 1
      fuehrt ueber einen anderen Reiter. */
-  .st-chip.extern::before { content: "97 "; color: #94a3b8; }
+  .st-chip.extern::before { content: "↗ "; color: #94a3b8; }
   .st-chip.anc { background: #1e3a5f; border-color: #38bdf8; }
   .st-chip.desc { background: #3b2f1a; border-color: #fbbf24; }
   .st-chip.sel { background: #38bdf8; color: #0f172a; border-color: #38bdf8; font-weight: bold; }
@@ -47,6 +47,14 @@
   .st-link { padding: 1px 7px; border-radius: 10px; border: 1px solid #334155; border-left-width: 4px; cursor: pointer; color: #e2e8f0; }
   .st-link:hover { background: #1e2d4d; }
   .st-link.ok { border-color: #4ade80; } .st-link.bad { border-color: #f87171; }
+  .st-werte { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .st-werte th, .st-werte td { text-align: left; vertical-align: top; padding: 3px 6px; border-top: 1px solid #334155; }
+  .st-werte thead th { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; border-top: 0; }
+  .st-werte tbody th { white-space: nowrap; border-left: 4px solid #334155; font-weight: bold; color: #cbd5e1; }
+  .st-werte tbody tr.r-Common > th { border-left-color: #94a3b8; } .st-werte tbody tr.r-Uncommon > th { border-left-color: #4ade80; }
+  .st-werte tbody tr.r-Rare > th { border-left-color: #38bdf8; } .st-werte tbody tr.r-Epic > th { border-left-color: #c084fc; }
+  .st-werte tbody tr.r-Legendary > th { border-left-color: #fbbf24; } .st-werte tbody tr.r-Transzendiert > th { border-left-color: #f472b6; }
+  .st-werte td.kosten { white-space: nowrap; color: #fbbf24; }
   .st-eff { margin-bottom: 6px; padding-left: 8px; border-left: 4px solid #334155; }
   .st-eff b { display: block; font-size: 11px; }
   .st-eff .extra { color: #fbbf24; }
@@ -88,6 +96,43 @@
 
           {{#if owned}}<div class="st-note">Im Bogen vorhanden (Level {{ownedLevel}}).</div>{{/if}}
 
+          {{#if reichweite}}<p class="st-note"><b>Reichweite:</b> {{reichweite}}</p>{{/if}}
+
+          {{#if auto.length}}
+            <h5>Rechnet der Bogen</h5>
+            {{#each auto}}<div class="st-note">{{this}}</div>{{/each}}
+          {{/if}}
+
+          <h5>Was jede Rarität bringt</h5>
+          {{#if hatWerte}}
+            <table class="st-werte">
+              <thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead>
+              <tbody>
+                {{#each effects}}
+                  <tr class="r-{{rarity}}"><th>{{rarity}}</th><td>{{base}}</td><td class="kosten">{{kosten}}</td></tr>
+                {{/each}}
+              </tbody>
+            </table>
+          {{else}}
+            {{#each effects}}
+              <div class="st-eff r-{{rarity}}">
+                <b>{{rarity}}</b>
+                {{base}}
+                {{#if extra}}<div class="extra">Neu bei dieser Rarität: {{extra}}</div>{{/if}}
+              </div>
+            {{/each}}
+          {{/if}}
+          {{#if formula}}<p class="st-note" style="margin-top:6px;">{{formula}}</p>{{/if}}
+          {{#if bonusModeLabel}}<p class="st-note">Eigener Bonus nach eigener Regel: {{bonusModeLabel}}.</p>{{/if}}
+
+          {{#if payoff}}
+            <h5>{{#if payoff.sample}}Was der Skill bringt (Beispiel){{else}}Was der Skill dir bringt{{/if}}</h5>
+            <div class="st-payoff">
+              <div class="st-payoff-head">{{payoff.head}}</div>
+              {{#each payoff.lines}}<div>{{{this}}}</div>{{/each}}
+            </div>
+          {{/if}}
+
           {{#if weg.length}}
             <h5>Weg von Ebene 1</h5>
             <div class="st-links">
@@ -116,23 +161,6 @@
               {{#each children}}<a class="st-link r-{{rarity}}" data-id="{{id}}">{{name}}</a>{{/each}}
             </div>
           {{/if}}
-
-          <h5>{{#if payoff.sample}}Was der Skill bringt (Beispiel){{else}}Was der Skill dir bringt{{/if}}</h5>
-          <div class="st-payoff">
-            <div class="st-payoff-head">{{payoff.head}}</div>
-            {{#each payoff.lines}}<div>{{{this}}}</div>{{/each}}
-          </div>
-          {{#if formula}}<p class="st-note" style="margin-top:6px;">{{formula}}</p>{{/if}}
-          {{#if bonusModeLabel}}<p class="st-note">Eigener Bonus nach eigener Regel: {{bonusModeLabel}}.</p>{{/if}}
-
-          <h5>Was jede Rarität bringt</h5>
-          {{#each effects}}
-            <div class="st-eff r-{{rarity}}">
-              <b>{{rarity}}</b>
-              {{base}}
-              {{#if extra}}<div class="extra">Neu bei dieser Rarität: {{extra}}</div>{{/if}}
-            </div>
-          {{/each}}
 
           <div class="st-actions">
             {{#if canAdd}}<a class="st-btn primary st-add" data-id="{{id}}">Zum Bogen von {{actorName}} hinzufügen</a>{{/if}}

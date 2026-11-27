@@ -23,6 +23,24 @@ npm install --no-save handlebars jsdom
 | `test-resistance.mjs` | Schadensreduktion, Stilllegung, Gift, und die ganze Kette aus der echten `data/skill-baum.json`. |
 | `test-skill-graph.mjs` | Baumaufbau, Voraussetzungen, eigene Skills, Uebergabe in den Bogen. |
 | `test-wiring.mjs` | jeder Listener findet sein Element, und jedes Feld, das gespeichert werden muss, steht im Formular. |
+| `test-werte.mjs` | jeder Skill mit konkreten Werten nennt Reichweite, Wirkung und Kosten fuer jede Raritaet ab seiner Einstiegsraritaet, beziffert und ohne Platzhalter. |
+
+## Konkrete Werte je Raritaet
+
+Ein Skill kann am Baum eine Tabelle tragen: `werte.rw` ist die Reichweite,
+`werte.st` je Raritaet `{ w: Wirkung, k: Kosten }`. Die Raritaetsstufe ist in
+den Zahlen schon eingerechnet; der Text nennt sie deshalb nie als
+Rechenanweisung. Wer sie hat, zeigt im Detail die Tabelle statt der Staffel
+seiner Art und ohne gerechnetes Beispiel.
+
+Geschrieben wird bereichsweise in `docs/werte-<bereich>.json`
+(`{ "<skill-id>": { "reichweite": ..., "stufen": { "R": { "wirkung", "kosten" } } } }`)
+und dann eingetragen:
+
+```bash
+node tools/merge-werte.mjs docs/werte-kombi.json
+node tools/test-werte.mjs
+```
 
 ## Skill-Baum als eigenstaendige Datei
 

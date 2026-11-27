@@ -68,6 +68,45 @@ function detailHtml(detail) {
     `<p>${esc(detail.kern)}</p>`
   ];
 
+  if (detail.reichweite) {
+    teile.push(`<p class="st-note"><b>Reichweite:</b> ${esc(detail.reichweite)}</p>`);
+  }
+
+  if (detail.auto.length) {
+    teile.push(`<h5>Rechnet der Bogen</h5>`);
+    teile.push(detail.auto.map(zeile => `<div class="st-note">${esc(zeile)}</div>`).join(""));
+  }
+
+  // Die Raritaeten zuerst, Eltern und Kinder darunter: was der Skill tut,
+  // steht vor der Frage, woher er kommt.
+  teile.push(`<h5>Was jede Rarität bringt</h5>`);
+  if (detail.hatWerte) {
+    teile.push(`<table class="st-werte">` +
+      `<thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead><tbody>` +
+      detail.effects.map(zeile =>
+        `<tr class="r-${esc(zeile.rarity)}"><th>${esc(zeile.rarity)}</th>` +
+        `<td>${esc(zeile.base)}</td><td class="kosten">${esc(zeile.kosten)}</td></tr>`).join("") +
+      `</tbody></table>`);
+  } else {
+    teile.push(detail.effects.map(zeile =>
+      `<div class="st-eff r-${esc(zeile.rarity)}"><b>${esc(zeile.rarity)}</b> ${esc(zeile.base)}` +
+      (zeile.extra ? `<div class="extra">Neu bei dieser Rarität: ${esc(zeile.extra)}</div>` : "") +
+      `</div>`).join(""));
+  }
+
+  if (detail.formula) teile.push(`<p class="st-note" style="margin-top:6px;">${esc(detail.formula)}</p>`);
+  if (detail.bonusModeLabel) {
+    teile.push(`<p class="st-note">Eigener Bonus nach eigener Regel: ${esc(detail.bonusModeLabel)}.</p>`);
+  }
+
+  // Ohne eigene Werte-Tabelle bleibt das gerechnete Beispiel die einzige
+  // Zahl, die der Skill nennt.
+  if (detail.payoff) {
+    teile.push(`<h5>${detail.payoff.sample ? "Was der Skill bringt (Beispiel)" : "Was der Skill dir bringt"}</h5>`);
+    teile.push(`<div class="st-payoff"><div class="st-payoff-head">${esc(detail.payoff.head)}</div>` +
+      detail.payoff.lines.map(line => `<div>${line}</div>`).join("") + `</div>`);
+  }
+
   if (detail.weg.length) {
     teile.push(`<h5>Weg von Ebene 1</h5>`);
     teile.push(`<div class="st-links">` + detail.weg.map(eintrag =>
@@ -87,21 +126,6 @@ function detailHtml(detail) {
     teile.push(`<h5>Führt weiter zu</h5>`);
     teile.push(links(detail.children));
   }
-
-  teile.push(`<h5>${detail.payoff.sample ? "Was der Skill bringt (Beispiel)" : "Was der Skill dir bringt"}</h5>`);
-  teile.push(`<div class="st-payoff"><div class="st-payoff-head">${esc(detail.payoff.head)}</div>` +
-    detail.payoff.lines.map(line => `<div>${line}</div>`).join("") + `</div>`);
-
-  if (detail.formula) teile.push(`<p class="st-note" style="margin-top:6px;">${esc(detail.formula)}</p>`);
-  if (detail.bonusModeLabel) {
-    teile.push(`<p class="st-note">Eigener Bonus nach eigener Regel: ${esc(detail.bonusModeLabel)}.</p>`);
-  }
-
-  teile.push(`<h5>Was jede Rarität bringt</h5>`);
-  teile.push(detail.effects.map(zeile =>
-    `<div class="st-eff r-${esc(zeile.rarity)}"><b>${esc(zeile.rarity)}</b> ${esc(zeile.base)}` +
-    (zeile.extra ? `<div class="extra">Neu bei dieser Rarität: ${esc(zeile.extra)}</div>` : "") +
-    `</div>`).join(""));
 
   return teile.join("\n");
 }

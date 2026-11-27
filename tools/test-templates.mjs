@@ -196,14 +196,27 @@ pruef("nichts wird von aussen geladen", !/src="http|href="http|<link/.test(seite
 // Im Detail steht, was der Skill bringt, und die Resistenz nur einmal
 const dickeHaut = Object.entries(eintraege.detail)
   .find(([, html]) => html.includes("<h3>Dicke Haut</h3>"))[1];
-// Im Kasten "Was der Skill bringt" steht die Reduktion genau einmal; die
-// Rechenregel darunter nennt sie noch einmal als Formel, das ist gewollt.
-const kasten = dickeHaut.slice(dickeHaut.indexOf("st-payoff"), dickeHaut.indexOf("st-note"));
+// Im Kasten "Was der Skill bringt" steht die Reduktion genau einmal; der
+// Block "Rechnet der Bogen" darueber und die Rechenregel darunter nennen sie
+// noch einmal als Regel, das ist gewollt.
+const kastenAb = dickeHaut.indexOf("st-payoff");
+const kasten = dickeHaut.slice(kastenAb, dickeHaut.indexOf("st-note", kastenAb));
 pruef("Detail nennt die Schadensreduktion genau einmal",
   (kasten.match(/Schadensreduktion/g) || []).length === 1);
 pruef("Detail nennt die Eltern", dickeHaut.includes("Hiebresistenz"));
 pruef("Detail nennt die Raritaetsleiter", dickeHaut.includes("st-eff"));
 pruef("Detail nennt die Tabelle im Bogen", dickeHaut.includes("Resistenzen"));
+pruef("Detail sagt, was der Bogen selbst rechnet", dickeHaut.includes("Rechnet der Bogen"));
+
+// Ein Skill mit konkreten Werten zeigt die Tabelle mit Kostenspalte, und die
+// Eltern stehen darunter.
+const mitWerten = Object.entries(eintraege.detail)
+  .find(([, html]) => html.includes("st-werte"))[1];
+pruef("Werte-Tabelle hat eine Kostenspalte", mitWerten.includes("<th>Kosten</th>"));
+pruef("Werte-Tabelle nennt die Reichweite", mitWerten.includes("Reichweite:"));
+pruef("mit Werten kein gerechnetes Beispiel", !mitWerten.includes("st-payoff"));
+pruef("Eltern stehen unter den Raritaeten",
+  mitWerten.indexOf("st-werte") < mitWerten.indexOf("Weg von Ebene 1"));
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

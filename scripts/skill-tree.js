@@ -326,6 +326,10 @@ export class SkillTreeApp extends Application {
         </div>
         <label style="grid-column:1 / 3;">Beschreibung (was der Skill bewirkt)
           <textarea name="kern" rows="4" style="width:100%;">${esc(value.kern)}</textarea></label>
+        ${value.werte?.st ? `<div style="grid-column:1 / 3; font-size:11px; color:#94a3b8;">
+          Dieser Skill hat konkrete Werte je Rarität (Reichweite, Wirkung, Kosten).
+          Sie bleiben beim Speichern erhalten; geändert werden sie in den Baumdaten.
+        </div>` : ""}
         <label style="grid-column:1 / 3;">Neu pro Rarität
           <span style="color:#64748b; font-size:11px;">&mdash; was der Skill ab dieser Rarität zusätzlich kann.
           Hinter die Zeile schreiben; was leer bleibt, zählt nicht.</span>
@@ -397,6 +401,9 @@ export class SkillTreeApp extends Application {
       </form>`;
 
     const collect = (html) => ({
+      // Die Tabelle konkreter Werte je Raritaet hat kein Feld im Formular.
+      // Sie wird mitgenommen, damit Bearbeiten sie nicht loescht.
+      ...(value.werte?.st ? { werte: value.werte } : {}),
       name: html.find('[name="name"]').val(),
       level: Number(html.find('[name="level"]').val()),
       domain: html.find('[name="domain"]').val(),
