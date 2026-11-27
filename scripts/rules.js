@@ -644,16 +644,22 @@ export const isWorn = (armor) => armor?.worn !== false && Number(armor?.durabili
 export function armorMalus(system, skills = []) {
   const teile = toArray(system?.armors).filter(isWorn);
   const ruestung = teile.reduce((summe, armor) => summe + Math.max(0, Number(armor.dr || 0)), 0);
+  // Rüstung wiegt weniger, wer kräftig ist — und wer gewandt ist, bewegt
+  // sich auch darin. Beide Attribute tragen sie gemeinsam.
   const staerke = abilityValue(system, "STR");
+  const gewandtheit = abilityValue(system, "DEX");
+  const traegt = staerke + gewandtheit;
   const extra = Number(system?.boni?.armormalus || 0);
 
-  const roh = Math.max(0, ruestung - staerke) + extra;
+  const roh = Math.max(0, ruestung - traegt) + extra;
   const ausSkills = boostTotals(skills).totals.armormalus;
 
   return {
     teile: teile.length,
     ruestung,
     staerke,
+    gewandtheit,
+    traegt,
     extra,
     roh,
     ausSkills,
