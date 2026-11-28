@@ -126,6 +126,23 @@ check("eigene Angabe geht vor der Regel",
 check("jede Zeile hat eine Kostenangabe",
   tree.order.every(id => effectLines(tree, id).every(zeile => zeile.kosten)), true);
 
+// --- Wer AP zahlt ---
+// Eine Waffengattung zu fuehren kostet nichts. AP zahlen die Spezialangriffe
+// und die Abwehrmanoever, die den Angriff des Gegners erwidern.
+const alle = tree.order.map(id => tree.skills[id]);
+check("kein Waffenskill kostet AP",
+  alle.filter(skill => skill.arch === "waffe" && skill.res === "AP").map(skill => skill.name), []);
+check("jeder Spezialangriff kostet AP",
+  alle.filter(skill => skill.domain === "spezial" && skill.res !== "AP").map(skill => skill.name), []);
+check("nur Manoever der Abwehr kosten AP",
+  alle.filter(skill => skill.arch === "abwehr" && skill.res === "AP").map(skill => skill.id).sort(),
+  ["mod_deckung", "ver_bindung", "ver_gegenschlag", "ver_konter", "ver_riposte",
+   "ver_schildparade", "ver_schildwall"]);
+check("Parade kostet nichts", effectLines(tree, "ver_parade")[0].kosten, "—");
+check("Zerschmettern kostet AP", effectLines(tree, "spe_wucht")[0].kosten, "4 AP");
+check("Bildschirmarbeit kostet keine Ausdauer",
+  ["mod_drohnen", "mod_hacking", "mod_ekrieg"].map(id => tree.skills[id].res), ["", "", ""]);
+
 // --- Der Hinweis ueber der Tabelle ---
 // Mit Werten: die Zeilen zaehlen zusammen. Ohne Werte: Platzhalter.
 const { WERTE_NOTE, LADDER_NOTE } = await import("../scripts/rules.js");

@@ -500,7 +500,7 @@ export const effectValue = ({ level = 0, rarity = "", attribute = 0 } = {}) =>
 export const GLOSSARY = [
   { gruppe: "Werte des Charakters", begriffe: [
     { kurz: "HP", lang: "Trefferpunkte", text: "Lebenspunkte. Bei 0 ist der Charakter kampfunfähig." },
-    { kurz: "AP", lang: "Ausdauerpunkte", text: "Zahlen Anstrengung: Spezialangriffe, Hetzen, Sprinten." },
+    { kurz: "AP", lang: "Ausdauerpunkte", text: "Zahlen Anstrengung: Spezialangriffe, Abwehrmanöver, Hetzen, Sprinten. Eine Waffengattung zu führen kostet nichts." },
     { kurz: "MP", lang: "Manapunkte", text: "Zahlen Zauber." },
     { kurz: "AW", lang: "Angriffswert", text: "Der Wurf gegen den Verteidigungswert des Ziels." },
     { kurz: "VW", lang: "Verteidigungswert", text: "Was ein Angreifer mit seinem AW übertreffen muss." },
