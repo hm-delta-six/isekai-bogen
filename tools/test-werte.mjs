@@ -57,14 +57,34 @@ check("keine Raritaet fehlt", luecken, []);
 check("jede Wirkung nennt eine Zahl", unbeziffert, []);
 check("keine Wirkung rechnet mit der Raritaet als Wort", platzhalter, []);
 
-// Das passende Attribut gehoert in den Primaereffekt: halb, abgerundet.
+// Das passende Attribut gehoert in den Primaereffekt: halb, abgerundet. Es
+// muss in der Einstiegsraritaet stehen; die hoeheren Zeilen schreiben nur,
+// was sich aendert, und duerfen es weglassen, wenn sich die Zahl nicht ruehrt.
 const ohneAttribut = [];
 for (const skill of mitWerten) {
-  for (const [brief, stufe] of Object.entries(skill.werte.st)) {
-    if (!String(stufe.w).includes(skill.attr)) ohneAttribut.push(`${skill.id}/${brief}`);
+  const brief = RARITY_LETTERS[skill.fl - 1];
+  const einstieg = skill.werte.st[brief];
+  if (einstieg && !String(einstieg.w).includes(skill.attr)) {
+    ohneAttribut.push(`${skill.id}/${brief}`);
   }
 }
-check("jede Wirkung nennt das Attribut des Skills", ohneAttribut, []);
+check("die Einstiegsraritaet nennt das Attribut des Skills", ohneAttribut, []);
+
+// Die Zeilen zaehlen zusammen: keine wiederholt den ersten Satz der Zeile
+// darunter wortgleich.
+const ersterSatz = (text) => String(text).split(/(?<=\.)\s+/)[0].trim();
+const wiederholt = [];
+for (const skill of mitWerten) {
+  let vorher = "";
+  for (let rang = skill.fl; rang <= 6; rang++) {
+    const brief = RARITY_LETTERS[rang - 1];
+    const stufe = skill.werte.st[brief];
+    if (!stufe) continue;
+    if (vorher && ersterSatz(stufe.w) === vorher) wiederholt.push(`${skill.id}/${brief}`);
+    vorher = ersterSatz(stufe.w);
+  }
+}
+check("keine Raritaet wiederholt die Zeile darunter", wiederholt, []);
 check("die Formel rechnet das Attribut halb",
   effectValue({ level: 10, rarity: "Rare", attribute: 16 }), 54);
 check("ein ungerades Attribut wird abgerundet",
@@ -93,6 +113,25 @@ check("ohne Werte bleibt das Beispiel", Boolean(altDetail.payoff), true);
 check("ohne Werte bleibt die Staffel", effectLines(tree, ohne.id)[0].base,
   (tree.lad[ohne.arch] || [])[ohne.fl - 1] || "");
 check("ohne Werte nennt die Zeile keine Kosten", effectLines(tree, ohne.id)[0].kosten, "");
+
+// --- Der Hinweis ueber der Tabelle ---
+// Mit Werten: die Zeilen zaehlen zusammen. Ohne Werte: Platzhalter.
+const { WERTE_NOTE, LADDER_NOTE } = await import("../scripts/rules.js");
+check("mit Werten steht der additive Hinweis", detail.werteNote, WERTE_NOTE);
+check("ohne Werte steht der Platzhalter-Hinweis", altDetail.werteNote, LADDER_NOTE);
+
+// --- Ausbessern: der Flickzauber hat ein Kind auf Ebene 2 ---
+const ausbessern = tree.skills.mag_ausbessern;
+check("Ausbessern steht im Baum", Boolean(ausbessern), true);
+check("Ausbessern sitzt auf Ebene 2", ausbessern.level, 2);
+check("Ausbessern stammt vom Flickzauber", ausbessern.parents, ["mag_flicken"]);
+check("Ausbessern beginnt bei Common", ausbessern.floor, "Common");
+check("Ausbessern hat Werte ab Common", Object.keys(ausbessern.werte.st), ["C", "U", "R", "E", "L", "T"]);
+check("fehlende Teile erst ab Rare",
+  [ausbessern.werte.st.C.w.includes("alle Teile da"),
+   ausbessern.werte.st.R.w.includes("Fehlt")], [true, true]);
+check("Flickzauber hat jetzt ein Kind auf Ebene 2",
+  tree.skills.mag_flicken.children.filter(id => tree.skills[id].level === 2), ["mag_ausbessern"]);
 
 // --- Bearbeiten darf die Werte nicht verlieren ---
 const bearbeitet = makeCustomSkill({

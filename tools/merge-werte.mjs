@@ -33,6 +33,12 @@ for (const [id, eintrag] of Object.entries(werte)) {
   const rw = String(eintrag.reichweite || "").trim();
   if (!rw) fehler.push(`${id}: keine Reichweite`);
 
+  // Die Zeilen zaehlen zusammen: eine hoehere Raritaet schreibt nur, was sich
+  // aendert. Wiederholt sie den ersten Satz der Zeile darueber wortgleich,
+  // ist das die alte, redundante Form.
+  const ersterSatz = (text) => String(text).split(/(?<=\.)\s+/)[0].trim();
+  let vorher = "";
+
   const st = {};
   for (let rang = skill.fl; rang <= 6; rang++) {
     const brief = BUCHSTABEN[rang - 1];
@@ -48,6 +54,10 @@ for (const [id, eintrag] of Object.entries(werte)) {
       fehler.push(`${id}/${brief}: Platzhalter im Text — "${wirkung}"`);
     }
     if (!/\d/.test(wirkung)) fehler.push(`${id}/${brief}: keine Zahl in der Wirkung`);
+    if (vorher && ersterSatz(wirkung) === vorher) {
+      fehler.push(`${id}/${brief}: wiederholt die Zeile darunter — nur schreiben, was sich ändert`);
+    }
+    vorher = ersterSatz(wirkung);
     st[brief] = { w: wirkung, k: kosten };
   }
 

@@ -217,6 +217,16 @@ pruef("Werte-Tabelle nennt die Reichweite", mitWerten.includes("Reichweite:"));
 pruef("mit Werten kein gerechnetes Beispiel", !mitWerten.includes("st-payoff"));
 pruef("Eltern stehen unter den Raritaeten",
   mitWerten.indexOf("st-werte") < mitWerten.indexOf("Weg von Ebene 1"));
+// Der Hinweis steht vor der Tabelle: die Zeilen zaehlen zusammen.
+pruef("der additive Hinweis steht ueber der Tabelle",
+  mitWerten.includes("Die Zeilen zählen zusammen")
+  && mitWerten.indexOf("Die Zeilen zählen zusammen") < mitWerten.indexOf("st-werte"));
+
+// Ein Skill ohne eigene Werte sagt, dass die Leiter nur ein Platzhalter ist.
+const ohneWerte = Object.entries(eintraege.detail)
+  .find(([, html]) => !html.includes("st-werte"))[1];
+pruef("ohne Werte steht der Platzhalter-Hinweis",
+  ohneWerte.includes("noch nicht ausgeschrieben"));
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

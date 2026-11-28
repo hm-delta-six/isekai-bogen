@@ -42,14 +42,25 @@ den Zahlen schon eingerechnet; der Text nennt sie deshalb nie als
 Rechenanweisung. Wer sie hat, zeigt im Detail die Tabelle statt der Staffel
 seiner Art und ohne gerechnetes Beispiel.
 
+Die Zeilen zaehlen zusammen. In der Einstiegsraritaet steht die ganze
+Wirkung samt Attribut, in jeder hoeheren nur, was sich aendert oder
+dazukommt — wer Epic hat, hat alles aus Common bis Rare ebenfalls. Deshalb
+weist `merge-werte.mjs` eine Zeile zurueck, die den ersten Satz der Zeile
+darunter wortgleich wiederholt, und `test-werte.mjs` prueft dasselbe am
+fertigen Baum.
+
 Geschrieben wird bereichsweise in `docs/werte-<bereich>.json`
 (`{ "<skill-id>": { "reichweite": ..., "stufen": { "R": { "wirkung", "kosten" } } } }`)
 und dann eingetragen:
 
 ```bash
-node tools/merge-werte.mjs docs/werte-kombi.json
+node tools/merge-werte.mjs docs/werte-verschmelzungen.json
 node tools/test-werte.mjs
 ```
+
+Ein Skill ohne eigene Werte zeigt weiter die Staffel seiner Art, aber mit dem
+Hinweis, dass sie nur ein Platzhalter ist (`LADDER_NOTE`) — damit niemand die
+allgemeine Leiter fuer die Beschreibung des Skills haelt.
 
 ## Skill-Baum als eigenstaendige Datei
 

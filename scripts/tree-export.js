@@ -12,7 +12,7 @@
 // Ohne Foundry lauffaehig, damit der Generator testbar bleibt.
 import {
   BOOST_DEFAULT_NOTE, DAMAGE_TYPES, DERIVED_START_NOTE, EFFECT_FORMULA, MACHTFAKTOR_MAP, RARITY_MAP, RESISTANCE_FORMULA,
-  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, glossaryLines, rarityRank
+  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, WERTE_NOTE, glossaryLines, rarityRank
 } from "./rules.js";
 import { buildTree } from "./skill-graph.js";
 import { columnList, detailData, domainList, norm, relations } from "./tree-view.js";
@@ -80,6 +80,7 @@ function detailHtml(detail) {
   // Die Raritaeten zuerst, Eltern und Kinder darunter: was der Skill tut,
   // steht vor der Frage, woher er kommt.
   teile.push(`<h5>Was jede Rarität bringt</h5>`);
+  if (detail.werteNote) teile.push(`<p class="st-note">${esc(detail.werteNote)}</p>`);
   if (detail.hatWerte) {
     teile.push(`<table class="st-werte">` +
       `<thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead><tbody>` +
@@ -315,6 +316,8 @@ ${RAHMEN}
   <dl>
     <dt>Wirkung eines Skills</dt>
     <dd>${esc(EFFECT_FORMULA)}</dd>
+    <dt>Raritäten lesen</dt>
+    <dd>${esc(WERTE_NOTE)}</dd>
     <dt>Skill-Bonus</dt>
     <dd><table><tr><th>Kategorie</th><th>Bonus</th></tr>${boni}</table></dd>
     <dt>Rarität</dt>

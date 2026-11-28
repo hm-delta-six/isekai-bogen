@@ -4,8 +4,9 @@
 // eigenstaendige HTML-Datei. Beide bekommen damit dieselben Spalten und
 // dasselbe Detail — ohne Foundry, also auch testbar.
 import {
-  ARCH_FORMULAS, BOOST_FORMULAS, BOOST_LOWERS, BOOST_TARGETS, SKILL_CATEGORIES, bonusFormula, condLabel,
-  derivedStartLevel, machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts, toArray, typeLabels
+  ARCH_FORMULAS, BOOST_FORMULAS, BOOST_LOWERS, BOOST_TARGETS, LADDER_NOTE, SKILL_CATEGORIES, WERTE_NOTE,
+  bonusFormula, condLabel, derivedStartLevel, machtfaktor, rarityRank, resistanceDR, skillBonus, skillBoosts,
+  toArray, typeLabels
 } from "./rules.js";
 import {
   LEVEL_FLOOR, LEVEL_REQ, MAX_LEVEL, TYPE_CATEGORY, TYPE_LABELS, ancestors, descendants,
@@ -244,6 +245,9 @@ export function detailData(tree, id, { owned = [], hasActor = false, actorName =
     // Steht eine eigene Werte-Tabelle am Skill, ersetzt sie die Staffel der
     // Art: dann braucht es weder die Formel der Art noch ein Beispiel.
     hatWerte: Boolean(skill.werte?.st),
+    // Die Tabelle zaehlt zusammen; ohne sie steht nur die Leiter der Art da,
+    // und das muss als Platzhalter erkennbar sein.
+    werteNote: skill.werte?.st ? WERTE_NOTE : LADDER_NOTE,
     reichweite: skill.werte?.rw || "",
     formula: skill.werte?.st ? "" : (ARCH_FORMULAS[skill.arch] || ""),
     bonusModeLabel: BOOST_FORMULAS[skill.bonusMode] || "",
