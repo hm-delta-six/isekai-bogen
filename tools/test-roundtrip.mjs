@@ -246,18 +246,18 @@ check("die Raenge bleiben", pf1Skills.acr.rank, 3);
 check("der Bogen legt dort kein Feld an",
   Object.keys(pf1Skills).every(key => typeof pf1Skills[key] === "object"), true);
 
-
-// --- Resistenzen wandern in ihre eigene Tabelle ---------------------------
-const tabelle = (key) => runde.context.skillGroups.find(group => group.key === key);
-check("es gibt eine Resistenz-Tabelle", Boolean(tabelle("resistenz")), true);
-check("Hiebresistenz steht dort, nicht bei den passiven Skills",
-  tabelle("resistenz").entries.map(entry => entry.skill.name), ["Hiebresistenz"]);
-check("die passive Tabelle ist leer", tabelle("passiv").entries.length, 0);
-check("der Bonus ist die Schadensreduktion: 10 x 2",
-  tabelle("resistenz").entries[0].skill.bonus, 20);
-check("die Tabelle wird beim Speichern mitgeschrieben",
-  skillByName("Hiebresistenz").category, "resistenz");
-
+
+// --- Resistenzen wandern in ihre eigene Tabelle ---------------------------
+const tabelle = (key) => runde.context.skillGroups.find(group => group.key === key);
+check("es gibt eine Resistenz-Tabelle", Boolean(tabelle("resistenz")), true);
+check("Hiebresistenz steht dort, nicht bei den passiven Skills",
+  tabelle("resistenz").entries.map(entry => entry.skill.name), ["Hiebresistenz"]);
+check("die passive Tabelle ist leer", tabelle("passiv").entries.length, 0);
+check("der Bonus ist die Schadensreduktion: 10 x 2",
+  tabelle("resistenz").entries[0].skill.bonus, 20);
+check("die Tabelle wird beim Speichern mitgeschrieben",
+  skillByName("Hiebresistenz").category, "resistenz");
+
 
 // --- Bogen und Angriffswurf rechnen gleich -------------------------------
 // Vorher gab es zwei Formeln: der Bogen zaehlte die Steigerungen aus Skills
@@ -295,58 +295,58 @@ check("Ausruestung auf VW zaehlt im Bogen", runde.context.derived.vwTotal - vwOh
 check("und im Angriff gegen den Charakter",
   defenceTotal(actor.system, alleSkills), runde.context.derived.vwTotal);
 
-
-// Beide Bonusfelder des Verteidigungswerts sind erreichbar
-const vwFelder = formular(runde.html);
-check("das Bonusfeld des VW steht im Formular", "system.boni.vw" in vwFelder, true);
-check("das alte Extra-Feld ebenso", "system.boni.vwSkill" in vwFelder, true);
-const vwVorFeld = runde.context.derived.vwTotal;
-vwFelder["system.boni.vw"] = 3;
-await actor.update(vwFelder);
-runde = zeichnen();
-check("ein Bonus von 3 kommt an", runde.context.derived.vwTotal - vwVorFeld, 3);
-
-
-// --- Ruestungsmalus ------------------------------------------------------
+
+// Beide Bonusfelder des Verteidigungswerts sind erreichbar
+const vwFelder = formular(runde.html);
+check("das Bonusfeld des VW steht im Formular", "system.boni.vw" in vwFelder, true);
+check("das alte Extra-Feld ebenso", "system.boni.vwSkill" in vwFelder, true);
+const vwVorFeld = runde.context.derived.vwTotal;
+vwFelder["system.boni.vw"] = 3;
+await actor.update(vwFelder);
+runde = zeichnen();
+check("ein Bonus von 3 kommt an", runde.context.derived.vwTotal - vwVorFeld, 3);
+
+
+// --- Ruestungsmalus ------------------------------------------------------
 // Summe der DR aller angelegten Teile minus (STR + DEX), dann die Skills.
-// Der Charakter hat STR 10 und DEX 14, traegt also 24 DR muehelos.
-const malus = runde.context.armorMalus;
-check("nur angelegte Teile zaehlen", malus.teile, 1);
-check("ihre DR", malus.ruestung, 4);
-check("STR 10 und DEX 14 tragen 4 DR muehelos", malus.wert, 0);
-check("der abgelegte Helm gibt auch keine DR",
-  runde.context.drByType.find(entry => entry.label === "Hieb").flat, 20);
-
-// Schwerere Ruestung anlegen
-actor.system.armors.push({ name: "Platte", dr: 32, durability: 20, types: "hieb", wear: "", worn: true });
-const awVorMalus = runde.context.derived.awTotal;
-const vwVorMalus = runde.context.derived.vwTotal;
-runde = zeichnen();
-check("36 DR minus STR 10 und DEX 14", runde.context.armorMalus.wert, 12);
-check("der Malus geht vom Angriffswert ab",
-  awVorMalus - runde.context.derived.awTotal, 12);
-check("und vom Verteidigungswert",
-  vwVorMalus - runde.context.derived.vwTotal, 12);
-check("die Hilfe nennt Bewegung",
-  runde.context.armorMalusHelp.includes("Bewegung"), true);
-
-// Ein Skill senkt ihn
-actor.system.isekaiSkills.push({
-  name: "Rüstungstragen", level: 10, rarity: "Common", attribute: "CON", category: "passiv"
-});
-runde = zeichnen();
-check("Ruestungstragen 10 senkt um ein Fuenftel", runde.context.armorMalus.ausSkills, 2);
-check("Malus danach", runde.context.armorMalus.wert, 10);
-
-// Ablegen nimmt Malus und DR
-for (const stueck of actor.system.armors) stueck.worn = false;
-runde = zeichnen();
-check("nichts angelegt, kein Malus", runde.context.armorMalus.wert, 0);
-check("und keine DR aus Ruestung",
-  runde.context.drByType.find(entry => entry.label === "Stich").flat, 0);
-
-// Die Checkbox steht im Formular
-check("Angelegt-Feld im Formular", "system.armors.0.worn" in formular(runde.html), true);
-
+// Der Charakter hat STR 10 und DEX 14, traegt also 24 DR muehelos.
+const malus = runde.context.armorMalus;
+check("nur angelegte Teile zaehlen", malus.teile, 1);
+check("ihre DR", malus.ruestung, 4);
+check("STR 10 und DEX 14 tragen 4 DR muehelos", malus.wert, 0);
+check("der abgelegte Helm gibt auch keine DR",
+  runde.context.drByType.find(entry => entry.label === "Hieb").flat, 20);
+
+// Schwerere Ruestung anlegen
+actor.system.armors.push({ name: "Platte", dr: 32, durability: 20, types: "hieb", wear: "", worn: true });
+const awVorMalus = runde.context.derived.awTotal;
+const vwVorMalus = runde.context.derived.vwTotal;
+runde = zeichnen();
+check("36 DR minus STR 10 und DEX 14", runde.context.armorMalus.wert, 12);
+check("der Malus geht vom Angriffswert ab",
+  awVorMalus - runde.context.derived.awTotal, 12);
+check("und vom Verteidigungswert",
+  vwVorMalus - runde.context.derived.vwTotal, 12);
+check("die Hilfe nennt Bewegung",
+  runde.context.armorMalusHelp.includes("Bewegung"), true);
+
+// Ein Skill senkt ihn
+actor.system.isekaiSkills.push({
+  name: "Rüstungstragen", level: 10, rarity: "Common", attribute: "CON", category: "passiv"
+});
+runde = zeichnen();
+check("Ruestungstragen 10 senkt um ein Fuenftel", runde.context.armorMalus.ausSkills, 2);
+check("Malus danach", runde.context.armorMalus.wert, 10);
+
+// Ablegen nimmt Malus und DR
+for (const stueck of actor.system.armors) stueck.worn = false;
+runde = zeichnen();
+check("nichts angelegt, kein Malus", runde.context.armorMalus.wert, 0);
+check("und keine DR aus Ruestung",
+  runde.context.drByType.find(entry => entry.label === "Stich").flat, 0);
+
+// Die Checkbox steht im Formular
+check("Angelegt-Feld im Formular", "system.armors.0.worn" in formular(runde.html), true);
+
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);
