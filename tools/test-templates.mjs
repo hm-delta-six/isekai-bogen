@@ -204,29 +204,37 @@ const kasten = dickeHaut.slice(kastenAb, dickeHaut.indexOf("st-note", kastenAb))
 pruef("Detail nennt die Schadensreduktion genau einmal",
   (kasten.match(/Schadensreduktion/g) || []).length === 1);
 pruef("Detail nennt die Eltern", dickeHaut.includes("Hiebresistenz"));
-pruef("Detail nennt die Raritaetsleiter", dickeHaut.includes("st-eff"));
+pruef("Detail nennt die Raritaetsleiter", dickeHaut.includes("st-werte"));
 pruef("Detail nennt die Tabelle im Bogen", dickeHaut.includes("Resistenzen"));
 pruef("Detail sagt, was der Bogen selbst rechnet", dickeHaut.includes("Rechnet der Bogen"));
 
-// Ein Skill mit konkreten Werten zeigt die Tabelle mit Kostenspalte, und die
-// Eltern stehen darunter.
-const mitWerten = Object.entries(eintraege.detail)
-  .find(([, html]) => html.includes("st-werte"))[1];
-pruef("Werte-Tabelle hat eine Kostenspalte", mitWerten.includes("<th>Kosten</th>"));
+// Jeder Skill zeigt die Tabelle mit der Kostenspalte neben der Rarietaet.
+const alleDetails = Object.values(eintraege.detail);
+pruef("jedes Detail hat die Tabelle", alleDetails.every(html => html.includes("st-werte")));
+pruef("jedes Detail hat eine Kostenspalte",
+  alleDetails.every(html => html.includes("<th>Kosten</th>")));
+pruef("jede Zeile nennt Kosten",
+  alleDetails.every(html => html.includes('<td class="kosten">')));
+pruef("keine Zeile laesst die Kosten leer",
+  !alleDetails.some(html => html.includes('<td class="kosten"></td>')));
+
+// Ein Skill mit eigenen Werten nennt Reichweite, laesst das Beispiel weg und
+// sagt, dass die Zeilen zusammenzaehlen.
+const mitWerten = Object.values(eintraege.detail)
+  .find(html => html.includes("Die Zeilen zählen zusammen"));
 pruef("Werte-Tabelle nennt die Reichweite", mitWerten.includes("Reichweite:"));
 pruef("mit Werten kein gerechnetes Beispiel", !mitWerten.includes("st-payoff"));
 pruef("Eltern stehen unter den Raritaeten",
   mitWerten.indexOf("st-werte") < mitWerten.indexOf("Weg von Ebene 1"));
-// Der Hinweis steht vor der Tabelle: die Zeilen zaehlen zusammen.
 pruef("der additive Hinweis steht ueber der Tabelle",
-  mitWerten.includes("Die Zeilen zählen zusammen")
-  && mitWerten.indexOf("Die Zeilen zählen zusammen") < mitWerten.indexOf("st-werte"));
+  mitWerten.indexOf("Die Zeilen zählen zusammen") < mitWerten.indexOf("st-werte"));
 
-// Ein Skill ohne eigene Werte sagt, dass die Leiter nur ein Platzhalter ist.
-const ohneWerte = Object.entries(eintraege.detail)
-  .find(([, html]) => !html.includes("st-werte"))[1];
-pruef("ohne Werte steht der Platzhalter-Hinweis",
-  ohneWerte.includes("noch nicht ausgeschrieben"));
+// Ein Skill ohne eigene Werte sagt, dass die Wirkung noch ein Platzhalter ist.
+const ohneWerte = Object.values(eintraege.detail)
+  .find(html => html.includes("noch nicht ausgeschrieben"));
+pruef("ohne Werte steht der Platzhalter-Hinweis", Boolean(ohneWerte));
+pruef("und der Platzhalter nennt die Kostenregel",
+  ohneWerte.includes("2 × Ebene × Raritätsstufe"));
 
 console.log(fails ? `\n${fails} Test(s) fehlgeschlagen` : "\nalle Tests bestanden");
 process.exit(fails ? 1 : 0);

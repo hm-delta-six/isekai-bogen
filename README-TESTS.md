@@ -62,6 +62,11 @@ Ein Skill ohne eigene Werte zeigt weiter die Staffel seiner Art, aber mit dem
 Hinweis, dass sie nur ein Platzhalter ist (`LADDER_NOTE`) — damit niemand die
 allgemeine Leiter fuer die Beschreibung des Skills haelt.
 
+Die Tabelle selbst steht bei **jedem** Skill, samt Kostenspalte neben der
+Rarietaet. Fehlt eine eigene Kostenangabe, rechnet `skillCost()` sie:
+2 x Ebene x Raritaetsstufe in der Ressource des Skills (`SKILL_COST_FORMULA`),
+und "—" fuer Skills ohne Ressource. Eine eigene Angabe aus `werte` geht vor.
+
 ## Skill-Baum als eigenstaendige Datei
 
 ```bash

@@ -5,7 +5,8 @@
 // Baum zusammen, in dem Kinder, Art und Einstiegsrarität berechnet sind.
 
 import {
-  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, derivedStartLevel, nameList, toArray, typeList
+  BOOST_FORMULAS, BOOST_TARGETS, SKILL_CATEGORIES, derivedStartLevel, nameList, skillCost, toArray,
+  typeList
 } from "./rules.js";
 
 export const MAX_LEVEL = 7;
@@ -346,7 +347,8 @@ export function effectLines(tree, id) {
       rank,
       rarity: tree.rn[rank - 1],
       base: eigen ? eigen.w : (ladder[rank - 1] || ""),
-      kosten: eigen ? eigen.k : "",
+      // Ohne eigene Angabe gilt die Regel: 2 x Ebene x Raritaetsstufe.
+      kosten: eigen ? eigen.k : skillCost({ level: skill.level, rank, res: skill.res }),
       extra: eigen ? null : (skill.ms[letter] || null)
     });
   }

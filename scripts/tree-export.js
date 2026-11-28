@@ -12,7 +12,7 @@
 // Ohne Foundry lauffaehig, damit der Generator testbar bleibt.
 import {
   BOOST_DEFAULT_NOTE, DAMAGE_TYPES, DERIVED_START_NOTE, EFFECT_FORMULA, MACHTFAKTOR_MAP, RARITY_MAP, RESISTANCE_FORMULA,
-  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, WERTE_NOTE, glossaryLines, rarityRank
+  SKILL_BONUS_FORMULAS, SKILL_CATEGORIES, SKILL_COST_FORMULA, WERTE_NOTE, glossaryLines, rarityRank
 } from "./rules.js";
 import { buildTree } from "./skill-graph.js";
 import { columnList, detailData, domainList, norm, relations } from "./tree-view.js";
@@ -81,19 +81,15 @@ function detailHtml(detail) {
   // steht vor der Frage, woher er kommt.
   teile.push(`<h5>Was jede Rarität bringt</h5>`);
   if (detail.werteNote) teile.push(`<p class="st-note">${esc(detail.werteNote)}</p>`);
-  if (detail.hatWerte) {
-    teile.push(`<table class="st-werte">` +
-      `<thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead><tbody>` +
-      detail.effects.map(zeile =>
-        `<tr class="r-${esc(zeile.rarity)}"><th>${esc(zeile.rarity)}</th>` +
-        `<td>${esc(zeile.base)}</td><td class="kosten">${esc(zeile.kosten)}</td></tr>`).join("") +
-      `</tbody></table>`);
-  } else {
-    teile.push(detail.effects.map(zeile =>
-      `<div class="st-eff r-${esc(zeile.rarity)}"><b>${esc(zeile.rarity)}</b> ${esc(zeile.base)}` +
+  // Eine Tabelle fuer alle Skills: die Kostenspalte steht neben der Rarietaet,
+  // egal ob die Werte von Hand stehen oder aus der Regel kommen.
+  teile.push(`<table class="st-werte">` +
+    `<thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead><tbody>` +
+    detail.effects.map(zeile =>
+      `<tr class="r-${esc(zeile.rarity)}"><th>${esc(zeile.rarity)}</th><td>${esc(zeile.base)}` +
       (zeile.extra ? `<div class="extra">Neu bei dieser Rarität: ${esc(zeile.extra)}</div>` : "") +
-      `</div>`).join(""));
-  }
+      `</td><td class="kosten">${esc(zeile.kosten)}</td></tr>`).join("") +
+    `</tbody></table>`);
 
   if (detail.formula) teile.push(`<p class="st-note" style="margin-top:6px;">${esc(detail.formula)}</p>`);
   if (detail.bonusModeLabel) {
@@ -318,6 +314,8 @@ ${RAHMEN}
     <dd>${esc(EFFECT_FORMULA)}</dd>
     <dt>Raritäten lesen</dt>
     <dd>${esc(WERTE_NOTE)}</dd>
+    <dt>Kosten</dt>
+    <dd>${esc(SKILL_COST_FORMULA)} Steht am Skill eine eigene Kostenangabe, gilt die.</dd>
     <dt>Skill-Bonus</dt>
     <dd><table><tr><th>Kategorie</th><th>Bonus</th></tr>${boni}</table></dd>
     <dt>Rarität</dt>

@@ -2,7 +2,7 @@
   "id": "isekai-bogen",
   "title": "Mein ISEKAI Charakterbogen",
   "description": "Ein eigener Charakterbogen unabhängig vom Hauptsystem",
-  "version": "2.38.0",
+  "version": "2.39.0",
   "compatibility": {
     "minimum": "11",
     "verified": "12"

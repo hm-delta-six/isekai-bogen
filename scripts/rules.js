@@ -453,6 +453,26 @@ export const EFFECT_FORMULA =
   "Reichweiten, Runden und Zielzahlen rechnen ohne das Attribut.";
 
 /**
+ * Kosten eines Skills je Raritaet: zwei Punkte seiner Ressource je Ebene und
+ * je Raritaetsstufe. Tiefer im Baum und hoeher in der Rarietaet kostet mehr,
+ * und beides zaehlt gleich. MP und AP wachsen mit INT beziehungsweise CON um
+ * je fuenf Punkte, ein Zauber der Ebene 5 auf Rare kostet also etwa ein
+ * Drittel eines gut ausgebauten Vorrats.
+ *
+ * Eigene Werte am Skill gehen vor: steht dort eine Kostenangabe, gilt die.
+ */
+export const SKILL_COST_FORMULA =
+  "Kosten = 2 × Ebene × Raritätsstufe, in der Ressource des Skills. " +
+  "Wer keine Ressource verbraucht, zahlt nichts.";
+
+export function skillCost({ level = 0, rank = 0, res = "" } = {}) {
+  const ebene = Math.max(0, Math.trunc(Number(level) || 0));
+  const stufe = Math.max(0, Math.trunc(Number(rank) || 0));
+  if (!res || !ebene || !stufe) return "—";
+  return `${2 * ebene * stufe} ${res}`;
+}
+
+/**
  * Die Werte-Tabelle eines Skills zaehlt von unten nach oben zusammen: in der
  * Einstiegsrarietaet steht die ganze Wirkung, in jeder hoeheren nur, was sich
  * aendert oder dazukommt. Wer Epic hat, hat alles aus Common bis Rare
@@ -468,8 +488,9 @@ export const WERTE_NOTE =
  * sein, damit niemand sie fuer die Beschreibung des Skills haelt.
  */
 export const LADDER_NOTE =
-  "Für diesen Skill sind die Raritäten noch nicht ausgeschrieben. " +
-  "Hier steht, was seine Art auf der jeweiligen Rarität allgemein kann.";
+  "Für diesen Skill ist die Wirkung noch nicht ausgeschrieben: hier steht, " +
+  "was seine Art auf der jeweiligen Rarität allgemein kann. Die Kosten " +
+  "rechnet die Regel — 2 × Ebene × Raritätsstufe.";
 
 /** Der Primaereffekt eines Skills aus Level, Raritaet und Attribut. */
 export const effectValue = ({ level = 0, rarity = "", attribute = 0 } = {}) =>

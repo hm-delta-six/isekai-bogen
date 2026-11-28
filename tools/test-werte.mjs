@@ -112,7 +112,19 @@ const altDetail = detailData(tree, ohne.id);
 check("ohne Werte bleibt das Beispiel", Boolean(altDetail.payoff), true);
 check("ohne Werte bleibt die Staffel", effectLines(tree, ohne.id)[0].base,
   (tree.lad[ohne.arch] || [])[ohne.fl - 1] || "");
-check("ohne Werte nennt die Zeile keine Kosten", effectLines(tree, ohne.id)[0].kosten, "");
+// Ohne eigene Angabe rechnet die Regel: 2 x Ebene x Raritaetsstufe, in der
+// Ressource des Skills. Wer keine verbraucht, zahlt nichts.
+const { skillCost } = await import("../scripts/rules.js");
+check("ohne Werte rechnet die Regel die Kosten", effectLines(tree, ohne.id)[0].kosten,
+  skillCost({ level: ohne.level, rank: ohne.fl, res: ohne.res }));
+check("zwei Punkte je Ebene und Raritaetsstufe",
+  [skillCost({ level: 2, rank: 1, res: "MP" }), skillCost({ level: 5, rank: 3, res: "MP" }),
+   skillCost({ level: 3, rank: 6, res: "AP" })], ["4 MP", "30 MP", "36 AP"]);
+check("ohne Ressource keine Kosten", skillCost({ level: 4, rank: 2, res: "" }), "—");
+check("eigene Angabe geht vor der Regel",
+  effectLines(tree, "mag_ausbessern")[0].kosten, "3 MP");
+check("jede Zeile hat eine Kostenangabe",
+  tree.order.every(id => effectLines(tree, id).every(zeile => zeile.kosten)), true);
 
 // --- Der Hinweis ueber der Tabelle ---
 // Mit Werten: die Zeilen zaehlen zusammen. Ohne Werte: Platzhalter.

@@ -55,9 +55,7 @@
   .st-werte tbody tr.r-Rare > th { border-left-color: #38bdf8; } .st-werte tbody tr.r-Epic > th { border-left-color: #c084fc; }
   .st-werte tbody tr.r-Legendary > th { border-left-color: #fbbf24; } .st-werte tbody tr.r-Transzendiert > th { border-left-color: #f472b6; }
   .st-werte td.kosten { white-space: nowrap; color: #fbbf24; }
-  .st-eff { margin-bottom: 6px; padding-left: 8px; border-left: 4px solid #334155; }
-  .st-eff b { display: block; font-size: 11px; }
-  .st-eff .extra { color: #fbbf24; }
+  .st-werte .extra { color: #fbbf24; margin-top: 2px; }
   .st-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
   .st-empty { color: #64748b; padding: 20px 4px; line-height: 1.5; }
   .st-gloss h6 { margin: 12px 0 3px; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; border: 0; }
@@ -110,24 +108,18 @@
 
           <h5>Was jede Rarität bringt</h5>
           {{#if werteNote}}<p class="st-note">{{werteNote}}</p>{{/if}}
-          {{#if hatWerte}}
-            <table class="st-werte">
-              <thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead>
-              <tbody>
-                {{#each effects}}
-                  <tr class="r-{{rarity}}"><th>{{rarity}}</th><td>{{base}}</td><td class="kosten">{{kosten}}</td></tr>
-                {{/each}}
-              </tbody>
-            </table>
-          {{else}}
-            {{#each effects}}
-              <div class="st-eff r-{{rarity}}">
-                <b>{{rarity}}</b>
-                {{base}}
-                {{#if extra}}<div class="extra">Neu bei dieser Rarität: {{extra}}</div>{{/if}}
-              </div>
-            {{/each}}
-          {{/if}}
+          <table class="st-werte">
+            <thead><tr><th>Rarität</th><th>Wirkung</th><th>Kosten</th></tr></thead>
+            <tbody>
+              {{#each effects}}
+                <tr class="r-{{rarity}}">
+                  <th>{{rarity}}</th>
+                  <td>{{base}}{{#if extra}}<div class="extra">Neu bei dieser Rarität: {{extra}}</div>{{/if}}</td>
+                  <td class="kosten">{{kosten}}</td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
           {{#if formula}}<p class="st-note" style="margin-top:6px;">{{formula}}</p>{{/if}}
           {{#if bonusModeLabel}}<p class="st-note">Eigener Bonus nach eigener Regel: {{bonusModeLabel}}.</p>{{/if}}
 
