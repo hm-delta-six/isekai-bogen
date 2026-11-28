@@ -452,6 +452,25 @@ export const EFFECT_FORMULA =
   "Primäreffekt = Raritätsstufe × (Stufe + Attribut ÷ 2, abgerundet). " +
   "Reichweiten, Runden und Zielzahlen rechnen ohne das Attribut.";
 
+/**
+ * Die Werte-Tabelle eines Skills zaehlt von unten nach oben zusammen: in der
+ * Einstiegsrarietaet steht die ganze Wirkung, in jeder hoeheren nur, was sich
+ * aendert oder dazukommt. Wer Epic hat, hat alles aus Common bis Rare
+ * ebenfalls — ausser dort, wo eine Zahl ausdruecklich ersetzt wird.
+ */
+export const WERTE_NOTE =
+  "Die Zeilen zählen zusammen: in jeder Rarität steht nur, was sich zur " +
+  "Rarität darunter ändert. Alles andere gilt weiter.";
+
+/**
+ * Was dort steht, wo ein Skill noch keine eigenen Werte hat: die allgemeine
+ * Leiter seiner Art. Sie ist ein Platzhalter und muss als solcher kenntlich
+ * sein, damit niemand sie fuer die Beschreibung des Skills haelt.
+ */
+export const LADDER_NOTE =
+  "Für diesen Skill sind die Raritäten noch nicht ausgeschrieben. " +
+  "Hier steht, was seine Art auf der jeweiligen Rarität allgemein kann.";
+
 /** Der Primaereffekt eines Skills aus Level, Raritaet und Attribut. */
 export const effectValue = ({ level = 0, rarity = "", attribute = 0 } = {}) =>
   rarityRank(rarity) * (Math.max(0, Math.trunc(Number(level) || 0)) +
@@ -634,21 +653,23 @@ export const abilityValue = (system, key) => {
 export const isWorn = (armor) => armor?.worn !== false && Number(armor?.durability || 0) > 0;
 
 /**
- * Ruestungsmalus: die DR aller angelegten Teile zusammen, abzueglich der
- * Staerke des Charakters — wer kraeftig ist, traegt Ruestung leichter. Was
- * uebrig bleibt, senken Skills wie Ruestungstragen; der Rest geht auf
- * Angriffswert, Verteidigungswert und Bewegung.
+ * Ruestungsmalus: die DR aller angelegten Teile zusammen, abzueglich Staerke
+ * und Ausdauer des Charakters — wer kraeftig ist, traegt Ruestung leichter,
+ * und wer zaeh ist, haelt sie den Tag lang aus. Was uebrig bleibt, senken
+ * Skills wie Ruestungstragen; der Rest geht auf Angriffswert,
+ * Verteidigungswert und Bewegung.
  *
  * Nur Ausruestung macht Malus. Resistenzen nicht: sie wiegen nichts.
  */
 export function armorMalus(system, skills = []) {
   const teile = toArray(system?.armors).filter(isWorn);
   const ruestung = teile.reduce((summe, armor) => summe + Math.max(0, Number(armor.dr || 0)), 0);
-  // Rüstung wiegt weniger, wer kräftig ist — und wer gewandt ist, bewegt
-  // sich auch darin. Beide Attribute tragen sie gemeinsam.
+  // Rüstung wiegt weniger, wer kräftig ist — und wer zäh ist, erträgt sie
+  // länger. Stärke und Ausdauer tragen sie gemeinsam. Gewandtheit nicht:
+  // die zählt schon beim Verteidigungswert und beim Cap ihrer Skills.
   const staerke = abilityValue(system, "STR");
-  const gewandtheit = abilityValue(system, "DEX");
-  const traegt = staerke + gewandtheit;
+  const ausdauer = abilityValue(system, "CON");
+  const traegt = staerke + ausdauer;
   const extra = Number(system?.boni?.armormalus || 0);
 
   const roh = Math.max(0, ruestung - traegt) + extra;
@@ -658,7 +679,7 @@ export function armorMalus(system, skills = []) {
     teile: teile.length,
     ruestung,
     staerke,
-    gewandtheit,
+    ausdauer,
     traegt,
     extra,
     roh,

@@ -183,15 +183,15 @@ class MeinHausregelSheet extends ActorSheet {
       : `Ohne Abwehr-Skill trägt DEX den Verteidigungswert. `;
 
     const malusNote = `Rüstungsmalus: ${malus.ruestung} DR aus ${malus.teile} angelegten Teilen` +
-      ` − STR ${malus.staerke} − DEX ${malus.gewandtheit}` +
+      ` − STR ${malus.staerke} − CON ${malus.ausdauer}` +
       `${malus.extra ? ` + Extra ${malus.extra}` : ""}` +
       `${malus.ausSkills ? ` − ${malus.ausSkills} aus Skills` : ""}` +
       ` = ${malus.wert}. `;
 
     context.armorMalus = malus;
     context.armorMalusHelp =
-      `Die DR aller angelegten Rüstungsteile zusammen, abzüglich Stärke und Gewandtheit: ` +
-      `${malus.ruestung} − (STR ${malus.staerke} + DEX ${malus.gewandtheit})` +
+      `Die DR aller angelegten Rüstungsteile zusammen, abzüglich Stärke und Ausdauer: ` +
+      `${malus.ruestung} − (STR ${malus.staerke} + CON ${malus.ausdauer})` +
       `${malus.extra ? ` + Extra ${malus.extra}` : ""} = ${Math.max(0, malus.roh)}` +
       `${malus.ausSkills ? `, davon ${malus.ausSkills} durch Skills gesenkt` : ""}` +
       ` = ${malus.wert}. Er geht auf Angriffswert, Verteidigungswert und Bewegung. ` +

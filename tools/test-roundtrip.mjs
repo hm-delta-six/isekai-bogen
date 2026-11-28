@@ -308,12 +308,12 @@ check("ein Bonus von 3 kommt an", runde.context.derived.vwTotal - vwVorFeld, 3);
 
 
 // --- Ruestungsmalus ------------------------------------------------------
-// Summe der DR aller angelegten Teile minus (STR + DEX), dann die Skills.
-// Der Charakter hat STR 10 und DEX 14, traegt also 24 DR muehelos.
+// Summe der DR aller angelegten Teile minus (STR + CON), dann die Skills.
+// Der Charakter hat STR 10 und CON 12, traegt also 22 DR muehelos.
 const malus = runde.context.armorMalus;
 check("nur angelegte Teile zaehlen", malus.teile, 1);
 check("ihre DR", malus.ruestung, 4);
-check("STR 10 und DEX 14 tragen 4 DR muehelos", malus.wert, 0);
+check("STR 10 und CON 12 tragen 4 DR muehelos", malus.wert, 0);
 check("der abgelegte Helm gibt auch keine DR",
   runde.context.drByType.find(entry => entry.label === "Hieb").flat, 20);
 
@@ -322,11 +322,11 @@ actor.system.armors.push({ name: "Platte", dr: 32, durability: 20, types: "hieb"
 const awVorMalus = runde.context.derived.awTotal;
 const vwVorMalus = runde.context.derived.vwTotal;
 runde = zeichnen();
-check("36 DR minus STR 10 und DEX 14", runde.context.armorMalus.wert, 12);
+check("36 DR minus STR 10 und CON 12", runde.context.armorMalus.wert, 14);
 check("der Malus geht vom Angriffswert ab",
-  awVorMalus - runde.context.derived.awTotal, 12);
+  awVorMalus - runde.context.derived.awTotal, 14);
 check("und vom Verteidigungswert",
-  vwVorMalus - runde.context.derived.vwTotal, 12);
+  vwVorMalus - runde.context.derived.vwTotal, 14);
 check("die Hilfe nennt Bewegung",
   runde.context.armorMalusHelp.includes("Bewegung"), true);
 
@@ -336,7 +336,7 @@ actor.system.isekaiSkills.push({
 });
 runde = zeichnen();
 check("Ruestungstragen 10 senkt um ein Fuenftel", runde.context.armorMalus.ausSkills, 2);
-check("Malus danach", runde.context.armorMalus.wert, 10);
+check("Malus danach", runde.context.armorMalus.wert, 12);
 
 // Ablegen nimmt Malus und DR
 for (const stueck of actor.system.armors) stueck.worn = false;

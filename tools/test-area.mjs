@@ -325,25 +325,28 @@ for (const kategorie of KATEGORIEN) {
 }
 
 
-// --- Ruestungsmalus: angelegte DR minus Staerke und Gewandtheit ----------
+// --- Ruestungsmalus: angelegte DR minus Staerke und Ausdauer -------------
 const { armorMalus, isWorn } = await import("../scripts/rules.js");
-const traeger = (armors, str = 10, boni = {}, dex = 6) => ({
-  abilities: { STR: { value: str }, DEX: { value: dex } }, boni, titles: [], equipment: [], armors
+const traeger = (armors, str = 10, boni = {}, con = 6) => ({
+  abilities: { STR: { value: str }, DEX: { value: 18 }, CON: { value: con } },
+  boni, titles: [], equipment: [], armors
 });
 
 check("ohne Ruestung kein Malus", armorMalus(traeger([])).wert, 0);
 check("leichte Ruestung traegt sich muehelos",
   armorMalus(traeger([{ dr: 8, durability: 10 }])).wert, 0);
-check("24 DR minus STR 10 und DEX 6", armorMalus(traeger([{ dr: 24, durability: 10 }])).wert, 8);
+check("24 DR minus STR 10 und CON 6", armorMalus(traeger([{ dr: 24, durability: 10 }])).wert, 8);
 check("mehrere Teile summieren sich",
   armorMalus(traeger([{ dr: 14, durability: 5 }, { dr: 10, durability: 5 }])).wert, 8);
 check("staerkere Leute tragen leichter",
   armorMalus(traeger([{ dr: 24, durability: 10 }], 16)).wert, 2);
-check("gewandtere Leute tragen leichter",
+check("zaehere Leute tragen leichter",
   armorMalus(traeger([{ dr: 24, durability: 10 }], 10, {}, 12)).wert, 2);
+check("Gewandtheit traegt nicht mit",
+  armorMalus(traeger([{ dr: 24, durability: 10 }])).traegt, 16);
 check("beide Attribute stehen im Ergebnis",
   [armorMalus(traeger([{ dr: 24, durability: 10 }])).staerke,
-   armorMalus(traeger([{ dr: 24, durability: 10 }])).gewandtheit,
+   armorMalus(traeger([{ dr: 24, durability: 10 }])).ausdauer,
    armorMalus(traeger([{ dr: 24, durability: 10 }])).traegt], [10, 6, 16]);
 
 check("abgelegtes zaehlt nicht",
